@@ -14,14 +14,25 @@ import { HabitsGrid } from '@/components/dashboard/HabitsGrid'
 import { AlcoholTracker } from '@/components/dashboard/AlcoholTracker'
 import { EventsTracker } from '@/components/dashboard/EventsTracker'
 import { MovementChart } from '@/components/dashboard/MovementChart'
-import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
-import type { DashboardWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
-import type { Profile } from '@/types/database'
+import { DashboardCustomizer, getWidgetConfig, getOrderedVisibleWidgets } from '@/components/dashboard/DashboardCustomizer'
+import type { DashboardWidgetConfig, WidgetKey } from '@/components/dashboard/DashboardCustomizer'
+import type { Profile, DailyEntryWithRelations } from '@/types/database'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
 
 interface DashboardClientProps {
   currentUser: Profile
   users: { id: string; display_name: string }[]
+}
+
+// Widget component mapping
+const widgetComponents: Record<WidgetKey, React.ComponentType<{ entries: DailyEntryWithRelations[] }>> = {
+  moodChart: MoodChart,
+  workLocationChart: WorkLocationChart,
+  habitsGrid: ({ entries }) => <HabitsGrid entries={entries} showDays={7} />,
+  alcoholTracker: AlcoholTracker,
+  movementChart: MovementChart,
+  eventsTracker: EventsTracker,
 }
 
 export function DashboardClient({ currentUser, users }: DashboardClientProps) {
@@ -41,8 +52,28 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   })
 
   const stats = useStats(entries)
-
   const selectedUser = users.find((u) => u.id === selectedUserId)
+
+  // Get ordered visible widgets
+  const orderedWidgets = getOrderedVisibleWidgets(widgetConfig)
+
+  // Render widget with proper sizing
+  const renderWidget = (key: WidgetKey) => {
+    const Component = widgetComponents[key]
+    const settings = widgetConfig[key]
+
+    return (
+      <div
+        key={key}
+        className={cn(
+          settings.size === 'full' ? 'lg:col-span-2' : 'lg:col-span-1',
+          'col-span-1'
+        )}
+      >
+        <Component entries={entries || []} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -82,7 +113,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
+          {/* Summary Cards - always shown */}
           <SummaryCards
             moodAverage={stats.moodStats.average}
             moodTrend={stats.moodStats.trend}
@@ -91,27 +122,12 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             totalDays={stats.totalDays}
           />
 
-          {/* Charts Grid */}
-          {(widgetConfig.moodChart || widgetConfig.workLocationChart) && (
+          {/* Dynamic Widget Grid */}
+          {orderedWidgets.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {widgetConfig.moodChart && <MoodChart entries={entries || []} />}
-              {widgetConfig.workLocationChart && <WorkLocationChart entries={entries || []} />}
+              {orderedWidgets.map(renderWidget)}
             </div>
           )}
-
-          {/* Habits Grid */}
-          {widgetConfig.habitsGrid && <HabitsGrid entries={entries || []} showDays={7} />}
-
-          {/* Lower Grid */}
-          {(widgetConfig.alcoholTracker || widgetConfig.movementChart) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {widgetConfig.alcoholTracker && <AlcoholTracker entries={entries || []} />}
-              {widgetConfig.movementChart && <MovementChart entries={entries || []} />}
-            </div>
-          )}
-
-          {/* Events Tracker */}
-          {widgetConfig.eventsTracker && <EventsTracker entries={entries || []} />}
         </>
       )}
     </div>

@@ -4,28 +4,38 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { Settings2, X, Check, Loader2 } from 'lucide-react'
+import { Settings2, X, Check, Loader2, GripVertical, Maximize2, Minimize2 } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
-export interface DashboardWidgetConfig {
-  moodChart: boolean
-  workLocationChart: boolean
-  habitsGrid: boolean
-  alcoholTracker: boolean
-  movementChart: boolean
-  eventsTracker: boolean
+export type WidgetSize = 'half' | 'full'
+
+export interface WidgetSettings {
+  visible: boolean
+  size: WidgetSize
+  order: number
 }
+
+export interface DashboardWidgetConfig {
+  moodChart: WidgetSettings
+  workLocationChart: WidgetSettings
+  habitsGrid: WidgetSettings
+  alcoholTracker: WidgetSettings
+  movementChart: WidgetSettings
+  eventsTracker: WidgetSettings
+}
+
+export type WidgetKey = keyof DashboardWidgetConfig
 
 const defaultConfig: DashboardWidgetConfig = {
-  moodChart: true,
-  workLocationChart: true,
-  habitsGrid: true,
-  alcoholTracker: true,
-  movementChart: true,
-  eventsTracker: true,
+  moodChart: { visible: true, size: 'half', order: 0 },
+  workLocationChart: { visible: true, size: 'half', order: 1 },
+  habitsGrid: { visible: true, size: 'full', order: 2 },
+  alcoholTracker: { visible: true, size: 'half', order: 3 },
+  movementChart: { visible: true, size: 'half', order: 4 },
+  eventsTracker: { visible: true, size: 'full', order: 5 },
 }
 
-const widgetLabels: Record<keyof DashboardWidgetConfig, string> = {
+const widgetLabels: Record<WidgetKey, string> = {
   moodChart: 'Mood Chart',
   workLocationChart: 'Work Location',
   habitsGrid: 'Habits Grid',
@@ -48,6 +58,7 @@ export function DashboardCustomizer({
   const [isOpen, setIsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [localConfig, setLocalConfig] = useState(config)
+  const [draggedItem, setDraggedItem] = useState<WidgetKey | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -66,11 +77,43 @@ export function DashboardCustomizer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  const toggleWidget = (key: keyof DashboardWidgetConfig) => {
+  const toggleWidget = (key: WidgetKey) => {
     setLocalConfig((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [key]: { ...prev[key], visible: !prev[key].visible },
     }))
+  }
+
+  const toggleSize = (key: WidgetKey) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], size: prev[key].size === 'half' ? 'full' : 'half' },
+    }))
+  }
+
+  const handleDragStart = (key: WidgetKey) => {
+    setDraggedItem(key)
+  }
+
+  const handleDragOver = (e: React.DragEvent, targetKey: WidgetKey) => {
+    e.preventDefault()
+    if (!draggedItem || draggedItem === targetKey) return
+
+    setLocalConfig((prev) => {
+      const newConfig = { ...prev }
+      const draggedOrder = prev[draggedItem].order
+      const targetOrder = prev[targetKey].order
+
+      // Swap orders
+      newConfig[draggedItem] = { ...prev[draggedItem], order: targetOrder }
+      newConfig[targetKey] = { ...prev[targetKey], order: draggedOrder }
+
+      return newConfig
+    })
+  }
+
+  const handleDragEnd = () => {
+    setDraggedItem(null)
   }
 
   const handleSave = async () => {
@@ -95,6 +138,11 @@ export function DashboardCustomizer({
 
   const hasChanges = JSON.stringify(localConfig) !== JSON.stringify(config)
 
+  // Sort widgets by order for display
+  const sortedWidgets = (Object.keys(widgetLabels) as WidgetKey[]).sort(
+    (a, b) => localConfig[a].order - localConfig[b].order
+  )
+
   return (
     <div className="relative" ref={panelRef}>
       <Button
@@ -108,7 +156,7 @@ export function DashboardCustomizer({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Customize Dashboard</h3>
             <button
@@ -119,35 +167,64 @@ export function DashboardCustomizer({
             </button>
           </div>
 
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-1 max-h-80 overflow-y-auto">
             <p className="text-xs text-gray-500 mb-3">
-              Show or hide dashboard widgets
+              Drag to reorder, toggle visibility and size
             </p>
-            {(Object.keys(widgetLabels) as Array<keyof DashboardWidgetConfig>).map(
-              (key) => (
-                <label
-                  key={key}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+            {sortedWidgets.map((key) => (
+              <div
+                key={key}
+                draggable
+                onDragStart={() => handleDragStart(key)}
+                onDragOver={(e) => handleDragOver(e, key)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  'flex items-center gap-2 p-2 rounded-lg border border-transparent transition-colors',
+                  draggedItem === key ? 'bg-purple-50 border-purple-200' : 'hover:bg-gray-50',
+                  !localConfig[key].visible && 'opacity-50'
+                )}
+              >
+                <GripVertical className="h-4 w-4 text-gray-400 cursor-grab flex-shrink-0" />
+
+                <span className="text-sm text-gray-700 flex-1 truncate">
+                  {widgetLabels[key]}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSize(key)}
+                  className={cn(
+                    'p-1.5 rounded transition-colors',
+                    localConfig[key].size === 'full'
+                      ? 'bg-purple-100 text-purple-600'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  )}
+                  title={localConfig[key].size === 'full' ? 'Full width' : 'Half width'}
                 >
-                  <span className="text-sm text-gray-700">{widgetLabels[key]}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleWidget(key)}
+                  {localConfig[key].size === 'full' ? (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleWidget(key)}
+                  className={cn(
+                    'w-9 h-5 rounded-full transition-colors relative flex-shrink-0',
+                    localConfig[key].visible ? 'bg-purple-600' : 'bg-gray-200'
+                  )}
+                >
+                  <span
                     className={cn(
-                      'w-10 h-6 rounded-full transition-colors relative',
-                      localConfig[key] ? 'bg-purple-600' : 'bg-gray-200'
+                      'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                      localConfig[key].visible ? 'translate-x-4' : 'translate-x-0.5'
                     )}
-                  >
-                    <span
-                      className={cn(
-                        'absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
-                        localConfig[key] ? 'translate-x-5' : 'translate-x-1'
-                      )}
-                    />
-                  </button>
-                </label>
-              )
-            )}
+                  />
+                </button>
+              </div>
+            ))}
           </div>
 
           <div className="p-4 border-t border-gray-100">
@@ -171,13 +248,42 @@ export function DashboardCustomizer({
   )
 }
 
-export function getWidgetConfig(profile: Profile): DashboardWidgetConfig {
-  const customMetrics = profile.custom_metrics as unknown as DashboardWidgetConfig | null
-  if (customMetrics && typeof customMetrics === 'object') {
+// Helper to migrate old config format to new format
+function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
+  if (!oldConfig || typeof oldConfig !== 'object') {
+    return defaultConfig
+  }
+
+  const config = oldConfig as Record<string, unknown>
+
+  // Check if it's already in new format
+  if (config.moodChart && typeof config.moodChart === 'object' && 'visible' in (config.moodChart as object)) {
     return {
       ...defaultConfig,
-      ...customMetrics,
+      ...config,
+    } as DashboardWidgetConfig
+  }
+
+  // Migrate from old boolean format
+  const result = { ...defaultConfig }
+  for (const key of Object.keys(defaultConfig) as WidgetKey[]) {
+    if (key in config) {
+      const value = config[key]
+      if (typeof value === 'boolean') {
+        result[key] = { ...defaultConfig[key], visible: value }
+      }
     }
   }
-  return defaultConfig
+  return result
+}
+
+export function getWidgetConfig(profile: Profile): DashboardWidgetConfig {
+  const customMetrics = profile.custom_metrics
+  return migrateConfig(customMetrics)
+}
+
+export function getOrderedVisibleWidgets(config: DashboardWidgetConfig): WidgetKey[] {
+  return (Object.keys(config) as WidgetKey[])
+    .filter((key) => config[key].visible)
+    .sort((a, b) => config[a].order - config[b].order)
 }
