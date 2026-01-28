@@ -14,6 +14,8 @@ import { HabitsGrid } from '@/components/dashboard/HabitsGrid'
 import { AlcoholTracker } from '@/components/dashboard/AlcoholTracker'
 import { EventsTracker } from '@/components/dashboard/EventsTracker'
 import { MovementChart } from '@/components/dashboard/MovementChart'
+import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
+import type { DashboardWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
 import { Loader2 } from 'lucide-react'
 
@@ -28,6 +30,9 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     start: subDays(new Date(), 30),
     end: subDays(new Date(), 1),
   })
+  const [widgetConfig, setWidgetConfig] = useState<DashboardWidgetConfig>(() =>
+    getWidgetConfig(currentUser)
+  )
 
   const { data: entries, isLoading } = useEntries({
     userId: selectedUserId,
@@ -63,6 +68,11 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             endDate={dateRange.end}
             onRangeChange={(start, end) => setDateRange({ start, end })}
           />
+          <DashboardCustomizer
+            profile={currentUser}
+            config={widgetConfig}
+            onConfigChange={setWidgetConfig}
+          />
         </div>
       </div>
 
@@ -82,22 +92,26 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
           />
 
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MoodChart entries={entries || []} />
-            <WorkLocationChart entries={entries || []} />
-          </div>
+          {(widgetConfig.moodChart || widgetConfig.workLocationChart) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {widgetConfig.moodChart && <MoodChart entries={entries || []} />}
+              {widgetConfig.workLocationChart && <WorkLocationChart entries={entries || []} />}
+            </div>
+          )}
 
           {/* Habits Grid */}
-          <HabitsGrid entries={entries || []} showDays={7} />
+          {widgetConfig.habitsGrid && <HabitsGrid entries={entries || []} showDays={7} />}
 
           {/* Lower Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AlcoholTracker entries={entries || []} />
-            <MovementChart entries={entries || []} />
-          </div>
+          {(widgetConfig.alcoholTracker || widgetConfig.movementChart) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {widgetConfig.alcoholTracker && <AlcoholTracker entries={entries || []} />}
+              {widgetConfig.movementChart && <MovementChart entries={entries || []} />}
+            </div>
+          )}
 
           {/* Events Tracker */}
-          <EventsTracker entries={entries || []} />
+          {widgetConfig.eventsTracker && <EventsTracker entries={entries || []} />}
         </>
       )}
     </div>
