@@ -148,7 +148,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             {selectedUser?.display_name || 'Your'} health metrics and habits
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
           {users.length > 1 && currentUser.is_admin && (
             <UserSelector
               users={users}
@@ -162,49 +162,46 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             endDate={dateRange.end}
             onRangeChange={(start, end) => setDateRange({ start, end })}
           />
+          <Button
+            variant={isEditMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="gap-2"
+          >
+            {isEditMode ? (
+              <>
+                <X className="h-4 w-4" />
+                Done
+              </>
+            ) : (
+              <>
+                <Settings className="h-4 w-4" />
+                Customize
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Widget customization toolbar */}
-      <div className="flex items-center justify-between py-2 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          {isEditMode && (
-            <>
-              <AddWidgetPanel
-                availableWidgets={getAvailableWidgets()}
-                onAddWidget={addWidget}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetLayout}
-                className="gap-2 text-gray-600"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </Button>
-            </>
-          )}
+      {/* Widget customization toolbar - only shows in edit mode */}
+      {isEditMode && (
+        <div className="flex items-center gap-2 py-2 px-4 bg-purple-50 rounded-lg border border-purple-200">
+          <span className="text-sm text-purple-700 font-medium">Edit Mode:</span>
+          <AddWidgetPanel
+            availableWidgets={getAvailableWidgets()}
+            onAddWidget={addWidget}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetLayout}
+            className="gap-2 text-purple-700 hover:text-purple-900 hover:bg-purple-100"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset Layout
+          </Button>
         </div>
-        <Button
-          variant={isEditMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setIsEditMode(!isEditMode)}
-          className="gap-2"
-        >
-          {isEditMode ? (
-            <>
-              <X className="h-4 w-4" />
-              Done
-            </>
-          ) : (
-            <>
-              <Settings className="h-4 w-4" />
-              Customize
-            </>
-          )}
-        </Button>
-      </div>
+      )}
 
       <div ref={containerRef}>
         {isLoading ? (
