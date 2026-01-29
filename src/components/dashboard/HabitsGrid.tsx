@@ -139,24 +139,21 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, title = 'Hea
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
-        <table className="w-full h-full">
+        <table className="w-full h-full table-fixed">
           <thead>
             <tr>
-              <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-4">
+              <th className="text-left text-xs font-medium text-gray-500 pb-2 w-20">
                 Habit
               </th>
               {dateHeaders.map((header, i) => (
                 <th
                   key={i}
-                  className="text-center text-xs font-medium text-gray-500 pb-2 px-1 min-w-[36px]"
+                  className="text-center text-xs font-medium text-gray-500 pb-2"
                 >
                   <div>{header.day}</div>
                   <div className="text-[10px] text-gray-400">{header.date}</div>
                 </th>
               ))}
-              <th className="text-right text-xs font-medium text-gray-500 pb-2 pl-4">
-                Rate
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -166,30 +163,16 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, title = 'Hea
                 className="border-t border-gray-100"
                 style={{ height: `${100 / data.length}%` }}
               >
-                <td className="pr-4 align-middle">
+                <td className="align-middle">
                   <span className="text-sm text-gray-700 whitespace-nowrap">
                     {row.label}
                   </span>
                 </td>
                 {row.days.map((status, i) => (
-                  <td key={i} className="text-center px-1 align-middle">
+                  <td key={i} className="text-center align-middle">
                     {renderDayCell(status, row.habit)}
                   </td>
                 ))}
-                <td className="text-right pl-4 align-middle">
-                  <span
-                    className={cn(
-                      'text-sm font-medium',
-                      row.completionRate >= 70
-                        ? 'text-green-600'
-                        : row.completionRate >= 40
-                        ? 'text-yellow-600'
-                        : 'text-gray-400'
-                    )}
-                  >
-                    {row.completionRate}%
-                  </span>
-                </td>
               </tr>
             ))}
           </tbody>

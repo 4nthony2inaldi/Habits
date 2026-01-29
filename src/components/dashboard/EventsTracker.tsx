@@ -5,7 +5,34 @@ import { cn } from '@/lib/utils/cn'
 import { differenceInDays, parseISO } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
 import { eventLabels } from '@/types/forms'
-import { Clock, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
+
+// Short labels for compact display
+const shortEventLabels: Record<EventType, string> = {
+  concert: 'Concert',
+  stage_production: 'Stage',
+  movies: 'Movies',
+  museum: 'Museum',
+  attended_sport: 'Sports Event',
+  played_sport: 'Played Sport',
+  haircut: 'Haircut',
+  massage: 'Massage',
+  facial: 'Facial',
+  pedicure: 'Pedicure',
+  manicure: 'Manicure',
+  other_selfcare: 'Self Care',
+  doctor: 'Doctor',
+  dentist: 'Dentist',
+  flight: 'Flight',
+  train: 'Train',
+  subway: 'Subway',
+  bus: 'Bus',
+  diner: 'Diner',
+  ice_cream: 'Ice Cream',
+  park: 'Park',
+  guys_night: "Guys' Night",
+  pto: 'PTO',
+}
 
 interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
@@ -53,7 +80,7 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, 
 
       return {
         event,
-        label: eventLabels[event],
+        label: shortEventLabels[event] || eventLabels[event],
         daysSince,
         lastDate,
         countCurrentYear,
