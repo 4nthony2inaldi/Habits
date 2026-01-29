@@ -10,6 +10,23 @@ import { habitLabels } from '@/types/forms'
 
 export type WidgetSize = 'half' | 'full'
 
+// Computed habits that are calculated from entry data
+export type ComputedHabitType = 'no_alcohol' | 'was_active'
+
+// All selectable habits (regular + computed)
+export type SelectableHabitType = HabitType | ComputedHabitType
+
+export const computedHabitLabels: Record<ComputedHabitType, string> = {
+  no_alcohol: "Didn't drink",
+  was_active: 'Was active (7.5k+ steps)',
+}
+
+// Combined labels for all selectable habits
+export const allHabitLabels: Record<SelectableHabitType, string> = {
+  ...habitLabels,
+  ...computedHabitLabels,
+}
+
 export interface WidgetSettings {
   visible: boolean
   size: WidgetSize
@@ -23,12 +40,12 @@ export interface DashboardWidgetConfig {
   alcoholTracker: WidgetSettings
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
-  selectedHabits: HabitType[]
+  selectedHabits: SelectableHabitType[]
 }
 
 export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits'>
 
-const allHabits = Object.keys(habitLabels) as HabitType[]
+const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
 
 const defaultConfig: DashboardWidgetConfig = {
   moodChart: { visible: true, size: 'half', order: 0 },
@@ -97,7 +114,7 @@ export function DashboardCustomizer({
     }))
   }
 
-  const toggleHabit = (habit: HabitType) => {
+  const toggleHabit = (habit: SelectableHabitType) => {
     setLocalConfig((prev) => {
       const currentHabits = prev.selectedHabits
       const isSelected = currentHabits.includes(habit)
@@ -312,7 +329,7 @@ export function DashboardCustomizer({
                             onChange={() => toggleHabit(habit)}
                             className="w-4 h-4 accent-purple-600 rounded"
                           />
-                          <span className="text-xs text-gray-700">{habitLabels[habit]}</span>
+                          <span className="text-xs text-gray-700">{allHabitLabels[habit]}</span>
                         </label>
                       ))}
                     </div>
