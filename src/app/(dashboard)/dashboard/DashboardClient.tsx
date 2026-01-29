@@ -25,13 +25,12 @@ interface DashboardClientProps {
   users: { id: string; display_name: string }[]
 }
 
-// Widget component mapping (excluding habitsGrid which needs special handling)
-const widgetComponents: Record<Exclude<WidgetKey, 'habitsGrid'>, React.ComponentType<{ entries: DailyEntryWithRelations[] }>> = {
+// Widget component mapping (excluding habitsGrid and eventsTracker which need special handling)
+const widgetComponents: Record<Exclude<WidgetKey, 'habitsGrid' | 'eventsTracker'>, React.ComponentType<{ entries: DailyEntryWithRelations[] }>> = {
   moodChart: MoodChart,
   workLocationChart: WorkLocationChart,
   alcoholTracker: AlcoholTracker,
   movementChart: MovementChart,
-  eventsTracker: EventsTracker,
 }
 
 export function DashboardClient({ currentUser, users }: DashboardClientProps) {
@@ -59,17 +58,15 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   // Render widget with proper sizing
   const renderWidget = (key: WidgetKey) => {
     const settings = widgetConfig[key]
+    const wrapperClass = cn(
+      settings.size === 'full' ? 'lg:col-span-2' : 'lg:col-span-1',
+      'col-span-1'
+    )
 
     // Special handling for habitsGrid to pass selectedHabits
     if (key === 'habitsGrid') {
       return (
-        <div
-          key={key}
-          className={cn(
-            settings.size === 'full' ? 'lg:col-span-2' : 'lg:col-span-1',
-            'col-span-1'
-          )}
-        >
+        <div key={key} className={wrapperClass}>
           <HabitsGrid
             entries={entries || []}
             showDays={7}
@@ -79,16 +76,22 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
       )
     }
 
+    // Special handling for eventsTracker to pass selectedEvents
+    if (key === 'eventsTracker') {
+      return (
+        <div key={key} className={wrapperClass}>
+          <EventsTracker
+            entries={entries || []}
+            selectedEvents={widgetConfig.selectedEvents}
+          />
+        </div>
+      )
+    }
+
     const Component = widgetComponents[key]
 
     return (
-      <div
-        key={key}
-        className={cn(
-          settings.size === 'full' ? 'lg:col-span-2' : 'lg:col-span-1',
-          'col-span-1'
-        )}
-      >
+      <div key={key} className={wrapperClass}>
         <Component entries={entries || []} />
       </div>
     )

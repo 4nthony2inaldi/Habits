@@ -11,11 +11,16 @@ import { Clock, AlertCircle } from 'lucide-react'
 interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
   overdueThreshold?: number
+  selectedEvents?: EventType[]
 }
 
-export function EventsTracker({ entries, overdueThreshold = 30 }: EventsTrackerProps) {
+export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }: EventsTrackerProps) {
   const eventData = useMemo(() => {
-    const events = Object.keys(eventLabels) as EventType[]
+    const allEvents = Object.keys(eventLabels) as EventType[]
+    // Filter by selectedEvents if provided
+    const events = selectedEvents && selectedEvents.length > 0
+      ? allEvents.filter(e => selectedEvents.includes(e))
+      : allEvents
     const today = new Date()
 
     return events.map((event) => {
@@ -63,7 +68,7 @@ export function EventsTracker({ entries, overdueThreshold = 30 }: EventsTrackerP
         if (b.daysSince === null) return -1
         return a.daysSince - b.daysSince
       })
-  }, [entries, overdueThreshold])
+  }, [entries, overdueThreshold, selectedEvents])
 
   if (eventData.length === 0) {
     return (

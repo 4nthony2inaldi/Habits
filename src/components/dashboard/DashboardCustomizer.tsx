@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
 import { Settings2, X, Check, Loader2, GripVertical, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-react'
-import type { Profile, HabitType } from '@/types/database'
-import { habitLabels } from '@/types/forms'
+import type { Profile, HabitType, EventType } from '@/types/database'
+import { habitLabels, eventLabels } from '@/types/forms'
 
 export type WidgetSize = 'half' | 'full'
 
@@ -58,11 +58,13 @@ export interface DashboardWidgetConfig {
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
   selectedHabits: SelectableHabitType[]
+  selectedEvents: EventType[]
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents'>
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
+const allEvents = Object.keys(eventLabels) as EventType[]
 
 const defaultConfig: DashboardWidgetConfig = {
   moodChart: { visible: true, size: 'half', order: 0 },
@@ -72,6 +74,7 @@ const defaultConfig: DashboardWidgetConfig = {
   movementChart: { visible: true, size: 'half', order: 4 },
   eventsTracker: { visible: true, size: 'full', order: 5 },
   selectedHabits: allHabits,
+  selectedEvents: allEvents,
 }
 
 const widgetLabels: Record<WidgetKey, string> = {
@@ -99,6 +102,7 @@ export function DashboardCustomizer({
   const [localConfig, setLocalConfig] = useState(config)
   const [draggedItem, setDraggedItem] = useState<WidgetKey | null>(null)
   const [habitsExpanded, setHabitsExpanded] = useState(false)
+  const [eventsExpanded, setEventsExpanded] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -158,6 +162,33 @@ export function DashboardCustomizer({
     }))
   }
 
+  const toggleEvent = (event: EventType) => {
+    setLocalConfig((prev) => {
+      const currentEvents = prev.selectedEvents
+      const isSelected = currentEvents.includes(event)
+      return {
+        ...prev,
+        selectedEvents: isSelected
+          ? currentEvents.filter((e) => e !== event)
+          : [...currentEvents, event],
+      }
+    })
+  }
+
+  const selectAllEvents = () => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      selectedEvents: [...allEvents],
+    }))
+  }
+
+  const deselectAllEvents = () => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      selectedEvents: [],
+    }))
+  }
+
   const handleDragStart = (key: WidgetKey) => {
     setDraggedItem(key)
   }
@@ -211,6 +242,108 @@ export function DashboardCustomizer({
     (a, b) => localConfig[a].order - localConfig[b].order
   )
 
+  const renderExpandableWidget = (key: WidgetKey) => {
+    const isHabits = key === 'habitsGrid'
+    const isEvents = key === 'eventsTracker'
+    const isExpandable = (isHabits || isEvents) && localConfig[key].visible
+    const isExpanded = isHabits ? habitsExpanded : eventsExpanded
+    const setExpanded = isHabits ? setHabitsExpanded : setEventsExpanded
+    const items = isHabits ? allHabits : allEvents
+    const selectedItems = isHabits ? localConfig.selectedHabits : localConfig.selectedEvents
+    const labels = isHabits ? allHabitLabels : eventLabels
+    const toggleItem = isHabits ? toggleHabit : toggleEvent
+    const selectAll = isHabits ? selectAllHabits : selectAllEvents
+    const deselectAll = isHabits ? deselectAllHabits : deselectAllEvents
+
+    if (!isExpandable) {
+      return (
+        <span className="text-sm text-gray-700 flex-1 truncate">
+          {widgetLabels[key]}
+        </span>
+      )
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(!isExpanded)}
+        className="flex items-center gap-1 text-sm text-gray-700 flex-1"
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5" />
+        )}
+        {widgetLabels[key]}
+        <span className="text-xs text-gray-400">
+          ({selectedItems.length}/{items.length})
+        </span>
+      </button>
+    )
+  }
+
+  const renderSelectionDropdown = (key: WidgetKey) => {
+    const isHabits = key === 'habitsGrid'
+    const isEvents = key === 'eventsTracker'
+
+    if (!isHabits && !isEvents) return null
+    if (!localConfig[key].visible) return null
+
+    const isExpanded = isHabits ? habitsExpanded : eventsExpanded
+    if (!isExpanded) return null
+
+    const items = isHabits ? allHabits : allEvents
+    const selectedItems = isHabits ? localConfig.selectedHabits : localConfig.selectedEvents
+    const labels = isHabits ? allHabitLabels : eventLabels
+    const toggleItem = isHabits
+      ? (item: string) => toggleHabit(item as SelectableHabitType)
+      : (item: string) => toggleEvent(item as EventType)
+    const selectAll = isHabits ? selectAllHabits : selectAllEvents
+    const deselectAll = isHabits ? deselectAllHabits : deselectAllEvents
+    const itemLabel = isHabits ? 'habits' : 'events'
+
+    return (
+      <div className="ml-6 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-medium text-gray-600">Select {itemLabel} to show:</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="text-xs text-purple-600 hover:underline"
+            >
+              All
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              type="button"
+              onClick={deselectAll}
+              className="text-xs text-purple-600 hover:underline"
+            >
+              None
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+          {items.map((item) => (
+            <label
+              key={item}
+              className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedItems.includes(item as never)}
+                onChange={() => toggleItem(item)}
+                className="w-4 h-4 accent-purple-600 rounded"
+              />
+              <span className="text-xs text-gray-700">{labels[item as keyof typeof labels]}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative" ref={panelRef}>
       <Button
@@ -254,27 +387,7 @@ export function DashboardCustomizer({
                 >
                   <GripVertical className="h-4 w-4 text-gray-400 cursor-grab flex-shrink-0" />
 
-                  {key === 'habitsGrid' && localConfig[key].visible ? (
-                    <button
-                      type="button"
-                      onClick={() => setHabitsExpanded(!habitsExpanded)}
-                      className="flex items-center gap-1 text-sm text-gray-700 flex-1"
-                    >
-                      {habitsExpanded ? (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      )}
-                      {widgetLabels[key]}
-                      <span className="text-xs text-gray-400">
-                        ({localConfig.selectedHabits.length}/{allHabits.length})
-                      </span>
-                    </button>
-                  ) : (
-                    <span className="text-sm text-gray-700 flex-1 truncate">
-                      {widgetLabels[key]}
-                    </span>
-                  )}
+                  {renderExpandableWidget(key)}
 
                   <button
                     type="button"
@@ -311,47 +424,7 @@ export function DashboardCustomizer({
                   </button>
                 </div>
 
-                {/* Habits selection dropdown */}
-                {key === 'habitsGrid' && habitsExpanded && localConfig[key].visible && (
-                  <div className="ml-6 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium text-gray-600">Select habits to show:</span>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={selectAllHabits}
-                          className="text-xs text-purple-600 hover:underline"
-                        >
-                          All
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          type="button"
-                          onClick={deselectAllHabits}
-                          className="text-xs text-purple-600 hover:underline"
-                        >
-                          None
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-1">
-                      {allHabits.map((habit) => (
-                        <label
-                          key={habit}
-                          className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={localConfig.selectedHabits.includes(habit)}
-                            onChange={() => toggleHabit(habit)}
-                            className="w-4 h-4 accent-purple-600 rounded"
-                          />
-                          <span className="text-xs text-gray-700">{allHabitLabels[habit]}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {renderSelectionDropdown(key)}
               </div>
             ))}
           </div>
@@ -410,7 +483,12 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
 
   // Migrate selectedHabits
   if ('selectedHabits' in config && Array.isArray(config.selectedHabits)) {
-    result.selectedHabits = config.selectedHabits as HabitType[]
+    result.selectedHabits = config.selectedHabits as SelectableHabitType[]
+  }
+
+  // Migrate selectedEvents
+  if ('selectedEvents' in config && Array.isArray(config.selectedEvents)) {
+    result.selectedEvents = config.selectedEvents as EventType[]
   }
 
   return result
