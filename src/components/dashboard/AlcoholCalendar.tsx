@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { format, parseISO, eachDayOfInterval, getMonth, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
@@ -11,6 +11,7 @@ interface AlcoholCalendarProps {
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 function getDrinkColor(drinks: number): string {
@@ -24,6 +25,7 @@ function getDrinkColor(drinks: number): string {
 
 interface MonthData {
   month: string
+  monthShort: string
   monthNum: number
   year: number
   weeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[]
@@ -31,6 +33,27 @@ interface MonthData {
 }
 
 export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [columns, setColumns] = useState(4)
+
+  // Determine number of columns based on container width
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0
+      // Each month needs approximately 200px (7 days * ~28px + gaps)
+      if (width < 220) setColumns(1)
+      else if (width < 420) setColumns(2)
+      else if (width < 620) setColumns(3)
+      else setColumns(4)
+    })
+
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+
   const calendarData = useMemo(() => {
     // Create a map of entries by date
     const entriesByDate = new Map<string, number>()
@@ -74,6 +97,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
         if (currentWeeks.length > 0) {
           months.push({
             month: MONTHS[currentMonth],
+            monthShort: MONTHS_SHORT[currentMonth],
             monthNum: currentMonth,
             year: currentYear,
             weeks: currentWeeks,
@@ -104,6 +128,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     if (currentWeeks.length > 0) {
       months.push({
         month: MONTHS[currentMonth],
+        monthShort: MONTHS_SHORT[currentMonth],
         monthNum: currentMonth,
         year: currentYear,
         weeks: currentWeeks,
@@ -125,17 +150,16 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     )
   }
 
-  // Render a single month
+  // Render a single month with compact header
   const renderMonth = (monthData: MonthData) => (
     <div key={`${monthData.month}-${monthData.year}`} className="flex-shrink-0">
-      {/* Month header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">
-          {monthData.month} {monthData.year}
+      {/* Compact month header - all on one row */}
+      <div className="flex items-baseline gap-1 mb-2">
+        <span className="text-sm font-semibold text-gray-800">
+          {columns <= 2 ? monthData.monthShort : monthData.month}
         </span>
-        <span className="text-xs text-gray-500">
-          {Math.round(monthData.monthTotal)} drinks
-        </span>
+        <span className="text-xs text-gray-500">{monthData.year}</span>
+        <span className="text-xs text-gray-400 ml-auto">{Math.round(monthData.monthTotal)}</span>
       </div>
 
       {/* Day headers */}
@@ -183,27 +207,23 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     </div>
   )
 
+  // Dynamic grid classes based on column count
+  const gridClass = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4',
+  }[columns] || 'grid-cols-4'
+
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
 
       {/* Responsive grid - fills available space */}
-      <div className="flex-1 min-h-0 scrollbar-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
-          {calendarData.map(renderMonth)}
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar-hidden">
+        <div className={cn('grid gap-4 auto-rows-min', gridClass)}>
+          {calendarData.slice(0, columns * 3).map(renderMonth)}
         </div>
-      </div>
-
-      {/* Legend - compact */}
-      <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t flex-shrink-0">
-        <span className="text-xs text-gray-500">Less</span>
-        <div className="w-3 h-3 rounded bg-gray-100" />
-        <div className="w-3 h-3 rounded bg-purple-100" />
-        <div className="w-3 h-3 rounded bg-purple-200" />
-        <div className="w-3 h-3 rounded bg-purple-300" />
-        <div className="w-3 h-3 rounded bg-purple-400" />
-        <div className="w-3 h-3 rounded bg-purple-600" />
-        <span className="text-xs text-gray-500">More</span>
       </div>
     </div>
   )
