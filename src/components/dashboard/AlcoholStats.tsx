@@ -243,8 +243,8 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
-      <div className="flex-1 min-h-0 scrollbar-hidden">
-        <table className="w-full text-sm">
+      <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
+        <table className="w-full text-sm h-full">
           <thead>
             <tr className="border-b">
               <th className="text-left py-1.5 pr-4 font-medium text-gray-500"></th>
@@ -262,28 +262,29 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="[&>tr]:h-[1fr]">
             {rows.map((row, idx) => (
               <tr
-                key={row.label}
+                key={row.key}
                 className={cn(
                   idx % 2 === 0 ? 'bg-gray-50' : '',
                   'hover:bg-gray-100'
                 )}
+                style={{ height: `${100 / rows.length}%` }}
               >
-                <td className="py-1 pr-4 text-gray-700 font-medium whitespace-nowrap text-xs">
+                <td className="pr-4 text-gray-700 font-medium whitespace-nowrap text-xs align-middle">
                   {row.label}
                 </td>
-                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.last7 || '-'}
                 </td>
-                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.last30 || '-'}
                 </td>
-                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.lastYear || '-'}
                 </td>
-                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.currentYear || '-'}
                 </td>
               </tr>
