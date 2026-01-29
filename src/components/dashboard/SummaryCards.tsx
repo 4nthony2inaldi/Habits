@@ -10,6 +10,9 @@ interface SummaryCardsProps {
   healthScore: number
   busyScore: number
   totalDays: number
+  showHappy?: boolean
+  showHealthy?: boolean
+  showBusy?: boolean
 }
 
 export function SummaryCards({
@@ -18,9 +21,14 @@ export function SummaryCards({
   healthScore,
   busyScore,
   totalDays,
+  showHappy = true,
+  showHealthy = true,
+  showBusy = true,
 }: SummaryCardsProps) {
-  const cards = [
+  const allCards = [
     {
+      key: 'happy',
+      visible: showHappy,
       title: 'How Happy',
       value: moodAverage.toFixed(1),
       subtitle: `avg mood score`,
@@ -30,6 +38,8 @@ export function SummaryCards({
       bgColor: 'bg-yellow-50',
     },
     {
+      key: 'healthy',
+      visible: showHealthy,
       title: 'How Healthy',
       value: `${healthScore}%`,
       subtitle: 'habit completion',
@@ -38,6 +48,8 @@ export function SummaryCards({
       bgColor: 'bg-green-50',
     },
     {
+      key: 'busy',
+      visible: showBusy,
       title: 'How Busy',
       value: `${busyScore}%`,
       subtitle: 'activity level',
@@ -47,10 +59,18 @@ export function SummaryCards({
     },
   ]
 
+  const cards = allCards.filter((card) => card.visible)
+
+  if (cards.length === 0) {
+    return null
+  }
+
+  const gridCols = cards.length === 1 ? 'sm:grid-cols-1' : cards.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className={cn('grid grid-cols-1 gap-4', gridCols)}>
       {cards.map((card) => (
-        <Card key={card.title} className={cn('overflow-hidden')}>
+        <Card key={card.key} className={cn('overflow-hidden')}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div>

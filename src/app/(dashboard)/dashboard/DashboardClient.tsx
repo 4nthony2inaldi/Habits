@@ -135,13 +135,16 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         </div>
       ) : (
         <>
-          {/* Summary Cards - always shown */}
+          {/* Summary Cards */}
           <SummaryCards
             moodAverage={stats.moodStats.average}
             moodTrend={stats.moodStats.trend}
             healthScore={stats.healthScore}
             busyScore={stats.busyScore}
             totalDays={stats.totalDays}
+            showHappy={widgetConfig.kpiVisibility.happyKpi}
+            showHealthy={widgetConfig.kpiVisibility.healthyKpi}
+            showBusy={widgetConfig.kpiVisibility.busyKpi}
           />
 
           {/* Dynamic Widget Grid */}

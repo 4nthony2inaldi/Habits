@@ -50,6 +50,12 @@ export interface WidgetSettings {
   order: number
 }
 
+export interface KpiVisibility {
+  happyKpi: boolean
+  healthyKpi: boolean
+  busyKpi: boolean
+}
+
 export interface DashboardWidgetConfig {
   moodChart: WidgetSettings
   workLocationChart: WidgetSettings
@@ -59,12 +65,20 @@ export interface DashboardWidgetConfig {
   eventsTracker: WidgetSettings
   selectedHabits: SelectableHabitType[]
   selectedEvents: EventType[]
+  kpiVisibility: KpiVisibility
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'kpiVisibility'>
+export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
 const allEvents = Object.keys(eventLabels) as EventType[]
+
+const defaultKpiVisibility: KpiVisibility = {
+  happyKpi: true,
+  healthyKpi: true,
+  busyKpi: true,
+}
 
 const defaultConfig: DashboardWidgetConfig = {
   moodChart: { visible: true, size: 'half', order: 0 },
@@ -75,6 +89,13 @@ const defaultConfig: DashboardWidgetConfig = {
   eventsTracker: { visible: true, size: 'full', order: 5 },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
+  kpiVisibility: defaultKpiVisibility,
+}
+
+const kpiLabels: Record<KpiKey, string> = {
+  happyKpi: 'How Happy',
+  healthyKpi: 'How Healthy',
+  busyKpi: 'How Busy',
 }
 
 const widgetLabels: Record<WidgetKey, string> = {
@@ -125,6 +146,16 @@ export function DashboardCustomizer({
     setLocalConfig((prev) => ({
       ...prev,
       [key]: { ...prev[key], visible: !prev[key].visible },
+    }))
+  }
+
+  const toggleKpi = (key: KpiKey) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      kpiVisibility: {
+        ...prev.kpiVisibility,
+        [key]: !prev.kpiVisibility[key],
+      },
     }))
   }
 
@@ -369,8 +400,38 @@ export function DashboardCustomizer({
           </div>
 
           <div className="p-4 space-y-1 max-h-96 overflow-y-auto">
-            <p className="text-xs text-gray-500 mb-3">
-              Drag to reorder, toggle visibility and size
+            {/* KPI Cards Section */}
+            <p className="text-xs text-gray-500 mb-2">Summary Cards</p>
+            {(Object.keys(kpiLabels) as KpiKey[]).map((key) => (
+              <div
+                key={key}
+                className={cn(
+                  'flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50',
+                  !localConfig.kpiVisibility[key] && 'opacity-50'
+                )}
+              >
+                <span className="text-sm text-gray-700">{kpiLabels[key]}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleKpi(key)}
+                  className={cn(
+                    'w-9 h-5 rounded-full transition-colors relative flex-shrink-0',
+                    localConfig.kpiVisibility[key] ? 'bg-purple-600' : 'bg-gray-200'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                      localConfig.kpiVisibility[key] ? 'translate-x-4' : 'translate-x-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+            ))}
+
+            {/* Widgets Section */}
+            <p className="text-xs text-gray-500 mt-4 mb-2">
+              Widgets (drag to reorder)
             </p>
             {sortedWidgets.map((key) => (
               <div key={key}>
@@ -489,6 +550,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Migrate selectedEvents
   if ('selectedEvents' in config && Array.isArray(config.selectedEvents)) {
     result.selectedEvents = config.selectedEvents as EventType[]
+  }
+
+  // Migrate kpiVisibility
+  if ('kpiVisibility' in config && typeof config.kpiVisibility === 'object') {
+    result.kpiVisibility = { ...defaultKpiVisibility, ...(config.kpiVisibility as KpiVisibility) }
   }
 
   return result
