@@ -10,6 +10,8 @@ import type { AlcoholMetricType } from './DashboardCustomizer'
 interface AlcoholStatsProps {
   entries: DailyEntryWithRelations[]
   selectedMetrics?: AlcoholMetricType[]
+  title?: string
+  subtitle?: string
 }
 
 interface PeriodStats {
@@ -99,11 +101,12 @@ const defaultMetrics: AlcoholMetricType[] = [
   'daysWithDrink', 'daysWith2Plus', 'daysWith6Plus'
 ]
 
-export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: AlcoholStatsProps) {
+export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title = 'How Much Drinking', subtitle }: AlcoholStatsProps) {
   const stats = useMemo(() => {
     const today = new Date()
     const currentYear = getYear(today)
     const lastYear = currentYear - 1
+    const twoYearsAgo = currentYear - 2
 
     // Filter entries by time period
     const last7 = entries.filter((e) => {
@@ -126,20 +129,30 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
       return getYear(date) === lastYear
     })
 
+    const twoYearsAgoEntries = entries.filter((e) => {
+      const date = parseISO(e.entry_date)
+      return getYear(date) === twoYearsAgo
+    })
+
     return {
       last7: calculatePeriodStats(last7),
       last30: calculatePeriodStats(last30),
       currentYear: calculatePeriodStats(thisYear),
       lastYear: calculatePeriodStats(prevYear),
+      twoYearsAgo: calculatePeriodStats(twoYearsAgoEntries),
       currentYearLabel: currentYear.toString(),
       lastYearLabel: lastYear.toString(),
+      twoYearsAgoLabel: twoYearsAgo.toString(),
     }
   }, [entries])
 
   if (entries.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
         </div>
@@ -152,88 +165,99 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
     label: string
     last7: number | string
     last30: number | string
-    currentYear: number | string
+    twoYearsAgo: number | string
     lastYear: number | string
+    currentYear: number | string
   }> = [
     {
       key: 'avgWeekly',
       label: 'Avg. Weekly',
       last7: stats.last7.avgWeekly,
       last30: stats.last30.avgWeekly,
-      currentYear: stats.currentYear.avgWeekly,
+      twoYearsAgo: stats.twoYearsAgo.avgWeekly,
       lastYear: stats.lastYear.avgWeekly,
+      currentYear: stats.currentYear.avgWeekly,
     },
     {
       key: 'totalDrinks',
       label: 'Total Drinks',
       last7: stats.last7.totalDrinks,
       last30: stats.last30.totalDrinks,
-      currentYear: stats.currentYear.totalDrinks,
+      twoYearsAgo: stats.twoYearsAgo.totalDrinks,
       lastYear: stats.lastYear.totalDrinks,
+      currentYear: stats.currentYear.totalDrinks,
     },
     {
       key: 'beers',
       label: 'Beers',
       last7: stats.last7.beers,
       last30: stats.last30.beers,
-      currentYear: stats.currentYear.beers,
+      twoYearsAgo: stats.twoYearsAgo.beers,
       lastYear: stats.lastYear.beers,
+      currentYear: stats.currentYear.beers,
     },
     {
       key: 'seltzers',
       label: 'Seltzers',
       last7: stats.last7.seltzers,
       last30: stats.last30.seltzers,
-      currentYear: stats.currentYear.seltzers,
+      twoYearsAgo: stats.twoYearsAgo.seltzers,
       lastYear: stats.lastYear.seltzers,
+      currentYear: stats.currentYear.seltzers,
     },
     {
       key: 'wine',
       label: 'Wine',
       last7: stats.last7.wine,
       last30: stats.last30.wine,
-      currentYear: stats.currentYear.wine,
+      twoYearsAgo: stats.twoYearsAgo.wine,
       lastYear: stats.lastYear.wine,
+      currentYear: stats.currentYear.wine,
     },
     {
       key: 'liquor',
       label: 'Liquor',
       last7: stats.last7.liquor,
       last30: stats.last30.liquor,
-      currentYear: stats.currentYear.liquor,
+      twoYearsAgo: stats.twoYearsAgo.liquor,
       lastYear: stats.lastYear.liquor,
+      currentYear: stats.currentYear.liquor,
     },
     {
       key: 'shots',
       label: 'Shots',
       last7: stats.last7.shots,
       last30: stats.last30.shots,
-      currentYear: stats.currentYear.shots,
+      twoYearsAgo: stats.twoYearsAgo.shots,
       lastYear: stats.lastYear.shots,
+      currentYear: stats.currentYear.shots,
     },
     {
       key: 'daysWithDrink',
       label: 'Days w/ Drink',
       last7: stats.last7.daysWithDrink,
       last30: `${stats.last30.daysWithDrinkPercent}%`,
-      currentYear: `${stats.currentYear.daysWithDrinkPercent}%`,
+      twoYearsAgo: `${stats.twoYearsAgo.daysWithDrinkPercent}%`,
       lastYear: `${stats.lastYear.daysWithDrinkPercent}%`,
+      currentYear: `${stats.currentYear.daysWithDrinkPercent}%`,
     },
     {
       key: 'daysWith2Plus',
       label: 'Days 2+',
       last7: stats.last7.daysWith2Plus,
       last30: `${stats.last30.daysWith2PlusPercent}%`,
-      currentYear: `${stats.currentYear.daysWith2PlusPercent}%`,
+      twoYearsAgo: `${stats.twoYearsAgo.daysWith2PlusPercent}%`,
       lastYear: `${stats.lastYear.daysWith2PlusPercent}%`,
+      currentYear: `${stats.currentYear.daysWith2PlusPercent}%`,
     },
     {
       key: 'daysWith6Plus',
       label: 'Days w/ 6+',
       last7: stats.last7.daysWith6Plus,
       last30: `${stats.last30.daysWith6PlusPercent}%`,
-      currentYear: `${stats.currentYear.daysWith6PlusPercent}%`,
+      twoYearsAgo: `${stats.twoYearsAgo.daysWith6PlusPercent}%`,
       lastYear: `${stats.lastYear.daysWith6PlusPercent}%`,
+      currentYear: `${stats.currentYear.daysWith6PlusPercent}%`,
     },
   ]
 
@@ -242,7 +266,10 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         <table className="w-full text-sm h-full">
           <thead>
@@ -253,6 +280,9 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
               </th>
               <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
                 Last 30
+              </th>
+              <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
+                {stats.twoYearsAgoLabel}
               </th>
               <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
                 {stats.lastYearLabel}
@@ -280,6 +310,9 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: Alco
                 </td>
                 <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.last30 || '-'}
+                </td>
+                <td className="px-2 text-center text-gray-900 text-xs align-middle">
+                  {row.twoYearsAgo || '-'}
                 </td>
                 <td className="px-2 text-center text-gray-900 text-xs align-middle">
                   {row.lastYear || '-'}

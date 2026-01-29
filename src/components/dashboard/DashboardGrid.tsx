@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Responsive } from 'react-grid-layout'
 import type { DailyEntryWithRelations, Profile } from '@/types/database'
-import type { DashboardWidgetConfig, WidgetKey, GridLayouts, GridLayoutItem } from './DashboardCustomizer'
-import { widgetLabels, defaultGridLayouts, getVisibleWidgets } from './DashboardCustomizer'
+import type { DashboardWidgetConfig, WidgetKey, GridLayouts, GridLayoutItem, WidgetTitleConfig } from './DashboardCustomizer'
+import { widgetLabels, defaultGridLayouts, getVisibleWidgets, defaultWidgetTitles } from './DashboardCustomizer'
 
 import { MoodChart } from './MoodChart'
 import { WorkLocationChart } from './WorkLocationChart'
@@ -73,8 +73,8 @@ function toRGLLayouts(gridLayouts: GridLayouts, visibleWidgets: WidgetKey[]): La
         y: item.y,
         w: item.w,
         h: item.h,
-        minW: item.minW || 2,
-        minH: item.minH || 2,
+        minW: item.minW || 1,
+        minH: item.minH || 1,
       }
     })
   }
@@ -153,32 +153,39 @@ export function DashboardGrid({
     [config.gridLayouts, onLayoutChange]
   )
 
+  const getWidgetTitle = (key: WidgetKey): WidgetTitleConfig => {
+    return config.widgetTitles?.[key] || defaultWidgetTitles[key]
+  }
+
   const renderWidget = (key: WidgetKey) => {
+    const titles = getWidgetTitle(key)
     switch (key) {
       case 'moodChart':
-        return <MoodChart entries={entries} />
+        return <MoodChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'workLocationChart':
-        return <WorkLocationChart entries={entries} />
+        return <WorkLocationChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'habitsGrid':
         return (
           <HabitsGrid
             entries={entries}
             showDays={7}
             selectedHabits={config.selectedHabits}
+            title={titles.title}
+            subtitle={titles.subtitle}
           />
         )
       case 'alcoholTracker':
-        return <AlcoholTracker entries={entries} />
+        return <AlcoholTracker entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholCalendar':
-        return <AlcoholCalendar entries={entries} />
+        return <AlcoholCalendar entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholStats':
-        return <AlcoholStats entries={entries} selectedMetrics={config.selectedAlcoholMetrics} />
+        return <AlcoholStats entries={entries} selectedMetrics={config.selectedAlcoholMetrics} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholByType':
-        return <AlcoholByType entries={entries} />
+        return <AlcoholByType entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'movementChart':
-        return <MovementChart entries={entries} />
+        return <MovementChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'eventsTracker':
-        return <EventsTracker entries={entries} selectedEvents={config.selectedEvents} />
+        return <EventsTracker entries={entries} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
       default:
         return null
     }

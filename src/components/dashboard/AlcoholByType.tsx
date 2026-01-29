@@ -7,6 +7,8 @@ import type { DailyEntryWithRelations } from '@/types/database'
 
 interface AlcoholByTypeProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
 const TYPE_COLORS = {
@@ -33,7 +35,7 @@ interface YearBreakdown {
   byType: Record<string, { count: number; percent: number }>
 }
 
-export function AlcoholByType({ entries }: AlcoholByTypeProps) {
+export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: AlcoholByTypeProps) {
   const data = useMemo(() => {
     // Group entries by year
     const byYear = new Map<number, DailyEntryWithRelations[]>()
@@ -88,7 +90,10 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
   if (entries.length === 0 || data.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
         </div>
@@ -98,7 +103,10 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
+      <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
 
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         {/* Stacked bars - fills available space */}

@@ -18,9 +18,11 @@ import { Footprints, TrendingUp, Trophy } from 'lucide-react'
 
 interface MovementChartProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
-export function MovementChart({ entries }: MovementChartProps) {
+export function MovementChart({ entries, title = 'Movement', subtitle }: MovementChartProps) {
   const stats = useMemo(() => calculateStepsStats(entries), [entries])
 
   const chartData = useMemo(() => {
@@ -48,10 +50,13 @@ export function MovementChart({ entries }: MovementChartProps) {
   if (stats.daysTracked === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <Footprints className="h-5 w-5 text-blue-500" />
-          Movement
-        </h3>
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Footprints className="h-5 w-5 text-blue-500" />
+            {title}
+          </h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No step data available
         </div>
@@ -61,10 +66,13 @@ export function MovementChart({ entries }: MovementChartProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <Footprints className="h-5 w-5 text-blue-500" />
-        Movement
-      </h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Footprints className="h-5 w-5 text-blue-500" />
+          {title}
+        </h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-3 scrollbar-hidden">
         {/* Key Metrics */}

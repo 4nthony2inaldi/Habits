@@ -11,9 +11,11 @@ interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
   overdueThreshold?: number
   selectedEvents?: EventType[]
+  title?: string
+  subtitle?: string
 }
 
-export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }: EventsTrackerProps) {
+export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
   const eventData = useMemo(() => {
     const allEvents = Object.keys(eventLabels) as EventType[]
     // Filter by selectedEvents if provided
@@ -75,7 +77,10 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
   if (eventData.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Days Since...</h3>
+        <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No life events recorded yet
         </div>
@@ -85,7 +90,10 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Days Since...</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
       <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">
         {eventData.map((item) => (
           <div

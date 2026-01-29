@@ -7,6 +7,8 @@ import { Home, Building, MapPin, Coffee } from 'lucide-react'
 
 interface WorkLocationChartProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
 const COLORS = {
@@ -30,7 +32,7 @@ const ICONS = {
   off: Coffee,
 }
 
-export function WorkLocationChart({ entries }: WorkLocationChartProps) {
+export function WorkLocationChart({ entries, title = 'Work Location', subtitle }: WorkLocationChartProps) {
   const data = useMemo(() => {
     const counts = { home: 0, office: 0, field: 0, off: 0 }
 
@@ -53,7 +55,10 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
   if (data.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
+        <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No work location data available
         </div>
@@ -63,7 +68,10 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-center gap-4">
         {/* Pie Chart */}
         <div className="flex-1 min-h-[100px] min-w-[100px] max-w-[150px] max-h-[150px] aspect-square">

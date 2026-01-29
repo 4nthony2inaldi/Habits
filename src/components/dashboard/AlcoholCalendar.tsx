@@ -8,6 +8,8 @@ import { calculateTotalDrinks } from '@/lib/utils/calculations'
 
 interface AlcoholCalendarProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -32,7 +34,7 @@ interface MonthData {
   monthTotal: number
 }
 
-export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
+export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: AlcoholCalendarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [columns, setColumns] = useState(4)
 
@@ -142,7 +144,10 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
   if (entries.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
         </div>
@@ -217,7 +222,10 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
 
       {/* Responsive grid - fills available space */}
       <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar-hidden">

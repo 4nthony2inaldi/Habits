@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { Settings2, X, Check, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Settings2, X, Check, Loader2, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
 import type { Profile, HabitType, EventType } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
 
@@ -95,6 +95,14 @@ export const alcoholMetricLabels: Record<AlcoholMetricType, string> = {
 
 const allAlcoholMetrics = Object.keys(alcoholMetricLabels) as AlcoholMetricType[]
 
+// Widget title configuration
+export interface WidgetTitleConfig {
+  title: string
+  subtitle?: string
+}
+
+export type WidgetTitles = Record<WidgetKey, WidgetTitleConfig>
+
 export interface DashboardWidgetConfig {
   moodChart: WidgetSettings
   workLocationChart: WidgetSettings
@@ -110,9 +118,10 @@ export interface DashboardWidgetConfig {
   selectedAlcoholMetrics: AlcoholMetricType[]
   kpiVisibility: KpiVisibility
   gridLayouts: GridLayouts
+  widgetTitles: WidgetTitles
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts' | 'widgetTitles'>
 export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
@@ -124,40 +133,54 @@ const defaultKpiVisibility: KpiVisibility = {
   busyKpi: true,
 }
 
+// Default widget titles
+export const defaultWidgetTitles: WidgetTitles = {
+  moodChart: { title: 'Mood Over Time' },
+  workLocationChart: { title: 'Work Location' },
+  habitsGrid: { title: 'Healthy Habits' },
+  alcoholTracker: { title: 'Drinking Trends' },
+  alcoholCalendar: { title: 'When Drinking' },
+  alcoholStats: { title: 'How Much Drinking' },
+  alcoholByType: { title: 'What Drinking' },
+  movementChart: { title: 'Movement' },
+  eventsTracker: { title: 'Life Events' },
+}
+
 // Default grid layouts for different breakpoints (12 column grid)
+// No minimum constraints - widgets can be any size the grid allows
 export const defaultGridLayouts: GridLayouts = {
   lg: {
-    moodChart: { x: 0, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
-    workLocationChart: { x: 6, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
-    habitsGrid: { x: 0, y: 4, w: 12, h: 5, minW: 6, minH: 4 },
-    alcoholTracker: { x: 0, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
-    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
-    alcoholStats: { x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-    alcoholByType: { x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-    movementChart: { x: 0, y: 20, w: 6, h: 4, minW: 4, minH: 3 },
-    eventsTracker: { x: 6, y: 20, w: 6, h: 6, minW: 4, minH: 4 },
+    moodChart: { x: 0, y: 0, w: 6, h: 4 },
+    workLocationChart: { x: 6, y: 0, w: 6, h: 4 },
+    habitsGrid: { x: 0, y: 4, w: 12, h: 5 },
+    alcoholTracker: { x: 0, y: 9, w: 6, h: 5 },
+    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5 },
+    alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
+    alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
+    movementChart: { x: 0, y: 20, w: 6, h: 4 },
+    eventsTracker: { x: 6, y: 20, w: 6, h: 6 },
   },
   md: {
-    moodChart: { x: 0, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
-    workLocationChart: { x: 6, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
-    habitsGrid: { x: 0, y: 4, w: 12, h: 5, minW: 6, minH: 4 },
-    alcoholTracker: { x: 0, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
-    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
-    alcoholStats: { x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-    alcoholByType: { x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
-    movementChart: { x: 0, y: 20, w: 6, h: 4, minW: 4, minH: 3 },
-    eventsTracker: { x: 6, y: 20, w: 6, h: 6, minW: 4, minH: 4 },
+    moodChart: { x: 0, y: 0, w: 6, h: 4 },
+    workLocationChart: { x: 6, y: 0, w: 6, h: 4 },
+    habitsGrid: { x: 0, y: 4, w: 12, h: 5 },
+    alcoholTracker: { x: 0, y: 9, w: 6, h: 5 },
+    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5 },
+    alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
+    alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
+    movementChart: { x: 0, y: 20, w: 6, h: 4 },
+    eventsTracker: { x: 6, y: 20, w: 6, h: 6 },
   },
   sm: {
-    moodChart: { x: 0, y: 0, w: 12, h: 4, minW: 6, minH: 3 },
-    workLocationChart: { x: 0, y: 4, w: 12, h: 4, minW: 6, minH: 3 },
-    habitsGrid: { x: 0, y: 8, w: 12, h: 5, minW: 6, minH: 4 },
-    alcoholTracker: { x: 0, y: 13, w: 12, h: 5, minW: 6, minH: 4 },
-    alcoholCalendar: { x: 0, y: 18, w: 12, h: 5, minW: 6, minH: 4 },
-    alcoholStats: { x: 0, y: 23, w: 12, h: 6, minW: 6, minH: 4 },
-    alcoholByType: { x: 0, y: 29, w: 12, h: 6, minW: 6, minH: 4 },
-    movementChart: { x: 0, y: 35, w: 12, h: 4, minW: 6, minH: 3 },
-    eventsTracker: { x: 0, y: 39, w: 12, h: 6, minW: 6, minH: 4 },
+    moodChart: { x: 0, y: 0, w: 12, h: 4 },
+    workLocationChart: { x: 0, y: 4, w: 12, h: 4 },
+    habitsGrid: { x: 0, y: 8, w: 12, h: 5 },
+    alcoholTracker: { x: 0, y: 13, w: 12, h: 5 },
+    alcoholCalendar: { x: 0, y: 18, w: 12, h: 5 },
+    alcoholStats: { x: 0, y: 23, w: 12, h: 6 },
+    alcoholByType: { x: 0, y: 29, w: 12, h: 6 },
+    movementChart: { x: 0, y: 35, w: 12, h: 4 },
+    eventsTracker: { x: 0, y: 39, w: 12, h: 6 },
   },
 }
 
@@ -176,6 +199,7 @@ const defaultConfig: DashboardWidgetConfig = {
   selectedAlcoholMetrics: allAlcoholMetrics,
   kpiVisibility: defaultKpiVisibility,
   gridLayouts: defaultGridLayouts,
+  widgetTitles: defaultWidgetTitles,
 }
 
 const kpiLabels: Record<KpiKey, string> = {
@@ -213,6 +237,7 @@ export function DashboardCustomizer({
   const [habitsExpanded, setHabitsExpanded] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const [alcoholStatsExpanded, setAlcoholStatsExpanded] = useState(false)
+  const [titleEditingWidget, setTitleEditingWidget] = useState<WidgetKey | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -272,6 +297,16 @@ export function DashboardCustomizer({
       selectedAlcoholMetrics: prev.selectedAlcoholMetrics.includes(metric)
         ? prev.selectedAlcoholMetrics.filter((m) => m !== metric)
         : [...prev.selectedAlcoholMetrics, metric],
+    }))
+  }
+
+  const updateWidgetTitle = (key: WidgetKey, title: string, subtitle?: string) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      widgetTitles: {
+        ...prev.widgetTitles,
+        [key]: { title, subtitle },
+      },
     }))
   }
 
@@ -395,6 +430,19 @@ export function DashboardCustomizer({
                       </span>
                     )}
 
+                    {/* Edit title button */}
+                    <button
+                      type="button"
+                      onClick={() => setTitleEditingWidget(titleEditingWidget === key ? null : key)}
+                      className={cn(
+                        'p-1 rounded hover:bg-gray-200 flex-shrink-0',
+                        titleEditingWidget === key && 'bg-gray-200'
+                      )}
+                      title="Edit title"
+                    >
+                      <Pencil className="h-3 w-3 text-gray-500" />
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => toggleWidget(key)}
@@ -411,6 +459,32 @@ export function DashboardCustomizer({
                       />
                     </button>
                   </div>
+
+                  {/* Title editing */}
+                  {titleEditingWidget === key && (
+                    <div className="ml-4 mt-1 p-2 bg-blue-50 rounded-lg space-y-2">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Title</label>
+                        <input
+                          type="text"
+                          value={localConfig.widgetTitles[key]?.title || ''}
+                          onChange={(e) => updateWidgetTitle(key, e.target.value, localConfig.widgetTitles[key]?.subtitle)}
+                          className="w-full mt-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          placeholder={defaultWidgetTitles[key].title}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Subtitle (optional)</label>
+                        <input
+                          type="text"
+                          value={localConfig.widgetTitles[key]?.subtitle || ''}
+                          onChange={(e) => updateWidgetTitle(key, localConfig.widgetTitles[key]?.title || defaultWidgetTitles[key].title, e.target.value || undefined)}
+                          className="w-full mt-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          placeholder="Optional subtitle"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Habits selection dropdown */}
                   {isHabits && habitsExpanded && localConfig[key].visible && (
@@ -598,6 +672,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Migrate gridLayouts or use defaults
   if ('gridLayouts' in config && typeof config.gridLayouts === 'object') {
     result.gridLayouts = { ...defaultGridLayouts, ...(config.gridLayouts as GridLayouts) }
+  }
+
+  // Migrate widgetTitles or use defaults
+  if ('widgetTitles' in config && typeof config.widgetTitles === 'object') {
+    result.widgetTitles = { ...defaultWidgetTitles, ...(config.widgetTitles as WidgetTitles) }
   }
 
   return result

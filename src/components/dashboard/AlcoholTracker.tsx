@@ -21,6 +21,8 @@ import { Beer, Wine, Martini, Droplet } from 'lucide-react'
 
 interface AlcoholTrackerProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
 const TYPE_COLORS = {
@@ -39,7 +41,7 @@ const TYPE_LABELS = {
   shots: 'Shots',
 }
 
-export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
+export function AlcoholTracker({ entries, title = 'Drinking Trends', subtitle }: AlcoholTrackerProps) {
   const stats = useMemo(() => calculateAlcoholStats(entries), [entries])
 
   const weeklyData = useMemo(() => {
@@ -82,7 +84,10 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Alcohol Tracking</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-4 scrollbar-hidden">
         {/* Key Metrics */}

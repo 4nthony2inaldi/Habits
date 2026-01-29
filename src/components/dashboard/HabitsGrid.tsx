@@ -18,9 +18,11 @@ interface HabitsGridProps {
   entries: DailyEntryWithRelations[]
   showDays?: number
   selectedHabits?: SelectableHabitType[]
+  title?: string
+  subtitle?: string
 }
 
-export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGridProps) {
+export function HabitsGrid({ entries, showDays = 7, selectedHabits, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
   const data = useMemo(() => {
     // Get last N days
     const dates: string[] = []
@@ -132,7 +134,10 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Healthy Habits</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         <table className="w-full h-full">
           <thead>

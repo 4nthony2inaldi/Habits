@@ -15,9 +15,11 @@ import type { DailyEntryWithRelations } from '@/types/database'
 
 interface MoodChartProps {
   entries: DailyEntryWithRelations[]
+  title?: string
+  subtitle?: string
 }
 
-export function MoodChart({ entries }: MoodChartProps) {
+export function MoodChart({ entries, title = 'Mood Over Time', subtitle }: MoodChartProps) {
   const chartData = useMemo(() => {
     return [...entries]
       .filter((e) => e.mood_score !== null)
@@ -32,7 +34,10 @@ export function MoodChart({ entries }: MoodChartProps) {
   if (chartData.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
+        <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No mood data available for this period
         </div>
@@ -42,7 +47,10 @@ export function MoodChart({ entries }: MoodChartProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
+      <div className="mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
