@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { subDays } from 'date-fns'
+import { subDays, startOfYear } from 'date-fns'
 import { useEntries } from '@/lib/hooks/useEntries'
 import { useStats } from '@/lib/hooks/useStats'
 import { formatDateForInput } from '@/lib/utils/dates'
@@ -23,7 +23,7 @@ interface DashboardClientProps {
 export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [selectedUserId, setSelectedUserId] = useState(currentUser.id)
   const [dateRange, setDateRange] = useState({
-    start: subDays(new Date(), 30),
+    start: startOfYear(new Date()),
     end: subDays(new Date(), 1),
   })
   const [widgetConfig, setWidgetConfig] = useState<DashboardWidgetConfig>(() =>
@@ -34,6 +34,12 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     userId: selectedUserId,
     startDate: formatDateForInput(dateRange.start),
     endDate: formatDateForInput(dateRange.end),
+  })
+
+  // Fetch all entries for EventsTracker (Days Since widget should always use all-time data)
+  const { data: allEntries } = useEntries({
+    userId: selectedUserId,
+    // No date filters - get all entries
   })
 
   const stats = useStats(entries)
@@ -114,6 +120,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
           {/* Draggable Widget Grid */}
           <DashboardGrid
             entries={entries || []}
+            allEntries={allEntries || []}
             config={widgetConfig}
             profile={currentUser}
             onLayoutChange={handleLayoutChange}

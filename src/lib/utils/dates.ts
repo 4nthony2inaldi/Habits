@@ -102,6 +102,11 @@ export function getPresetDateRanges(): DateRange[] {
       start: startOfYear(subDays(startOfYear(today), 1)),
       end: endOfYear(subDays(startOfYear(today), 1)),
     },
+    {
+      label: 'All Time',
+      start: new Date(2020, 0, 1), // Jan 1, 2020 as a reasonable "all time" start
+      end: yesterday,
+    },
   ]
 }
 
