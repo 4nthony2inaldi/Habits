@@ -30,7 +30,7 @@ const shortEventLabels: Record<EventType, string> = {
   diner: 'Diner',
   ice_cream: 'Ice Cream',
   park: 'Park',
-  guys_night: "Guys' Night",
+  guys_night: 'Saw Friends',
   pto: 'PTO',
 }
 
