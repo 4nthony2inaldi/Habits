@@ -9,6 +9,7 @@ import { widgetLabels, defaultGridLayouts, getVisibleWidgets, defaultWidgetTitle
 import { MoodChart } from './MoodChart'
 import { WorkLocationChart } from './WorkLocationChart'
 import { HabitsGrid } from './HabitsGrid'
+import { HabitsScore } from './HabitsScore'
 import { AlcoholTracker } from './AlcoholTracker'
 import { AlcoholCalendar } from './AlcoholCalendar'
 import { AlcoholStats } from './AlcoholStats'
@@ -172,6 +173,16 @@ export function DashboardGrid({
           <HabitsGrid
             entries={entries}
             showDays={7}
+            selectedHabits={config.selectedHabits}
+            title={titles.title}
+            subtitle={titles.subtitle}
+          />
+        )
+      case 'habitsScore':
+        // Use allEntries so score is always based on last 7 days regardless of date filter
+        return (
+          <HabitsScore
+            entries={allEntries}
             selectedHabits={config.selectedHabits}
             title={titles.title}
             subtitle={titles.subtitle}

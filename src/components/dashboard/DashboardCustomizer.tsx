@@ -107,6 +107,7 @@ export interface DashboardWidgetConfig {
   moodChart: WidgetSettings
   workLocationChart: WidgetSettings
   habitsGrid: WidgetSettings
+  habitsScore: WidgetSettings
   alcoholTracker: WidgetSettings
   alcoholCalendar: WidgetSettings
   alcoholStats: WidgetSettings
@@ -138,6 +139,7 @@ export const defaultWidgetTitles: WidgetTitles = {
   moodChart: { title: 'Mood Over Time' },
   workLocationChart: { title: 'Work Location' },
   habitsGrid: { title: 'Healthy Habits' },
+  habitsScore: { title: 'Habits Score', subtitle: 'Last 7 days' },
   alcoholTracker: { title: 'Drinking Trends' },
   alcoholCalendar: { title: 'When Drinking' },
   alcoholStats: { title: 'How Much Drinking' },
@@ -152,7 +154,8 @@ export const defaultGridLayouts: GridLayouts = {
   lg: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
     workLocationChart: { x: 6, y: 0, w: 6, h: 4 },
-    habitsGrid: { x: 0, y: 4, w: 12, h: 5 },
+    habitsGrid: { x: 0, y: 4, w: 9, h: 5 },
+    habitsScore: { x: 9, y: 4, w: 3, h: 5 },
     alcoholTracker: { x: 0, y: 9, w: 6, h: 5 },
     alcoholCalendar: { x: 6, y: 9, w: 6, h: 5 },
     alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
@@ -163,7 +166,8 @@ export const defaultGridLayouts: GridLayouts = {
   md: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
     workLocationChart: { x: 6, y: 0, w: 6, h: 4 },
-    habitsGrid: { x: 0, y: 4, w: 12, h: 5 },
+    habitsGrid: { x: 0, y: 4, w: 9, h: 5 },
+    habitsScore: { x: 9, y: 4, w: 3, h: 5 },
     alcoholTracker: { x: 0, y: 9, w: 6, h: 5 },
     alcoholCalendar: { x: 6, y: 9, w: 6, h: 5 },
     alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
@@ -175,12 +179,13 @@ export const defaultGridLayouts: GridLayouts = {
     moodChart: { x: 0, y: 0, w: 12, h: 4 },
     workLocationChart: { x: 0, y: 4, w: 12, h: 4 },
     habitsGrid: { x: 0, y: 8, w: 12, h: 5 },
-    alcoholTracker: { x: 0, y: 13, w: 12, h: 5 },
-    alcoholCalendar: { x: 0, y: 18, w: 12, h: 5 },
-    alcoholStats: { x: 0, y: 23, w: 12, h: 6 },
-    alcoholByType: { x: 0, y: 29, w: 12, h: 6 },
-    movementChart: { x: 0, y: 35, w: 12, h: 4 },
-    eventsTracker: { x: 0, y: 39, w: 12, h: 6 },
+    habitsScore: { x: 0, y: 13, w: 12, h: 4 },
+    alcoholTracker: { x: 0, y: 17, w: 12, h: 5 },
+    alcoholCalendar: { x: 0, y: 22, w: 12, h: 5 },
+    alcoholStats: { x: 0, y: 27, w: 12, h: 6 },
+    alcoholByType: { x: 0, y: 33, w: 12, h: 6 },
+    movementChart: { x: 0, y: 39, w: 12, h: 4 },
+    eventsTracker: { x: 0, y: 43, w: 12, h: 6 },
   },
 }
 
@@ -188,6 +193,7 @@ const defaultConfig: DashboardWidgetConfig = {
   moodChart: { visible: true },
   workLocationChart: { visible: true },
   habitsGrid: { visible: true },
+  habitsScore: { visible: true },
   alcoholTracker: { visible: true },
   alcoholCalendar: { visible: true },
   alcoholStats: { visible: true },
@@ -212,6 +218,7 @@ export const widgetLabels: Record<WidgetKey, string> = {
   moodChart: 'Mood Chart',
   workLocationChart: 'Work Location',
   habitsGrid: 'Habits Grid',
+  habitsScore: 'Habits Score',
   alcoholTracker: 'Alcohol Tracker',
   alcoholCalendar: 'When Drinking',
   alcoholStats: 'How Much Drinking',
