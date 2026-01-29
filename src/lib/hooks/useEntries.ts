@@ -104,6 +104,11 @@ export function useCreateEntry() {
       userId: string
       data: DailyEntryFormData
     }) => {
+      // Calculate aggregate wine and liquor from detailed fields (for backwards compatibility)
+      const wineTotal = (data.wine_red || 0) + (data.wine_white || 0) + (data.wine_sparkling || 0)
+      const liquorTotal = (data.liquor_vodka || 0) + (data.liquor_gin || 0) + (data.liquor_tequila || 0) +
+        (data.liquor_whiskey || 0) + (data.liquor_rum || 0) + (data.liquor_other || 0)
+
       // First, create or update the daily entry
       const entryData: DailyEntryInsert = {
         user_id: userId,
@@ -112,13 +117,29 @@ export function useCreateEntry() {
         work_location: data.work_location,
         beers: data.beers,
         seltzers: data.seltzers,
-        wine: data.wine,
-        liquor: data.liquor,
+        // Use aggregate if detailed fields are empty, otherwise calculate from detailed
+        wine: wineTotal > 0 ? wineTotal : (data.wine || 0),
+        liquor: liquorTotal > 0 ? liquorTotal : (data.liquor || 0),
         shots: data.shots,
+        // Detailed wine breakdown
+        wine_red: data.wine_red,
+        wine_white: data.wine_white,
+        wine_sparkling: data.wine_sparkling,
+        // Detailed liquor breakdown
+        liquor_vodka: data.liquor_vodka,
+        liquor_gin: data.liquor_gin,
+        liquor_tequila: data.liquor_tequila,
+        liquor_whiskey: data.liquor_whiskey,
+        liquor_rum: data.liquor_rum,
+        liquor_other: data.liquor_other,
+        // Other metrics
         coffee: data.coffee,
         steps: data.steps,
         screen_time: data.screen_time,
         sex: data.sex,
+        // Meal tracking
+        lunch_location: data.lunch_location,
+        dinner_location: data.dinner_location,
         city_wake: data.city_wake,
         miles_wake: data.miles_wake,
         city_noon: data.city_noon,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -10,21 +10,69 @@ import { Select } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { HabitCheckboxGroup } from './HabitCheckboxGroup'
-import { EventCheckboxGroup } from './EventCheckboxGroup'
+import { FormSection } from './FormSection'
 import { useCreateEntry, useEntryByDate } from '@/lib/hooks/useEntries'
-import { type DailyEntryFormData, workLocationLabels } from '@/types/forms'
+import { type DailyEntryFormData, workLocationLabels, mealLocationLabels, habitLabels, eventLabels } from '@/types/forms'
+import type { MealLocation } from '@/types/database'
 import { getYesterdayString, formatDateForInput, isBeforeToday } from '@/lib/utils/dates'
 import type { Profile, HabitType, EventType } from '@/types/database'
-import { Smile, Briefcase, Beer, Coffee, Footprints, MapPin, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
+import {
+  Smile,
+  Sun,
+  Utensils,
+  Briefcase,
+  Wine,
+  Footprints,
+  Sparkles,
+  Theater,
+  Plane,
+  FileText,
+  Users,
+  Heart,
+} from 'lucide-react'
 
 interface DailyEntryFormProps {
   profile: Profile
 }
 
+// Checkbox component for habits and events
+function CheckboxItem({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors',
+        checked ? 'bg-purple-50 text-purple-700' : 'hover:bg-gray-50'
+      )}
+    >
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+      />
+      <span className="text-sm">{label}</span>
+    </label>
+  )
+}
+
 export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(getYesterdayString())
+  const [openSection, setOpenSection] = useState<string | null>('mood')
+
   const { data: existingEntry, isLoading: loadingEntry } = useEntryByDate(
     profile.id,
     selectedDate
@@ -49,10 +97,25 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       wine: 0,
       liquor: 0,
       shots: 0,
+      // Detailed wine breakdown
+      wine_red: 0,
+      wine_white: 0,
+      wine_sparkling: 0,
+      // Detailed liquor breakdown
+      liquor_vodka: 0,
+      liquor_gin: 0,
+      liquor_tequila: 0,
+      liquor_whiskey: 0,
+      liquor_rum: 0,
+      liquor_other: 0,
+      // Other metrics
       coffee: 0,
       steps: null,
       screen_time: null,
       sex: 0,
+      // Meal tracking
+      lunch_location: null,
+      dinner_location: null,
       city_wake: null,
       miles_wake: null,
       city_noon: null,
@@ -66,6 +129,9 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
     },
   })
 
+  // Watch values for summaries
+  const watchedValues = watch()
+
   // Load existing entry data when date changes
   useEffect(() => {
     if (existingEntry) {
@@ -78,10 +144,25 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         wine: existingEntry.wine,
         liquor: existingEntry.liquor,
         shots: existingEntry.shots,
+        // Detailed wine breakdown
+        wine_red: existingEntry.wine_red || 0,
+        wine_white: existingEntry.wine_white || 0,
+        wine_sparkling: existingEntry.wine_sparkling || 0,
+        // Detailed liquor breakdown
+        liquor_vodka: existingEntry.liquor_vodka || 0,
+        liquor_gin: existingEntry.liquor_gin || 0,
+        liquor_tequila: existingEntry.liquor_tequila || 0,
+        liquor_whiskey: existingEntry.liquor_whiskey || 0,
+        liquor_rum: existingEntry.liquor_rum || 0,
+        liquor_other: existingEntry.liquor_other || 0,
+        // Other metrics
         coffee: existingEntry.coffee,
         steps: existingEntry.steps,
         screen_time: existingEntry.screen_time,
         sex: existingEntry.sex,
+        // Meal tracking
+        lunch_location: existingEntry.lunch_location,
+        dinner_location: existingEntry.dinner_location,
         city_wake: existingEntry.city_wake,
         miles_wake: existingEntry.miles_wake,
         city_noon: existingEntry.city_noon,
@@ -103,10 +184,25 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         wine: 0,
         liquor: 0,
         shots: 0,
+        // Detailed wine breakdown
+        wine_red: 0,
+        wine_white: 0,
+        wine_sparkling: 0,
+        // Detailed liquor breakdown
+        liquor_vodka: 0,
+        liquor_gin: 0,
+        liquor_tequila: 0,
+        liquor_whiskey: 0,
+        liquor_rum: 0,
+        liquor_other: 0,
+        // Other metrics
         coffee: 0,
         steps: null,
         screen_time: null,
         sex: 0,
+        // Meal tracking
+        lunch_location: null,
+        dinner_location: null,
         city_wake: null,
         miles_wake: null,
         city_noon: null,
@@ -141,6 +237,10 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
     }
   }
 
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section)
+  }
+
   const hiddenFields = profile.hidden_fields || []
   const showLocationTracking = !hiddenFields.includes('location_tracking')
 
@@ -149,63 +249,342 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   yesterday.setDate(yesterday.getDate() - 1)
   const maxDate = formatDateForInput(yesterday)
 
+  // Generate section summaries
+  const summaries = useMemo(() => {
+    const habits = watchedValues.healthy_habits || []
+    const events = watchedValues.life_events || []
+
+    // Calculate total drinks including detailed breakdowns
+    const wineTotal = (watchedValues.wine_red || 0) + (watchedValues.wine_white || 0) + (watchedValues.wine_sparkling || 0)
+    const liquorTotal = (watchedValues.liquor_vodka || 0) + (watchedValues.liquor_gin || 0) +
+      (watchedValues.liquor_tequila || 0) + (watchedValues.liquor_whiskey || 0) +
+      (watchedValues.liquor_rum || 0) + (watchedValues.liquor_other || 0)
+    const totalDrinks = (watchedValues.beers || 0) + (watchedValues.seltzers || 0) +
+      (wineTotal > 0 ? wineTotal : (watchedValues.wine || 0)) +
+      (liquorTotal > 0 ? liquorTotal : (watchedValues.liquor || 0)) +
+      (watchedValues.shots || 0)
+
+    // Morning habits
+    const morningHabits = ['sleep_8hrs', 'breakfast', 'vitamin'].filter(h => habits.includes(h as HabitType))
+    const morningCoffee = watchedValues.coffee || 0
+
+    // Meals - include meal locations and healthy eating
+    const mealParts: string[] = []
+    if (watchedValues.lunch_location) mealParts.push(`Lunch ${watchedValues.lunch_location === 'home' ? 'home' : 'out'}`)
+    if (watchedValues.dinner_location) mealParts.push(`Dinner ${watchedValues.dinner_location === 'home' ? 'home' : 'out'}`)
+    if (habits.includes('ate_fruit')) mealParts.push('Fruit')
+    if (habits.includes('ate_vegetables')) mealParts.push('Veggies')
+
+    // Movement
+    const steps = watchedValues.steps
+    const hasExercise = habits.includes('exercise')
+    const playedSport = events.includes('played_sport')
+
+    // Self care events
+    const selfCareEvents = ['haircut', 'massage', 'facial', 'pedicure', 'manicure', 'other_selfcare', 'doctor', 'dentist']
+      .filter(e => events.includes(e as EventType))
+
+    // Entertainment events
+    const entertainmentEvents = ['concert', 'stage_production', 'movies', 'museum', 'attended_sport', 'diner', 'ice_cream', 'park', 'guys_night']
+      .filter(e => events.includes(e as EventType))
+
+    // Travel
+    const hasFlight = events.includes('flight')
+    const hasTrain = events.includes('train')
+    const hasTravel = hasFlight || hasTrain || watchedValues.city_wake || watchedValues.city_noon || watchedValues.city_sleep
+
+    return {
+      mood: watchedValues.mood_score !== null && watchedValues.mood_score !== undefined
+        ? `Mood: ${watchedValues.mood_score}/10`
+        : undefined,
+      morning: morningHabits.length > 0 || morningCoffee > 0
+        ? `${morningHabits.length} habits${morningCoffee > 0 ? `, ${morningCoffee} coffee` : ''}`
+        : undefined,
+      meals: mealParts.length > 0 ? mealParts.join(', ') : undefined,
+      work: watchedValues.work_location
+        ? workLocationLabels[watchedValues.work_location]
+        : undefined,
+      drinks: totalDrinks > 0 ? `${totalDrinks} drinks` : undefined,
+      movement: steps || hasExercise || playedSport
+        ? [steps && `${steps.toLocaleString()} steps`, hasExercise && 'Exercise', playedSport && 'Sport'].filter(Boolean).join(', ')
+        : undefined,
+      selfCare: selfCareEvents.length > 0 ? `${selfCareEvents.length} activities` : undefined,
+      events: entertainmentEvents.length > 0 ? `${entertainmentEvents.length} events` : undefined,
+      travel: hasTravel ? (hasFlight ? 'Flight' : hasTrain ? 'Train' : 'Away') : undefined,
+      notes: watchedValues.notes ? 'Has notes' : undefined,
+    }
+  }, [watchedValues])
+
+  // Helper to toggle habit
+  const toggleHabit = (habit: HabitType, currentHabits: HabitType[]) => {
+    if (currentHabits.includes(habit)) {
+      return currentHabits.filter(h => h !== habit)
+    }
+    return [...currentHabits, habit]
+  }
+
+  // Helper to toggle event
+  const toggleEvent = (event: EventType, currentEvents: EventType[]) => {
+    if (currentEvents.includes(event)) {
+      return currentEvents.filter(e => e !== event)
+    }
+    return [...currentEvents, event]
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Date Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Entry Date</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="entry_date">Date (entries are always for past days)</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 max-w-2xl mx-auto">
+      {/* Date Selection - always visible */}
+      <Card className="border-purple-200 bg-purple-50/50">
+        <CardContent className="py-3">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="entry_date" className="whitespace-nowrap font-medium">
+              Entry for:
+            </Label>
             <Input
               id="entry_date"
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
               max={maxDate}
-              className="max-w-xs"
+              className="max-w-[180px] bg-white"
             />
             {existingEntry && (
-              <p className="text-sm text-amber-600">
-                An entry exists for this date. Your changes will update it.
-              </p>
-            )}
-            {errors.entry_date && (
-              <p className="text-sm text-red-500">{errors.entry_date.message}</p>
+              <span className="text-sm text-amber-600 font-medium">
+                Updating existing
+              </span>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Mood & Work */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Smile className="h-5 w-5 text-yellow-500" />
-            Mood & Work
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Notes Section - at top */}
+      <FormSection
+        title="Notes"
+        subtitle="Remember the day"
+        icon={<FileText className="h-5 w-5" />}
+        isOpen={openSection === 'notes'}
+        onToggle={() => toggleSection('notes')}
+        summary={summaries.notes}
+      >
+        <Textarea
+          placeholder="Notes to remember the day..."
+          {...register('notes')}
+          className="min-h-[80px]"
+        />
+      </FormSection>
+
+      {/* Mood Section */}
+      <FormSection
+        title="Mood"
+        icon={<Smile className="h-5 w-5 text-yellow-500" />}
+        isOpen={openSection === 'mood'}
+        onToggle={() => toggleSection('mood')}
+        summary={summaries.mood}
+      >
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Mood Score (0-10)</Label>
+            <Label>How was your day? (0-10)</Label>
             <Controller
               name="mood_score"
               control={control}
               render={({ field }) => (
-                <Slider
-                  min={0}
-                  max={10}
-                  value={field.value ?? 5}
-                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                />
+                <div className="flex items-center gap-4">
+                  <Slider
+                    min={0}
+                    max={10}
+                    value={field.value ?? 5}
+                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className="text-2xl font-bold text-purple-600 w-8 text-center">
+                    {field.value ?? 5}
+                  </span>
+                </div>
               )}
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Controller
+              name="healthy_habits"
+              control={control}
+              render={({ field }) => (
+                <CheckboxItem
+                  id="saw_friends"
+                  label="Saw Friends"
+                  checked={field.value.includes('family_interaction')}
+                  onChange={() => field.onChange(toggleHabit('family_interaction', field.value as HabitType[]))}
+                />
+              )}
+            />
+            <Controller
+              name="sex"
+              control={control}
+              render={({ field }) => (
+                <CheckboxItem
+                  id="had_sex"
+                  label="Had Sex"
+                  checked={(field.value || 0) > 0}
+                  onChange={(checked) => field.onChange(checked ? 1 : 0)}
+                />
+              )}
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      {/* Morning Section */}
+      <FormSection
+        title="Morning"
+        subtitle="Blank if none"
+        icon={<Sun className="h-5 w-5 text-orange-400" />}
+        isOpen={openSection === 'morning'}
+        onToggle={() => toggleSection('morning')}
+        summary={summaries.morning}
+      >
+        <div className="space-y-4">
+          <Controller
+            name="healthy_habits"
+            control={control}
+            render={({ field }) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <CheckboxItem
+                  id="sleep_8hrs"
+                  label="8+ hrs Sleep"
+                  checked={field.value.includes('sleep_8hrs')}
+                  onChange={() => field.onChange(toggleHabit('sleep_8hrs', field.value as HabitType[]))}
+                />
+                <CheckboxItem
+                  id="breakfast"
+                  label="Breakfast"
+                  checked={field.value.includes('breakfast')}
+                  onChange={() => field.onChange(toggleHabit('breakfast', field.value as HabitType[]))}
+                />
+                <CheckboxItem
+                  id="vitamin"
+                  label="Vitamin"
+                  checked={field.value.includes('vitamin')}
+                  onChange={() => field.onChange(toggleHabit('vitamin', field.value as HabitType[]))}
+                />
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="coffee" className="text-sm whitespace-nowrap">Coffee:</Label>
+                  <Input
+                    id="coffee"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('coffee', { valueAsNumber: true })}
+                    className="w-16"
+                  />
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      </FormSection>
+
+      {/* Meals Section */}
+      <FormSection
+        title="Meals"
+        subtitle="Blank if none"
+        icon={<Utensils className="h-5 w-5 text-green-500" />}
+        isOpen={openSection === 'meals'}
+        onToggle={() => toggleSection('meals')}
+        summary={summaries.meals}
+      >
+        <div className="space-y-4">
+          {/* Meal locations */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Lunch</Label>
+              <Controller
+                name="lunch_location"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  >
+                    <option value="">Skip...</option>
+                    {Object.entries(mealLocationLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dinner</Label>
+              <Controller
+                name="dinner_location"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  >
+                    <option value="">Skip...</option>
+                    {Object.entries(mealLocationLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Healthy eating checkboxes */}
+          <Controller
+            name="healthy_habits"
+            control={control}
+            render={({ field }) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t">
+                <CheckboxItem
+                  id="cooked_dinner"
+                  label="Cooked Dinner"
+                  checked={field.value.includes('cooked_dinner')}
+                  onChange={() => field.onChange(toggleHabit('cooked_dinner', field.value as HabitType[]))}
+                />
+                <CheckboxItem
+                  id="ate_fruit"
+                  label="Ate Fruit"
+                  checked={field.value.includes('ate_fruit')}
+                  onChange={() => field.onChange(toggleHabit('ate_fruit', field.value as HabitType[]))}
+                />
+                <CheckboxItem
+                  id="ate_vegetables"
+                  label="Ate Vegetables"
+                  checked={field.value.includes('ate_vegetables')}
+                  onChange={() => field.onChange(toggleHabit('ate_vegetables', field.value as HabitType[]))}
+                />
+                <CheckboxItem
+                  id="water_8cups"
+                  label="8+ Cups Water"
+                  checked={field.value.includes('water_8cups')}
+                  onChange={() => field.onChange(toggleHabit('water_8cups', field.value as HabitType[]))}
+                />
+              </div>
+            )}
+          />
+        </div>
+      </FormSection>
+
+      {/* Work Section */}
+      <FormSection
+        title="Work"
+        subtitle="Blank if off"
+        icon={<Briefcase className="h-5 w-5 text-blue-500" />}
+        isOpen={openSection === 'work'}
+        onToggle={() => toggleSection('work')}
+        summary={summaries.work}
+      >
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Work Location</Label>
+            <Label>Worked from?</Label>
             <Controller
               name="work_location"
               control={control}
@@ -224,22 +603,38 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               )}
             />
           </div>
-        </CardContent>
-      </Card>
+          <Controller
+            name="life_events"
+            control={control}
+            render={({ field }) => (
+              <div className="pt-6">
+                <CheckboxItem
+                  id="pto"
+                  label="Took PTO"
+                  checked={field.value.includes('pto')}
+                  onChange={() => field.onChange(toggleEvent('pto', field.value as EventType[]))}
+                />
+              </div>
+            )}
+          />
+        </div>
+      </FormSection>
 
-      {/* Alcohol Tracking */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Beer className="h-5 w-5 text-amber-500" />
-            Alcohol Tracking
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {/* Drinks Section */}
+      <FormSection
+        title="Drinks"
+        subtitle="Blank if none"
+        icon={<Wine className="h-5 w-5 text-red-500" />}
+        isOpen={openSection === 'drinks'}
+        onToggle={() => toggleSection('drinks')}
+        summary={summaries.drinks}
+      >
+        <div className="space-y-4">
+          {/* Simple drink types */}
+          <div className="grid grid-cols-3 gap-4">
             {!hiddenFields.includes('beers') && (
               <div className="space-y-2">
-                <Label htmlFor="beers">Beers (0-10)</Label>
+                <Label htmlFor="beers">Beer</Label>
                 <Input
                   id="beers"
                   type="number"
@@ -251,7 +646,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             )}
             {!hiddenFields.includes('seltzers') && (
               <div className="space-y-2">
-                <Label htmlFor="seltzers">Seltzers (0-10)</Label>
+                <Label htmlFor="seltzers">Seltzers</Label>
                 <Input
                   id="seltzers"
                   type="number"
@@ -261,33 +656,9 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 />
               </div>
             )}
-            {!hiddenFields.includes('wine') && (
-              <div className="space-y-2">
-                <Label htmlFor="wine">Wine (0-10)</Label>
-                <Input
-                  id="wine"
-                  type="number"
-                  min={0}
-                  max={10}
-                  {...register('wine', { valueAsNumber: true })}
-                />
-              </div>
-            )}
-            {!hiddenFields.includes('liquor') && (
-              <div className="space-y-2">
-                <Label htmlFor="liquor">Liquor drinks (0-10)</Label>
-                <Input
-                  id="liquor"
-                  type="number"
-                  min={0}
-                  max={10}
-                  {...register('liquor', { valueAsNumber: true })}
-                />
-              </div>
-            )}
             {!hiddenFields.includes('shots') && (
               <div className="space-y-2">
-                <Label htmlFor="shots">Shots (0-5)</Label>
+                <Label htmlFor="shots">Shots</Label>
                 <Input
                   id="shots"
                   type="number"
@@ -298,29 +669,128 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Other Metrics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Coffee className="h-5 w-5 text-brown-500" />
-            Other Metrics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="coffee">Coffee (0-5)</Label>
-              <Input
-                id="coffee"
-                type="number"
-                min={0}
-                max={5}
-                {...register('coffee', { valueAsNumber: true })}
-              />
+          {/* Wine breakdown */}
+          {!hiddenFields.includes('wine') && (
+            <div className="pt-3 border-t">
+              <Label className="text-sm font-medium text-gray-600 mb-2 block">Wine</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="wine_red" className="text-xs text-gray-500">Red</Label>
+                  <Input
+                    id="wine_red"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('wine_red', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="wine_white" className="text-xs text-gray-500">White</Label>
+                  <Input
+                    id="wine_white"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('wine_white', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="wine_sparkling" className="text-xs text-gray-500">Sparkling</Label>
+                  <Input
+                    id="wine_sparkling"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('wine_sparkling', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Cocktail/Liquor breakdown */}
+          {!hiddenFields.includes('liquor') && (
+            <div className="pt-3 border-t">
+              <Label className="text-sm font-medium text-gray-600 mb-2 block">Cocktails (by spirit)</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_vodka" className="text-xs text-gray-500">Vodka</Label>
+                  <Input
+                    id="liquor_vodka"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_vodka', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_gin" className="text-xs text-gray-500">Gin</Label>
+                  <Input
+                    id="liquor_gin"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_gin', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_tequila" className="text-xs text-gray-500">Tequila</Label>
+                  <Input
+                    id="liquor_tequila"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_tequila', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_whiskey" className="text-xs text-gray-500">Whiskey</Label>
+                  <Input
+                    id="liquor_whiskey"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_whiskey', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_rum" className="text-xs text-gray-500">Rum</Label>
+                  <Input
+                    id="liquor_rum"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_rum', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="liquor_other" className="text-xs text-gray-500">Other</Label>
+                  <Input
+                    id="liquor_other"
+                    type="number"
+                    min={0}
+                    max={10}
+                    {...register('liquor_other', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </FormSection>
+
+      {/* Movement Section */}
+      <FormSection
+        title="Movement"
+        subtitle="Blank if none"
+        icon={<Footprints className="h-5 w-5 text-blue-500" />}
+        isOpen={openSection === 'movement'}
+        onToggle={() => toggleSection('movement')}
+        summary={summaries.movement}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="steps">Steps</Label>
               <Input
@@ -331,144 +801,274 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 {...register('steps', { valueAsNumber: true })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="screen_time">Screen time (min)</Label>
-              <Input
-                id="screen_time"
-                type="number"
-                min={0}
-                placeholder="Minutes"
-                {...register('screen_time', { valueAsNumber: true })}
+            <Controller
+              name="healthy_habits"
+              control={control}
+              render={({ field }) => (
+                <div className="pt-6">
+                  <CheckboxItem
+                    id="exercise"
+                    label="Intentional Exercise"
+                    checked={field.value.includes('exercise')}
+                    onChange={() => field.onChange(toggleHabit('exercise', field.value as HabitType[]))}
+                  />
+                </div>
+              )}
+            />
+            <Controller
+              name="life_events"
+              control={control}
+              render={({ field }) => (
+                <div className="pt-6">
+                  <CheckboxItem
+                    id="played_sport"
+                    label="Played a Sport"
+                    checked={field.value.includes('played_sport')}
+                    onChange={() => field.onChange(toggleEvent('played_sport', field.value as EventType[]))}
+                  />
+                </div>
+              )}
+            />
+          </div>
+        </div>
+      </FormSection>
+
+      {/* Self Care Section */}
+      <FormSection
+        title="Self Care"
+        subtitle="Blank if none"
+        icon={<Sparkles className="h-5 w-5 text-pink-500" />}
+        isOpen={openSection === 'selfcare'}
+        onToggle={() => toggleSection('selfcare')}
+        summary={summaries.selfCare}
+      >
+        <Controller
+          name="life_events"
+          control={control}
+          render={({ field }) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <CheckboxItem
+                id="haircut"
+                label="Haircut"
+                checked={field.value.includes('haircut')}
+                onChange={() => field.onChange(toggleEvent('haircut', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="massage"
+                label="Massage"
+                checked={field.value.includes('massage')}
+                onChange={() => field.onChange(toggleEvent('massage', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="manicure"
+                label="Manicure"
+                checked={field.value.includes('manicure')}
+                onChange={() => field.onChange(toggleEvent('manicure', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="pedicure"
+                label="Pedicure"
+                checked={field.value.includes('pedicure')}
+                onChange={() => field.onChange(toggleEvent('pedicure', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="facial"
+                label="Facial"
+                checked={field.value.includes('facial')}
+                onChange={() => field.onChange(toggleEvent('facial', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="doctor"
+                label="Doctor"
+                checked={field.value.includes('doctor')}
+                onChange={() => field.onChange(toggleEvent('doctor', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="dentist"
+                label="Dentist"
+                checked={field.value.includes('dentist')}
+                onChange={() => field.onChange(toggleEvent('dentist', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="other_selfcare"
+                label="Other"
+                checked={field.value.includes('other_selfcare')}
+                onChange={() => field.onChange(toggleEvent('other_selfcare', field.value as EventType[]))}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sex">Sex (0-10)</Label>
-              <Input
-                id="sex"
-                type="number"
-                min={0}
-                max={10}
-                {...register('sex', { valueAsNumber: true })}
+          )}
+        />
+      </FormSection>
+
+      {/* Arts, Entertainment & Events */}
+      <FormSection
+        title="Arts, Entertainment & Events"
+        icon={<Theater className="h-5 w-5 text-purple-500" />}
+        isOpen={openSection === 'events'}
+        onToggle={() => toggleSection('events')}
+        summary={summaries.events}
+      >
+        <Controller
+          name="life_events"
+          control={control}
+          render={({ field }) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <CheckboxItem
+                id="concert"
+                label="Concert"
+                checked={field.value.includes('concert')}
+                onChange={() => field.onChange(toggleEvent('concert', field.value as EventType[]))}
               />
+              <CheckboxItem
+                id="stage_production"
+                label="Stage Play"
+                checked={field.value.includes('stage_production')}
+                onChange={() => field.onChange(toggleEvent('stage_production', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="attended_sport"
+                label="Sporting Event"
+                checked={field.value.includes('attended_sport')}
+                onChange={() => field.onChange(toggleEvent('attended_sport', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="movies"
+                label="Movies"
+                checked={field.value.includes('movies')}
+                onChange={() => field.onChange(toggleEvent('movies', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="museum"
+                label="Museum"
+                checked={field.value.includes('museum')}
+                onChange={() => field.onChange(toggleEvent('museum', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="park"
+                label="Park"
+                checked={field.value.includes('park')}
+                onChange={() => field.onChange(toggleEvent('park', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="diner"
+                label="Diner"
+                checked={field.value.includes('diner')}
+                onChange={() => field.onChange(toggleEvent('diner', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="ice_cream"
+                label="Ice Cream"
+                checked={field.value.includes('ice_cream')}
+                onChange={() => field.onChange(toggleEvent('ice_cream', field.value as EventType[]))}
+              />
+              <CheckboxItem
+                id="guys_night"
+                label="Guys Night"
+                checked={field.value.includes('guys_night')}
+                onChange={() => field.onChange(toggleEvent('guys_night', field.value as EventType[]))}
+              />
+            </div>
+          )}
+        />
+        <Controller
+          name="healthy_habits"
+          control={control}
+          render={({ field }) => (
+            <div className="mt-3 pt-3 border-t">
+              <CheckboxItem
+                id="read_5pages"
+                label="Read 5+ Pages"
+                checked={field.value.includes('read_5pages')}
+                onChange={() => field.onChange(toggleHabit('read_5pages', field.value as HabitType[]))}
+              />
+            </div>
+          )}
+        />
+      </FormSection>
+
+      {/* Travel Section */}
+      {showLocationTracking && (
+        <FormSection
+          title="Travel"
+          subtitle="Blank if N/A"
+          icon={<Plane className="h-5 w-5 text-sky-500" />}
+          isOpen={openSection === 'travel'}
+          onToggle={() => toggleSection('travel')}
+          summary={summaries.travel}
+        >
+          <div className="space-y-4">
+            <Controller
+              name="life_events"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-2">
+                  <CheckboxItem
+                    id="flight"
+                    label="Took a Flight"
+                    checked={field.value.includes('flight')}
+                    onChange={() => field.onChange(toggleEvent('flight', field.value as EventType[]))}
+                  />
+                  <CheckboxItem
+                    id="train"
+                    label="Took a Train"
+                    checked={field.value.includes('train')}
+                    onChange={() => field.onChange(toggleEvent('train', field.value as EventType[]))}
+                  />
+                </div>
+              )}
+            />
+
+            <div className="pt-3 border-t">
+              <Label className="text-sm font-medium text-gray-600 mb-3 block">Away from home city?</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">At Wake</Label>
+                  <Input placeholder="City" {...register('city_wake')} />
+                  <Input
+                    type="number"
+                    placeholder="Miles from home"
+                    {...register('miles_wake', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">At Noon</Label>
+                  <Input placeholder="City" {...register('city_noon')} />
+                  <Input
+                    type="number"
+                    placeholder="Miles from home"
+                    {...register('miles_noon', { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-500">At Sleep</Label>
+                  <Input placeholder="City" {...register('city_sleep')} />
+                  <Input
+                    type="number"
+                    placeholder="Miles from home"
+                    {...register('miles_sleep', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Location Tracking */}
-      {showLocationTracking && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-red-500" />
-              Location (optional)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-600">At Wake</h4>
-                <Input
-                  placeholder="City (blank = home)"
-                  {...register('city_wake')}
-                />
-                <Input
-                  type="number"
-                  placeholder="Miles from home"
-                  {...register('miles_wake', { valueAsNumber: true })}
-                />
-              </div>
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-600">At Noon</h4>
-                <Input
-                  placeholder="City (blank = home)"
-                  {...register('city_noon')}
-                />
-                <Input
-                  type="number"
-                  placeholder="Miles from home"
-                  {...register('miles_noon', { valueAsNumber: true })}
-                />
-              </div>
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-600">At Sleep</h4>
-                <Input
-                  placeholder="City (blank = home)"
-                  {...register('city_sleep')}
-                />
-                <Input
-                  type="number"
-                  placeholder="Miles from home"
-                  {...register('miles_sleep', { valueAsNumber: true })}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </FormSection>
       )}
 
-      {/* Healthy Habits */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-green-500" />
-            Daily Habits & Events
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Controller
-            name="healthy_habits"
-            control={control}
-            render={({ field }) => (
-              <HabitCheckboxGroup
-                selected={field.value as HabitType[]}
-                onChange={field.onChange}
-                hiddenFields={hiddenFields}
-              />
-            )}
-          />
-
-          <Controller
-            name="life_events"
-            control={control}
-            render={({ field }) => (
-              <EventCheckboxGroup
-                selected={field.value as EventType[]}
-                onChange={field.onChange}
-                hiddenFields={hiddenFields}
-              />
-            )}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Qualitative */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Reflections</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="best_part">Best part of your day</Label>
-            <Textarea
-              id="best_part"
-              placeholder="What was the highlight?"
-              {...register('best_part')}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes to remember the day</Label>
-            <Textarea
-              id="notes"
-              placeholder="Anything else you want to remember..."
-              {...register('notes')}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Best Part - simple text field */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <Label htmlFor="best_part" className="block mb-2 font-medium">
+          Best part of your day
+        </Label>
+        <Textarea
+          id="best_part"
+          placeholder="What was the highlight?"
+          {...register('best_part')}
+          className="min-h-[60px]"
+        />
+      </div>
 
       {/* Submit */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 pt-2">
         <Button
           type="submit"
           className="flex-1"

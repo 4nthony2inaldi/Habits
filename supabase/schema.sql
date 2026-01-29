@@ -87,18 +87,35 @@ CREATE TABLE IF NOT EXISTS daily_entries (
   mood_score SMALLINT CHECK (mood_score >= 0 AND mood_score <= 10),
   work_location TEXT CHECK (work_location IN ('home', 'office', 'field', 'off')),
 
-  -- Alcohol
+  -- Alcohol (aggregate fields for backwards compatibility)
   beers SMALLINT DEFAULT 0,
   seltzers SMALLINT DEFAULT 0,
   wine SMALLINT DEFAULT 0,
   liquor SMALLINT DEFAULT 0,
   shots SMALLINT DEFAULT 0,
 
+  -- Detailed wine breakdown (rolls up to 'wine')
+  wine_red SMALLINT DEFAULT 0,
+  wine_white SMALLINT DEFAULT 0,
+  wine_sparkling SMALLINT DEFAULT 0,
+
+  -- Detailed cocktail/liquor breakdown (rolls up to 'liquor')
+  liquor_vodka SMALLINT DEFAULT 0,
+  liquor_gin SMALLINT DEFAULT 0,
+  liquor_tequila SMALLINT DEFAULT 0,
+  liquor_whiskey SMALLINT DEFAULT 0,
+  liquor_rum SMALLINT DEFAULT 0,
+  liquor_other SMALLINT DEFAULT 0,
+
   -- Other metrics
   coffee SMALLINT DEFAULT 0,
   steps INTEGER,
   screen_time INTEGER,
   sex SMALLINT DEFAULT 0,
+
+  -- Meal tracking
+  lunch_location TEXT CHECK (lunch_location IN ('home', 'out')),
+  dinner_location TEXT CHECK (dinner_location IN ('home', 'out')),
 
   -- Location tracking
   city_wake TEXT,

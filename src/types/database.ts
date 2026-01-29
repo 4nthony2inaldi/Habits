@@ -46,6 +46,8 @@ export type EventType =
 
 export type WorkLocation = 'home' | 'office' | 'field' | 'off'
 
+export type MealLocation = 'home' | 'out'
+
 export type GoalTargetType = 'min' | 'max' | 'exact' | 'streak'
 
 export type GoalTimeframe = 'daily' | 'weekly' | 'monthly'
@@ -145,10 +147,25 @@ export interface Database {
           wine: number
           liquor: number
           shots: number
+          // Detailed wine breakdown
+          wine_red: number
+          wine_white: number
+          wine_sparkling: number
+          // Detailed cocktail/liquor breakdown
+          liquor_vodka: number
+          liquor_gin: number
+          liquor_tequila: number
+          liquor_whiskey: number
+          liquor_rum: number
+          liquor_other: number
+          // Other metrics
           coffee: number
           steps: number | null
           screen_time: number | null
           sex: number
+          // Meal tracking
+          lunch_location: MealLocation | null
+          dinner_location: MealLocation | null
           city_wake: string | null
           miles_wake: number | null
           city_noon: string | null
@@ -171,10 +188,25 @@ export interface Database {
           wine?: number
           liquor?: number
           shots?: number
+          // Detailed wine breakdown
+          wine_red?: number
+          wine_white?: number
+          wine_sparkling?: number
+          // Detailed cocktail/liquor breakdown
+          liquor_vodka?: number
+          liquor_gin?: number
+          liquor_tequila?: number
+          liquor_whiskey?: number
+          liquor_rum?: number
+          liquor_other?: number
+          // Other metrics
           coffee?: number
           steps?: number | null
           screen_time?: number | null
           sex?: number
+          // Meal tracking
+          lunch_location?: MealLocation | null
+          dinner_location?: MealLocation | null
           city_wake?: string | null
           miles_wake?: number | null
           city_noon?: string | null
@@ -197,10 +229,25 @@ export interface Database {
           wine?: number
           liquor?: number
           shots?: number
+          // Detailed wine breakdown
+          wine_red?: number
+          wine_white?: number
+          wine_sparkling?: number
+          // Detailed cocktail/liquor breakdown
+          liquor_vodka?: number
+          liquor_gin?: number
+          liquor_tequila?: number
+          liquor_whiskey?: number
+          liquor_rum?: number
+          liquor_other?: number
+          // Other metrics
           coffee?: number
           steps?: number | null
           screen_time?: number | null
           sex?: number
+          // Meal tracking
+          lunch_location?: MealLocation | null
+          dinner_location?: MealLocation | null
           city_wake?: string | null
           miles_wake?: number | null
           city_noon?: string | null

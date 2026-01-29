@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { HabitType, EventType, WorkLocation, GoalTargetType, GoalTimeframe } from './database'
+import type { HabitType, EventType, WorkLocation, MealLocation, GoalTargetType, GoalTimeframe } from './database'
 
 // Habit and Event type arrays for validation
 export const habitTypes: HabitType[] = [
@@ -92,6 +92,11 @@ export const workLocationLabels: Record<WorkLocation, string> = {
   off: "Didn't work",
 }
 
+export const mealLocationLabels: Record<MealLocation, string> = {
+  home: 'At home',
+  out: 'Ate out',
+}
+
 // Daily Entry Form Schema
 export const dailyEntrySchema = z.object({
   entry_date: z.string().refine((date) => {
@@ -104,18 +109,35 @@ export const dailyEntrySchema = z.object({
   mood_score: z.number().min(0).max(10).nullable(),
   work_location: z.enum(['home', 'office', 'field', 'off']).nullable(),
 
-  // Alcohol tracking
+  // Alcohol tracking (aggregate fields)
   beers: z.number().min(0).max(10).default(0),
   seltzers: z.number().min(0).max(10).default(0),
   wine: z.number().min(0).max(10).default(0),
   liquor: z.number().min(0).max(10).default(0),
   shots: z.number().min(0).max(5).default(0),
 
+  // Detailed wine breakdown
+  wine_red: z.number().min(0).max(10).default(0),
+  wine_white: z.number().min(0).max(10).default(0),
+  wine_sparkling: z.number().min(0).max(10).default(0),
+
+  // Detailed cocktail/liquor breakdown
+  liquor_vodka: z.number().min(0).max(10).default(0),
+  liquor_gin: z.number().min(0).max(10).default(0),
+  liquor_tequila: z.number().min(0).max(10).default(0),
+  liquor_whiskey: z.number().min(0).max(10).default(0),
+  liquor_rum: z.number().min(0).max(10).default(0),
+  liquor_other: z.number().min(0).max(10).default(0),
+
   // Other metrics
   coffee: z.number().min(0).max(5).default(0),
   steps: z.number().min(0).nullable(),
   screen_time: z.number().min(0).nullable(),
   sex: z.number().min(0).max(10).default(0),
+
+  // Meal tracking
+  lunch_location: z.enum(['home', 'out']).nullable(),
+  dinner_location: z.enum(['home', 'out']).nullable(),
 
   // Location tracking
   city_wake: z.string().nullable(),
