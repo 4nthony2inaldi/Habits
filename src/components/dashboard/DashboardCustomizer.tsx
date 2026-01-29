@@ -61,6 +61,9 @@ export interface DashboardWidgetConfig {
   workLocationChart: WidgetSettings
   habitsGrid: WidgetSettings
   alcoholTracker: WidgetSettings
+  alcoholCalendar: WidgetSettings
+  alcoholStats: WidgetSettings
+  alcoholByType: WidgetSettings
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
   selectedHabits: SelectableHabitType[]
@@ -85,8 +88,11 @@ const defaultConfig: DashboardWidgetConfig = {
   workLocationChart: { visible: true, size: 'half', order: 1 },
   habitsGrid: { visible: true, size: 'full', order: 2 },
   alcoholTracker: { visible: true, size: 'half', order: 3 },
-  movementChart: { visible: true, size: 'half', order: 4 },
-  eventsTracker: { visible: true, size: 'full', order: 5 },
+  alcoholCalendar: { visible: true, size: 'half', order: 4 },
+  alcoholStats: { visible: true, size: 'half', order: 5 },
+  alcoholByType: { visible: true, size: 'half', order: 6 },
+  movementChart: { visible: true, size: 'half', order: 7 },
+  eventsTracker: { visible: true, size: 'full', order: 8 },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
   kpiVisibility: defaultKpiVisibility,
@@ -103,6 +109,9 @@ const widgetLabels: Record<WidgetKey, string> = {
   workLocationChart: 'Work Location',
   habitsGrid: 'Habits Grid',
   alcoholTracker: 'Alcohol Tracker',
+  alcoholCalendar: 'When Drinking',
+  alcoholStats: 'How Much Drinking',
+  alcoholByType: 'What Drinking',
   movementChart: 'Movement Chart',
   eventsTracker: 'Events Tracker',
 }

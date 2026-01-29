@@ -12,6 +12,9 @@ import { MoodChart } from '@/components/dashboard/MoodChart'
 import { WorkLocationChart } from '@/components/dashboard/WorkLocationChart'
 import { HabitsGrid } from '@/components/dashboard/HabitsGrid'
 import { AlcoholTracker } from '@/components/dashboard/AlcoholTracker'
+import { AlcoholCalendar } from '@/components/dashboard/AlcoholCalendar'
+import { AlcoholStats } from '@/components/dashboard/AlcoholStats'
+import { AlcoholByType } from '@/components/dashboard/AlcoholByType'
 import { EventsTracker } from '@/components/dashboard/EventsTracker'
 import { MovementChart } from '@/components/dashboard/MovementChart'
 import { DashboardCustomizer, getWidgetConfig, getOrderedVisibleWidgets } from '@/components/dashboard/DashboardCustomizer'
@@ -30,6 +33,9 @@ const widgetComponents: Record<Exclude<WidgetKey, 'habitsGrid' | 'eventsTracker'
   moodChart: MoodChart,
   workLocationChart: WorkLocationChart,
   alcoholTracker: AlcoholTracker,
+  alcoholCalendar: AlcoholCalendar,
+  alcoholStats: AlcoholStats,
+  alcoholByType: AlcoholByType,
   movementChart: MovementChart,
 }
 
