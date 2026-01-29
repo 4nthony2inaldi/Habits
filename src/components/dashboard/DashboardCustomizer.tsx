@@ -533,10 +533,25 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
 
   // Check if it has the new widget format
   if (config.moodChart && typeof config.moodChart === 'object' && 'visible' in (config.moodChart as object)) {
-    // Merge widget settings
+    // Merge widget settings - only for keys that exist in old config
     for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
       if (key in config && typeof config[key] === 'object') {
         result[key] = { ...defaultConfig[key], ...(config[key] as WidgetSettings) }
+      }
+      // If key is NOT in old config, it keeps the default value (new widget)
+    }
+
+    // Find the max order from existing widgets to place new ones after
+    const existingOrders = Object.keys(config)
+      .filter(k => k in widgetLabels && typeof config[k] === 'object')
+      .map(k => (config[k] as WidgetSettings).order || 0)
+    const maxOrder = existingOrders.length > 0 ? Math.max(...existingOrders) : -1
+
+    // Assign orders to new widgets that weren't in old config
+    let nextOrder = maxOrder + 1
+    for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
+      if (!(key in config)) {
+        result[key] = { ...result[key], order: nextOrder++ }
       }
     }
   } else {
