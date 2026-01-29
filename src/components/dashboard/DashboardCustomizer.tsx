@@ -139,7 +139,7 @@ export const defaultWidgetTitles: WidgetTitles = {
   moodChart: { title: 'Mood Over Time' },
   workLocationChart: { title: 'Work Location' },
   habitsGrid: { title: 'Healthy Habits' },
-  habitsScore: { title: 'Habits Score', subtitle: 'Last 7 days' },
+  habitsScore: { title: 'Habits Score' },
   alcoholTracker: { title: 'Drinking Trends' },
   alcoholCalendar: { title: 'When Drinking' },
   alcoholStats: { title: 'How Much Drinking' },

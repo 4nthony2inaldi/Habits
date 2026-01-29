@@ -72,7 +72,13 @@ function calculateScoreForPeriod(
   }
 }
 
-export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habits Score', subtitle }: HabitsScoreProps) {
+export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habits Score' }: HabitsScoreProps) {
+  // Generate dynamic subtitle showing actual date range
+  const dateRangeLabel = useMemo(() => {
+    const endDate = dateRange.end
+    const startDate = subDays(endDate, 6)
+    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
+  }, [dateRange.end])
   // Get habits to count
   const habitsToCount = useMemo(() => {
     const regularHabits = Object.keys(habitLabels) as HabitType[]
@@ -125,7 +131,7 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        <p className="text-xs text-gray-500">{dateRangeLabel}</p>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center">
         {/* Large percentage display */}

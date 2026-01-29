@@ -25,10 +25,10 @@ interface HabitsGridProps {
 
 export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
   const data = useMemo(() => {
-    // Get last N days from end of date range
+    // Get last N days from end of date range (most recent first)
     const dates: string[] = []
     for (let i = 0; i < showDays; i++) {
-      dates.unshift(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
+      dates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
     }
 
     // Create map of entries by date
@@ -90,7 +90,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     const headers: { day: string; date: string }[] = []
     for (let i = 0; i < showDays; i++) {
       const d = subDays(dateRange.end, i)
-      headers.unshift({
+      headers.push({
         day: format(d, 'EEE'),
         date: format(d, 'M/d'),
       })
