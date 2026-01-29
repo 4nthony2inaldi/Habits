@@ -11,6 +11,8 @@ export const habitTypes: HabitType[] = [
   'exercise',
   'read_5pages',
   'family_interaction',
+  'family_phone',
+  'family_in_person',
   'ate_fruit',
   'ate_vegetables',
   'journaled',
@@ -54,6 +56,8 @@ export const habitLabels: Record<HabitType, string> = {
   exercise: 'Went out of your way to exercise',
   read_5pages: 'Read 5+ pages of literature',
   family_interaction: 'Interact with family member (voice/in-person)',
+  family_phone: 'Family (phone)',
+  family_in_person: 'Family (in-person)',
   ate_fruit: 'Ate fruit (fresh/raw/steamed)',
   ate_vegetables: 'Ate vegetables (fresh/raw/steamed)',
   journaled: 'Journaled offline',
@@ -72,7 +76,7 @@ export const eventLabels: Record<EventType, string> = {
   stage_production: 'Went to a stage production',
   movies: 'Went to the movies',
   museum: 'Went to a museum',
-  guys_night: 'Guys night (trivia/poker/HH)',
+  guys_night: 'Saw Friends',
   massage: 'Massage',
   facial: 'Facial',
   pedicure: 'Pedicure',
@@ -110,24 +114,24 @@ export const dailyEntrySchema = z.object({
   work_location: z.enum(['home', 'office', 'field', 'off']).nullable(),
 
   // Alcohol tracking (aggregate fields)
-  beers: z.number().min(0).max(10).default(0),
-  seltzers: z.number().min(0).max(10).default(0),
-  wine: z.number().min(0).max(10).default(0),
-  liquor: z.number().min(0).max(10).default(0),
-  shots: z.number().min(0).max(5).default(0),
+  beers: z.number().min(0).default(0),
+  seltzers: z.number().min(0).default(0),
+  wine: z.number().min(0).default(0),
+  liquor: z.number().min(0).default(0),
+  shots: z.number().min(0).default(0),
 
   // Detailed wine breakdown
-  wine_red: z.number().min(0).max(10).default(0),
-  wine_white: z.number().min(0).max(10).default(0),
-  wine_sparkling: z.number().min(0).max(10).default(0),
+  wine_red: z.number().min(0).default(0),
+  wine_white: z.number().min(0).default(0),
+  wine_sparkling: z.number().min(0).default(0),
 
   // Detailed cocktail/liquor breakdown
-  liquor_vodka: z.number().min(0).max(10).default(0),
-  liquor_gin: z.number().min(0).max(10).default(0),
-  liquor_tequila: z.number().min(0).max(10).default(0),
-  liquor_whiskey: z.number().min(0).max(10).default(0),
-  liquor_rum: z.number().min(0).max(10).default(0),
-  liquor_other: z.number().min(0).max(10).default(0),
+  liquor_vodka: z.number().min(0).default(0),
+  liquor_gin: z.number().min(0).default(0),
+  liquor_tequila: z.number().min(0).default(0),
+  liquor_whiskey: z.number().min(0).default(0),
+  liquor_rum: z.number().min(0).default(0),
+  liquor_other: z.number().min(0).default(0),
 
   // Other metrics
   coffee: z.number().min(0).max(5).default(0),
@@ -136,6 +140,7 @@ export const dailyEntrySchema = z.object({
   sex: z.number().min(0).max(10).default(0),
 
   // Meal tracking
+  breakfast_location: z.enum(['home', 'out']).nullable(),
   lunch_location: z.enum(['home', 'out']).nullable(),
   dinner_location: z.enum(['home', 'out']).nullable(),
 
@@ -154,8 +159,8 @@ export const dailyEntrySchema = z.object({
   // Checklists
   healthy_habits: z.array(z.enum([
     'sleep_8hrs', 'breakfast', 'vitamin', 'water_8cups', 'cooked_dinner',
-    'exercise', 'read_5pages', 'family_interaction', 'ate_fruit',
-    'ate_vegetables', 'journaled'
+    'exercise', 'read_5pages', 'family_interaction', 'family_phone',
+    'family_in_person', 'ate_fruit', 'ate_vegetables', 'journaled'
   ])).default([]),
 
   life_events: z.array(z.enum([

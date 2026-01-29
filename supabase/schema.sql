@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS daily_entries (
   sex SMALLINT DEFAULT 0,
 
   -- Meal tracking
+  breakfast_location TEXT CHECK (breakfast_location IN ('home', 'out')),
   lunch_location TEXT CHECK (lunch_location IN ('home', 'out')),
   dinner_location TEXT CHECK (dinner_location IN ('home', 'out')),
 

@@ -29,6 +29,8 @@ export const shortHabitLabels: Record<SelectableHabitType, string> = {
   exercise: 'Exercise',
   read_5pages: 'Read',
   family_interaction: 'Family',
+  family_phone: 'Family (ph)',
+  family_in_person: 'Family (ip)',
   ate_fruit: 'Fruit',
   ate_vegetables: 'Veggies',
   journaled: 'Journal',

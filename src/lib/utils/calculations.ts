@@ -10,6 +10,8 @@ const habitWeights: Record<HabitType, number> = {
   exercise: 20,
   read_5pages: 5,
   family_interaction: 5,
+  family_phone: 5,
+  family_in_person: 5,
   ate_fruit: 10,
   ate_vegetables: 10,
   journaled: 5,

@@ -115,6 +115,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       screen_time: null,
       sex: 0,
       // Meal tracking
+      breakfast_location: null,
       lunch_location: null,
       dinner_location: null,
       city_wake: null,
@@ -162,6 +163,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         screen_time: existingEntry.screen_time,
         sex: existingEntry.sex,
         // Meal tracking
+        breakfast_location: existingEntry.breakfast_location,
         lunch_location: existingEntry.lunch_location,
         dinner_location: existingEntry.dinner_location,
         city_wake: existingEntry.city_wake,
@@ -202,6 +204,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         screen_time: null,
         sex: 0,
         // Meal tracking
+        breakfast_location: null,
         lunch_location: null,
         dinner_location: null,
         city_wake: null,
@@ -269,11 +272,12 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       (watchedValues.shots || 0)
 
     // Morning habits
-    const morningHabits = ['sleep_8hrs', 'breakfast', 'vitamin'].filter(h => habits.includes(h as HabitType))
+    const morningHabits = ['sleep_8hrs', 'vitamin'].filter(h => habits.includes(h as HabitType))
     const morningCoffee = watchedValues.coffee || 0
 
     // Meals - include meal locations and healthy eating
     const mealParts: string[] = []
+    if (watchedValues.breakfast_location) mealParts.push(`Breakfast ${watchedValues.breakfast_location === 'home' ? 'home' : 'out'}`)
     if (watchedValues.lunch_location) mealParts.push(`Lunch ${watchedValues.lunch_location === 'home' ? 'home' : 'out'}`)
     if (watchedValues.dinner_location) mealParts.push(`Dinner ${watchedValues.dinner_location === 'home' ? 'home' : 'out'}`)
     if (habits.includes('ate_fruit')) mealParts.push('Fruit')
@@ -408,16 +412,28 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Controller
               name="healthy_habits"
               control={control}
               render={({ field }) => (
                 <CheckboxItem
-                  id="saw_friends"
-                  label="Saw Friends"
-                  checked={field.value.includes('family_interaction')}
-                  onChange={() => field.onChange(toggleHabit('family_interaction', field.value as HabitType[]))}
+                  id="family_phone"
+                  label="Family (phone)"
+                  checked={field.value.includes('family_phone')}
+                  onChange={() => field.onChange(toggleHabit('family_phone', field.value as HabitType[]))}
+                />
+              )}
+            />
+            <Controller
+              name="healthy_habits"
+              control={control}
+              render={({ field }) => (
+                <CheckboxItem
+                  id="family_in_person"
+                  label="Family (in-person)"
+                  checked={field.value.includes('family_in_person')}
+                  onChange={() => field.onChange(toggleHabit('family_in_person', field.value as HabitType[]))}
                 />
               )}
             />
@@ -451,18 +467,12 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             name="healthy_habits"
             control={control}
             render={({ field }) => (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <CheckboxItem
                   id="sleep_8hrs"
                   label="8+ hrs Sleep"
                   checked={field.value.includes('sleep_8hrs')}
                   onChange={() => field.onChange(toggleHabit('sleep_8hrs', field.value as HabitType[]))}
-                />
-                <CheckboxItem
-                  id="breakfast"
-                  label="Breakfast"
-                  checked={field.value.includes('breakfast')}
-                  onChange={() => field.onChange(toggleHabit('breakfast', field.value as HabitType[]))}
                 />
                 <CheckboxItem
                   id="vitamin"
@@ -498,7 +508,27 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       >
         <div className="space-y-4">
           {/* Meal locations */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Breakfast</Label>
+              <Controller
+                name="breakfast_location"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                  >
+                    <option value="">Skip...</option>
+                    {Object.entries(mealLocationLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Lunch</Label>
               <Controller
@@ -546,13 +576,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             name="healthy_habits"
             control={control}
             render={({ field }) => (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t">
-                <CheckboxItem
-                  id="cooked_dinner"
-                  label="Cooked Dinner"
-                  checked={field.value.includes('cooked_dinner')}
-                  onChange={() => field.onChange(toggleHabit('cooked_dinner', field.value as HabitType[]))}
-                />
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t">
                 <CheckboxItem
                   id="ate_fruit"
                   label="Ate Fruit"
@@ -643,7 +667,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   id="beers"
                   type="number"
                   min={0}
-                  max={10}
                   {...register('beers', { valueAsNumber: true })}
                 />
               </div>
@@ -655,7 +678,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   id="seltzers"
                   type="number"
                   min={0}
-                  max={10}
                   {...register('seltzers', { valueAsNumber: true })}
                 />
               </div>
@@ -667,7 +689,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   id="shots"
                   type="number"
                   min={0}
-                  max={5}
                   {...register('shots', { valueAsNumber: true })}
                 />
               </div>
@@ -685,7 +706,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="wine_red"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('wine_red', { valueAsNumber: true })}
                   />
                 </div>
@@ -695,7 +715,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="wine_white"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('wine_white', { valueAsNumber: true })}
                   />
                 </div>
@@ -705,7 +724,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="wine_sparkling"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('wine_sparkling', { valueAsNumber: true })}
                   />
                 </div>
@@ -724,7 +742,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_vodka"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_vodka', { valueAsNumber: true })}
                   />
                 </div>
@@ -734,7 +751,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_gin"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_gin', { valueAsNumber: true })}
                   />
                 </div>
@@ -744,7 +760,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_tequila"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_tequila', { valueAsNumber: true })}
                   />
                 </div>
@@ -754,7 +769,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_whiskey"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_whiskey', { valueAsNumber: true })}
                   />
                 </div>
@@ -764,7 +778,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_rum"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_rum', { valueAsNumber: true })}
                   />
                 </div>
@@ -774,7 +787,6 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     id="liquor_other"
                     type="number"
                     min={0}
-                    max={10}
                     {...register('liquor_other', { valueAsNumber: true })}
                   />
                 </div>
@@ -967,7 +979,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               />
               <CheckboxItem
                 id="guys_night"
-                label="Guys Night"
+                label="Saw Friends"
                 checked={field.value.includes('guys_night')}
                 onChange={() => field.onChange(toggleEvent('guys_night', field.value as EventType[]))}
               />

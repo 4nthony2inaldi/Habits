@@ -15,6 +15,8 @@ export type HabitType =
   | 'exercise'
   | 'read_5pages'
   | 'family_interaction'
+  | 'family_phone'
+  | 'family_in_person'
   | 'ate_fruit'
   | 'ate_vegetables'
   | 'journaled'
@@ -164,6 +166,7 @@ export interface Database {
           screen_time: number | null
           sex: number
           // Meal tracking
+          breakfast_location: MealLocation | null
           lunch_location: MealLocation | null
           dinner_location: MealLocation | null
           city_wake: string | null
@@ -205,6 +208,7 @@ export interface Database {
           screen_time?: number | null
           sex?: number
           // Meal tracking
+          breakfast_location?: MealLocation | null
           lunch_location?: MealLocation | null
           dinner_location?: MealLocation | null
           city_wake?: string | null
@@ -246,6 +250,7 @@ export interface Database {
           screen_time?: number | null
           sex?: number
           // Meal tracking
+          breakfast_location?: MealLocation | null
           lunch_location?: MealLocation | null
           dinner_location?: MealLocation | null
           city_wake?: string | null

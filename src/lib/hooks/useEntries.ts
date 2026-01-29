@@ -138,6 +138,7 @@ export function useCreateEntry() {
         screen_time: data.screen_time,
         sex: data.sex,
         // Meal tracking
+        breakfast_location: data.breakfast_location,
         lunch_location: data.lunch_location,
         dinner_location: data.dinner_location,
         city_wake: data.city_wake,
