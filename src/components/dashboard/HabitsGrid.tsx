@@ -8,7 +8,7 @@ import { format, subDays } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
-import { allHabitLabels } from './DashboardCustomizer'
+import { shortHabitLabels } from './DashboardCustomizer'
 
 // Type for day completion status
 // For regular habits: true/false/null
@@ -74,7 +74,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
 
       return {
         habit,
-        label: allHabitLabels[habit],
+        label: shortHabitLabels[habit],
         days: daysCompleted,
         dates,
         completionRate,

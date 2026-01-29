@@ -21,6 +21,23 @@ export const computedHabitLabels: Record<ComputedHabitType, string> = {
   was_active: 'Was active (7.5k+ steps)',
 }
 
+// Short labels for mobile display
+export const shortHabitLabels: Record<SelectableHabitType, string> = {
+  sleep_8hrs: 'Sleep',
+  breakfast: 'Breakfast',
+  vitamin: 'Vitamin',
+  water_8cups: 'Water',
+  cooked_dinner: 'Cooked',
+  exercise: 'Exercise',
+  read_5pages: 'Read',
+  family_interaction: 'Family',
+  ate_fruit: 'Fruit',
+  ate_vegetables: 'Veggies',
+  journaled: 'Journal',
+  no_alcohol: 'Sober',
+  was_active: 'Active',
+}
+
 // Combined labels for all selectable habits
 export const allHabitLabels: Record<SelectableHabitType, string> = {
   ...habitLabels,
