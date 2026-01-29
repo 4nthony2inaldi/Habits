@@ -131,7 +131,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="h-full flex flex-col p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
@@ -214,9 +214,9 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
   ]
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 scrollbar-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">

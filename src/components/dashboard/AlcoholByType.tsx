@@ -87,7 +87,7 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
 
   if (entries.length === 0 || data.length === 0) {
     return (
-      <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="h-full flex flex-col p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
@@ -100,10 +100,10 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
   const maxTotal = Math.max(...data.map((d) => d.total))
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         {/* Stacked bars */}
         <div className="space-y-3">
           {data.map((yearData) => (

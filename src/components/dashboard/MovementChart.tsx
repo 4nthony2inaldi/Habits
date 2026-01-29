@@ -47,7 +47,7 @@ export function MovementChart({ entries }: MovementChartProps) {
 
   if (stats.daysTracked === 0) {
     return (
-      <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="h-full flex flex-col p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <Footprints className="h-5 w-5 text-blue-500" />
           Movement
@@ -60,13 +60,13 @@ export function MovementChart({ entries }: MovementChartProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
         <Footprints className="h-5 w-5 text-blue-500" />
         Movement
       </h3>
 
-      <div className="flex-1 min-h-0 flex flex-col gap-3">
+      <div className="flex-1 min-h-0 flex flex-col gap-3 scrollbar-hidden">
         {/* Key Metrics */}
         <div className="grid grid-cols-3 gap-2">
           <div className="text-center p-2 bg-blue-50 rounded-lg">

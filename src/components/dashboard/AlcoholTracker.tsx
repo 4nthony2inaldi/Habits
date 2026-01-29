@@ -81,10 +81,10 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
   }, [stats.byType])
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Alcohol Tracking</h3>
 
-      <div className="flex-1 min-h-0 flex flex-col gap-4">
+      <div className="flex-1 min-h-0 flex flex-col gap-4 scrollbar-hidden">
         {/* Key Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="text-center p-2 bg-gray-50 rounded-lg">

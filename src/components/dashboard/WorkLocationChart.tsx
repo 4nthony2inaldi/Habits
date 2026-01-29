@@ -52,7 +52,7 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="h-full flex flex-col p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No work location data available
@@ -62,7 +62,7 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
       <div className="flex-1 min-h-0 flex items-center gap-4">
         {/* Pie Chart */}

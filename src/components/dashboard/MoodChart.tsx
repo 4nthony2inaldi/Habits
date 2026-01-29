@@ -31,7 +31,7 @@ export function MoodChart({ entries }: MoodChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className="h-full flex flex-col p-4 overflow-hidden">
+      <div className="h-full flex flex-col p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No mood data available for this period
@@ -41,7 +41,7 @@ export function MoodChart({ entries }: MoodChartProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
