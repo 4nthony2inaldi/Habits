@@ -30,7 +30,7 @@ interface MonthData {
   monthShort: string
   monthNum: number
   year: number
-  weeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[]
+  weeks: { days: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] }[]
   monthTotal: number
 }
 
@@ -57,11 +57,15 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
   }, [])
 
   const calendarData = useMemo(() => {
-    // Create a map of entries by date
-    const entriesByDate = new Map<string, number>()
+    // Create a map of entries by date with full info
+    const entriesByDate = new Map<string, { drinks: number; bestPart: string | null; notes: string | null }>()
     entries.forEach((entry) => {
       const drinks = calculateTotalDrinks(entry)
-      entriesByDate.set(entry.entry_date, drinks)
+      entriesByDate.set(entry.entry_date, {
+        drinks,
+        bestPart: entry.best_part || null,
+        notes: entry.notes || null,
+      })
     })
 
     if (entries.length === 0) return []
@@ -78,8 +82,8 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
 
     let currentMonth = -1
     let currentYear = -1
-    let currentWeeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[] = []
-    let currentWeek: { date: string; drinks: number; dayOfWeek: number }[] = []
+    let currentWeeks: { days: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] }[] = []
+    let currentWeek: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] = []
     let monthTotal = 0
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate })
@@ -89,7 +93,10 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
       const year = getYear(day)
       const dateStr = format(day, 'yyyy-MM-dd')
       const dayOfWeek = day.getDay()
-      const drinks = entriesByDate.get(dateStr) ?? -1
+      const entryData = entriesByDate.get(dateStr)
+      const drinks = entryData?.drinks ?? -1
+      const bestPart = entryData?.bestPart ?? null
+      const notes = entryData?.notes ?? null
 
       // New month
       if (month !== currentMonth || year !== currentYear) {
@@ -120,7 +127,7 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
       }
 
       if (drinks > 0) monthTotal += drinks
-      currentWeek.push({ date: dateStr, drinks, dayOfWeek })
+      currentWeek.push({ date: dateStr, drinks, dayOfWeek, bestPart, notes })
     })
 
     // Push remaining data
@@ -187,18 +194,26 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
               ))
             }
 
-            {week.days.map((day) => (
-              <div
-                key={day.date}
-                className={cn(
-                  'w-6 h-6 rounded text-[9px] flex items-center justify-center font-medium',
-                  day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
-                )}
-                title={`${day.date}: ${day.drinks < 0 ? 'No entry' : day.drinks + ' drinks'}`}
-              >
-                {day.drinks > 0 ? Math.round(day.drinks) : ''}
-              </div>
-            ))}
+            {week.days.map((day) => {
+              const tooltipLines = [format(parseISO(day.date), 'MMM d, yyyy')]
+              if (day.drinks >= 0) tooltipLines.push(`${day.drinks} drinks`)
+              else tooltipLines.push('No entry')
+              if (day.bestPart) tooltipLines.push(`"${day.bestPart}"`)
+              if (day.notes) tooltipLines.push(`Notes: ${day.notes}`)
+
+              return (
+                <div
+                  key={day.date}
+                  className={cn(
+                    'w-6 h-6 rounded text-[9px] flex items-center justify-center font-medium cursor-default',
+                    day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
+                  )}
+                  title={tooltipLines.join('\n')}
+                >
+                  {day.drinks > 0 ? Math.round(day.drinks) : ''}
+                </div>
+              )
+            })}
 
             {/* Pad end of week */}
             {week.days[week.days.length - 1] && week.days[week.days.length - 1].dayOfWeek < 6 &&
