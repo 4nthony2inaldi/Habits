@@ -96,9 +96,6 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
     )
   }
 
-  // Find max total for scaling
-  const maxTotal = Math.max(...data.map((d) => d.total))
-
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
@@ -113,11 +110,8 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
                 <span className="text-gray-500 text-xs">{yearData.total} drinks</span>
               </div>
 
-              {/* Stacked bar */}
-              <div
-                className="h-8 rounded-lg overflow-hidden flex"
-                style={{ width: `${(yearData.total / maxTotal) * 100}%`, minWidth: '60%' }}
-              >
+              {/* Stacked bar - always 100% width since we show percentages */}
+              <div className="h-8 rounded-lg overflow-hidden flex w-full">
                 {TYPE_ORDER.map((type) => {
                   const typeData = yearData.byType[type]
                   if (!typeData || typeData.percent === 0) return null

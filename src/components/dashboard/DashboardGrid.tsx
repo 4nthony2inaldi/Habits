@@ -172,7 +172,7 @@ export function DashboardGrid({
       case 'alcoholCalendar':
         return <AlcoholCalendar entries={entries} />
       case 'alcoholStats':
-        return <AlcoholStats entries={entries} />
+        return <AlcoholStats entries={entries} selectedMetrics={config.selectedAlcoholMetrics} />
       case 'alcoholByType':
         return <AlcoholByType entries={entries} />
       case 'movementChart':

@@ -5,9 +5,11 @@ import { cn } from '@/lib/utils/cn'
 import { parseISO, subDays, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
+import type { AlcoholMetricType } from './DashboardCustomizer'
 
 interface AlcoholStatsProps {
   entries: DailyEntryWithRelations[]
+  selectedMetrics?: AlcoholMetricType[]
 }
 
 interface PeriodStats {
@@ -92,7 +94,12 @@ function calculatePeriodStats(entries: DailyEntryWithRelations[]): PeriodStats {
   }
 }
 
-export function AlcoholStats({ entries }: AlcoholStatsProps) {
+const defaultMetrics: AlcoholMetricType[] = [
+  'avgWeekly', 'totalDrinks', 'beers', 'seltzers', 'wine', 'liquor', 'shots',
+  'daysWithDrink', 'daysWith2Plus', 'daysWith6Plus'
+]
+
+export function AlcoholStats({ entries, selectedMetrics = defaultMetrics }: AlcoholStatsProps) {
   const stats = useMemo(() => {
     const today = new Date()
     const currentYear = getYear(today)
@@ -140,8 +147,16 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
     )
   }
 
-  const rows = [
+  const allRows: Array<{
+    key: AlcoholMetricType
+    label: string
+    last7: number | string
+    last30: number | string
+    currentYear: number | string
+    lastYear: number | string
+  }> = [
     {
+      key: 'avgWeekly',
       label: 'Avg. Weekly',
       last7: stats.last7.avgWeekly,
       last30: stats.last30.avgWeekly,
@@ -149,6 +164,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.avgWeekly,
     },
     {
+      key: 'totalDrinks',
       label: 'Total Drinks',
       last7: stats.last7.totalDrinks,
       last30: stats.last30.totalDrinks,
@@ -156,6 +172,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.totalDrinks,
     },
     {
+      key: 'beers',
       label: 'Beers',
       last7: stats.last7.beers,
       last30: stats.last30.beers,
@@ -163,6 +180,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.beers,
     },
     {
+      key: 'seltzers',
       label: 'Seltzers',
       last7: stats.last7.seltzers,
       last30: stats.last30.seltzers,
@@ -170,6 +188,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.seltzers,
     },
     {
+      key: 'wine',
       label: 'Wine',
       last7: stats.last7.wine,
       last30: stats.last30.wine,
@@ -177,6 +196,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.wine,
     },
     {
+      key: 'liquor',
       label: 'Liquor',
       last7: stats.last7.liquor,
       last30: stats.last30.liquor,
@@ -184,6 +204,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.liquor,
     },
     {
+      key: 'shots',
       label: 'Shots',
       last7: stats.last7.shots,
       last30: stats.last30.shots,
@@ -191,6 +212,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: stats.lastYear.shots,
     },
     {
+      key: 'daysWithDrink',
       label: 'Days w/ Drink',
       last7: stats.last7.daysWithDrink,
       last30: `${stats.last30.daysWithDrinkPercent}%`,
@@ -198,6 +220,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: `${stats.lastYear.daysWithDrinkPercent}%`,
     },
     {
+      key: 'daysWith2Plus',
       label: 'Days 2+',
       last7: stats.last7.daysWith2Plus,
       last30: `${stats.last30.daysWith2PlusPercent}%`,
@@ -205,6 +228,7 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: `${stats.lastYear.daysWith2PlusPercent}%`,
     },
     {
+      key: 'daysWith6Plus',
       label: 'Days w/ 6+',
       last7: stats.last7.daysWith6Plus,
       last30: `${stats.last30.daysWith6PlusPercent}%`,
@@ -212,6 +236,9 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
       lastYear: `${stats.lastYear.daysWith6PlusPercent}%`,
     },
   ]
+
+  // Filter rows based on selected metrics
+  const rows = allRows.filter(row => selectedMetrics.includes(row.key))
 
   return (
     <div className="h-full flex flex-col p-4">

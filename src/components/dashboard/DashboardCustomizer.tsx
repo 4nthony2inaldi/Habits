@@ -67,6 +67,34 @@ export interface KpiVisibility {
   busyKpi: boolean
 }
 
+// Alcohol stats metrics
+export type AlcoholMetricType =
+  | 'avgWeekly'
+  | 'totalDrinks'
+  | 'beers'
+  | 'seltzers'
+  | 'wine'
+  | 'liquor'
+  | 'shots'
+  | 'daysWithDrink'
+  | 'daysWith2Plus'
+  | 'daysWith6Plus'
+
+export const alcoholMetricLabels: Record<AlcoholMetricType, string> = {
+  avgWeekly: 'Avg. Weekly',
+  totalDrinks: 'Total Drinks',
+  beers: 'Beers',
+  seltzers: 'Seltzers',
+  wine: 'Wine',
+  liquor: 'Liquor',
+  shots: 'Shots',
+  daysWithDrink: 'Days w/ Drink',
+  daysWith2Plus: 'Days 2+',
+  daysWith6Plus: 'Days w/ 6+',
+}
+
+const allAlcoholMetrics = Object.keys(alcoholMetricLabels) as AlcoholMetricType[]
+
 export interface DashboardWidgetConfig {
   moodChart: WidgetSettings
   workLocationChart: WidgetSettings
@@ -79,11 +107,12 @@ export interface DashboardWidgetConfig {
   eventsTracker: WidgetSettings
   selectedHabits: SelectableHabitType[]
   selectedEvents: EventType[]
+  selectedAlcoholMetrics: AlcoholMetricType[]
   kpiVisibility: KpiVisibility
   gridLayouts: GridLayouts
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'kpiVisibility' | 'gridLayouts'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts'>
 export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
@@ -144,6 +173,7 @@ const defaultConfig: DashboardWidgetConfig = {
   eventsTracker: { visible: true },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
+  selectedAlcoholMetrics: allAlcoholMetrics,
   kpiVisibility: defaultKpiVisibility,
   gridLayouts: defaultGridLayouts,
 }
@@ -182,6 +212,7 @@ export function DashboardCustomizer({
   const [localConfig, setLocalConfig] = useState(config)
   const [habitsExpanded, setHabitsExpanded] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
+  const [alcoholStatsExpanded, setAlcoholStatsExpanded] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -232,6 +263,15 @@ export function DashboardCustomizer({
       selectedEvents: prev.selectedEvents.includes(event)
         ? prev.selectedEvents.filter((e) => e !== event)
         : [...prev.selectedEvents, event],
+    }))
+  }
+
+  const toggleAlcoholMetric = (metric: AlcoholMetricType) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      selectedAlcoholMetrics: prev.selectedAlcoholMetrics.includes(metric)
+        ? prev.selectedAlcoholMetrics.filter((m) => m !== metric)
+        : [...prev.selectedAlcoholMetrics, metric],
     }))
   }
 
@@ -319,9 +359,10 @@ export function DashboardCustomizer({
             {widgetKeys.map((key) => {
               const isHabits = key === 'habitsGrid'
               const isEvents = key === 'eventsTracker'
-              const isExpandable = isHabits || isEvents
-              const isExpanded = isHabits ? habitsExpanded : eventsExpanded
-              const setExpanded = isHabits ? setHabitsExpanded : setEventsExpanded
+              const isAlcoholStats = key === 'alcoholStats'
+              const isExpandable = isHabits || isEvents || isAlcoholStats
+              const isExpanded = isHabits ? habitsExpanded : isEvents ? eventsExpanded : alcoholStatsExpanded
+              const setExpanded = isHabits ? setHabitsExpanded : isEvents ? setEventsExpanded : setAlcoholStatsExpanded
 
               return (
                 <div key={key}>
@@ -344,8 +385,8 @@ export function DashboardCustomizer({
                         )}
                         {widgetLabels[key]}
                         <span className="text-xs text-gray-400">
-                          ({isHabits ? localConfig.selectedHabits.length : localConfig.selectedEvents.length}/
-                          {isHabits ? allHabits.length : allEvents.length})
+                          ({isHabits ? localConfig.selectedHabits.length : isEvents ? localConfig.selectedEvents.length : localConfig.selectedAlcoholMetrics.length}/
+                          {isHabits ? allHabits.length : isEvents ? allEvents.length : allAlcoholMetrics.length})
                         </span>
                       </button>
                     ) : (
@@ -448,6 +489,45 @@ export function DashboardCustomizer({
                       </div>
                     </div>
                   )}
+
+                  {/* Alcohol metrics selection dropdown */}
+                  {isAlcoholStats && alcoholStatsExpanded && localConfig[key].visible && (
+                    <div className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-gray-600">Select metrics:</span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedAlcoholMetrics: [...allAlcoholMetrics] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            All
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedAlcoholMetrics: [] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+                        {allAlcoholMetrics.map((metric) => (
+                          <label key={metric} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={localConfig.selectedAlcoholMetrics.includes(metric)}
+                              onChange={() => toggleAlcoholMetric(metric)}
+                              className="w-4 h-4 accent-purple-600 rounded"
+                            />
+                            <span className="text-xs text-gray-700">{alcoholMetricLabels[metric]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -503,6 +583,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Migrate selectedEvents
   if ('selectedEvents' in config && Array.isArray(config.selectedEvents)) {
     result.selectedEvents = config.selectedEvents as EventType[]
+  }
+
+  // Migrate selectedAlcoholMetrics
+  if ('selectedAlcoholMetrics' in config && Array.isArray(config.selectedAlcoholMetrics)) {
+    result.selectedAlcoholMetrics = config.selectedAlcoholMetrics as AlcoholMetricType[]
   }
 
   // Migrate kpiVisibility
