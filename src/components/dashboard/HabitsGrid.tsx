@@ -11,9 +11,10 @@ import { habitLabels } from '@/types/forms'
 interface HabitsGridProps {
   entries: DailyEntryWithRelations[]
   showDays?: number
+  selectedHabits?: HabitType[]
 }
 
-export function HabitsGrid({ entries, showDays = 7 }: HabitsGridProps) {
+export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGridProps) {
   const data = useMemo(() => {
     // Get last N days
     const dates: string[] = []
@@ -27,8 +28,11 @@ export function HabitsGrid({ entries, showDays = 7 }: HabitsGridProps) {
       entriesByDate.set(entry.entry_date, entry)
     })
 
-    // Calculate habit data
-    const habits = Object.keys(habitLabels) as HabitType[]
+    // Calculate habit data - filter by selectedHabits if provided
+    const allHabits = Object.keys(habitLabels) as HabitType[]
+    const habits = selectedHabits && selectedHabits.length > 0
+      ? allHabits.filter(h => selectedHabits.includes(h))
+      : allHabits
 
     return habits.map((habit) => {
       const daysCompleted = dates.map((date) => {
@@ -51,7 +55,7 @@ export function HabitsGrid({ entries, showDays = 7 }: HabitsGridProps) {
         trackedDays,
       }
     })
-  }, [entries, showDays])
+  }, [entries, showDays, selectedHabits])
 
   const dateHeaders = useMemo(() => {
     const dates: string[] = []
