@@ -73,8 +73,9 @@ function toRGLLayouts(gridLayouts: GridLayouts, visibleWidgets: WidgetKey[]): La
         y: item.y,
         w: item.w,
         h: item.h,
-        minW: item.minW || 1,
-        minH: item.minH || 1,
+        // Always use minW/minH of 1 - ignore any saved constraints
+        minW: 1,
+        minH: 1,
       }
     })
   }
