@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { format, parseISO, eachDayOfInterval, getMonth, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
@@ -117,16 +116,12 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
 
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Drinking Calendar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            No data available for this period
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No data available for this period
+        </div>
+      </div>
     )
   }
 
@@ -189,28 +184,27 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
   )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">When Drinking</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Responsive grid - 1 col on mobile, 2 on md, 3 on lg, 4 on xl */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
+
+      {/* Responsive grid - fills available space */}
+      <div className="flex-1 min-h-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
           {calendarData.map(renderMonth)}
         </div>
+      </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
-          <span className="text-xs text-gray-500">Less</span>
-          <div className="w-4 h-4 rounded bg-gray-100" />
-          <div className="w-4 h-4 rounded bg-purple-100" />
-          <div className="w-4 h-4 rounded bg-purple-200" />
-          <div className="w-4 h-4 rounded bg-purple-300" />
-          <div className="w-4 h-4 rounded bg-purple-400" />
-          <div className="w-4 h-4 rounded bg-purple-600" />
-          <span className="text-xs text-gray-500">More</span>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Legend - compact */}
+      <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t">
+        <span className="text-xs text-gray-500">Less</span>
+        <div className="w-3 h-3 rounded bg-gray-100" />
+        <div className="w-3 h-3 rounded bg-purple-100" />
+        <div className="w-3 h-3 rounded bg-purple-200" />
+        <div className="w-3 h-3 rounded bg-purple-300" />
+        <div className="w-3 h-3 rounded bg-purple-400" />
+        <div className="w-3 h-3 rounded bg-purple-600" />
+        <span className="text-xs text-gray-500">More</span>
+      </div>
+    </div>
   )
 }

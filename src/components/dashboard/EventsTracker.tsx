@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { differenceInDays, parseISO } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
@@ -75,77 +74,57 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
 
   if (eventData.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Life Events</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            No life events recorded yet
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Days Since...</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No life events recorded yet
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Days Since...</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {eventData.slice(0, 15).map((item) => (
-            <div
-              key={item.event}
-              className={cn(
-                'flex items-center justify-between p-3 rounded-lg',
-                item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Days Since...</h3>
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+        {eventData.map((item) => (
+          <div
+            key={item.event}
+            className={cn(
+              'flex items-center justify-between p-2 rounded-lg',
+              item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
+            )}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {item.isOverdue && (
+                <AlertCircle className="h-3 w-3 text-orange-500 flex-shrink-0" />
               )}
-            >
-              <div className="flex items-center gap-3">
-                {item.isOverdue && (
-                  <AlertCircle className="h-4 w-4 text-orange-500" />
+              <span className="text-xs text-gray-700 truncate">{item.label}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <p
+                className={cn(
+                  'text-sm font-bold',
+                  item.daysSince === null
+                    ? 'text-gray-400'
+                    : item.isOverdue
+                    ? 'text-orange-600'
+                    : 'text-gray-900'
                 )}
-                <span className="text-sm text-gray-700">{item.label}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p
-                    className={cn(
-                      'text-lg font-bold',
-                      item.daysSince === null
-                        ? 'text-gray-400'
-                        : item.isOverdue
-                        ? 'text-orange-600'
-                        : 'text-gray-900'
-                    )}
-                  >
-                    {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
-                  </p>
-                </div>
-                <div className="text-right text-xs text-gray-500 min-w-[60px]">
-                  {item.totalCount > 0 ? (
-                    <>
-                      <p>{item.countCurrentYear}x this year</p>
-                      {item.countPreviousYear > 0 && (
-                        <p>{item.countPreviousYear}x last year</p>
-                      )}
-                    </>
-                  ) : (
-                    <p>Not tracked</p>
-                  )}
-                </div>
+              >
+                {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
+              </p>
+              <div className="text-right text-[10px] text-gray-500 min-w-[50px]">
+                {item.totalCount > 0 ? (
+                  <p>{item.countCurrentYear}x / {item.countPreviousYear}x</p>
+                ) : (
+                  <p>-</p>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-        {eventData.length > 15 && (
-          <p className="text-center text-sm text-gray-500 mt-4">
-            +{eventData.length - 15} more events
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

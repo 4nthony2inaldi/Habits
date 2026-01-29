@@ -1,8 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { Home, Building, MapPin, Coffee } from 'lucide-react'
 
@@ -53,35 +52,30 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
 
   if (data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Work Location</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-gray-500">
-            No work location data available
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No work location data available
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Work Location</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-64">
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
+      <div className="flex-1 min-h-0 flex items-center gap-4">
+        {/* Pie Chart */}
+        <div className="w-32 h-32 flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
+                innerRadius={35}
+                outerRadius={50}
+                paddingAngle={3}
                 dataKey="value"
               >
                 {data.map((entry, index) => (
@@ -93,45 +87,43 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
+                  fontSize: '11px',
                 }}
                 formatter={(value, name) => [
                   `${value} days (${Math.round((Number(value) / entries.length) * 100)}%)`,
                   name,
                 ]}
               />
-              <Legend
-                formatter={(value: string) => (
-                  <span className="text-sm text-gray-600">{value}</span>
-                )}
-              />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-4">
+
+        {/* Legend */}
+        <div className="flex-1 grid grid-cols-2 gap-2">
           {data.map((item) => {
             const Icon = ICONS[item.name.toLowerCase() as keyof typeof ICONS] || Home
             return (
               <div
                 key={item.name}
-                className="flex items-center gap-2 p-2 rounded-lg bg-gray-50"
+                className="flex items-center gap-1.5 p-1.5 rounded-lg bg-gray-50"
               >
                 <div
-                  className="p-1.5 rounded"
+                  className="p-1 rounded"
                   style={{ backgroundColor: item.color + '20' }}
                 >
-                  <Icon className="h-4 w-4" style={{ color: item.color }} />
+                  <Icon className="h-3 w-3" style={{ color: item.color }} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">{item.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {item.value} days ({item.percent}%)
+                  <p className="text-xs font-medium text-gray-700">{item.name}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {item.value}d ({item.percent}%)
                   </p>
                 </div>
               </div>
             )
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

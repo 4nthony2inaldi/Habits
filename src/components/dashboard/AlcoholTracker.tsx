@@ -13,7 +13,6 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
@@ -82,61 +81,58 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
   }, [stats.byType])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Alcohol Tracking</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Alcohol Tracking</h3>
+
+      <div className="flex-1 min-h-0 flex flex-col gap-4">
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">{stats.totalDrinks}</p>
-            <p className="text-xs text-gray-500">Total Drinks</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <p className="text-xl font-bold text-gray-900">{stats.totalDrinks}</p>
+            <p className="text-[10px] text-gray-500">Total</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">{stats.avgPerWeek}</p>
-            <p className="text-xs text-gray-500">Avg/Week</p>
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <p className="text-xl font-bold text-gray-900">{stats.avgPerWeek}</p>
+            <p className="text-[10px] text-gray-500">Avg/Wk</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">
-              {stats.daysWithAlcoholPercent}%
-            </p>
-            <p className="text-xs text-gray-500">Days w/ Alcohol</p>
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <p className="text-xl font-bold text-gray-900">{stats.daysWithAlcoholPercent}%</p>
+            <p className="text-[10px] text-gray-500">Days w/</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">
-              {stats.daysWith6PlusPercent}%
-            </p>
-            <p className="text-xs text-gray-500">Days w/ 6+</p>
+          <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <p className="text-xl font-bold text-gray-900">{stats.daysWith6PlusPercent}%</p>
+            <p className="text-[10px] text-gray-500">6+ Days</p>
           </div>
         </div>
 
         {/* Weekly Chart */}
         {weeklyData.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Weekly Totals</h4>
-            <div className="h-48">
+          <div className="flex-1 min-h-0">
+            <h4 className="text-xs font-medium text-gray-700 mb-2">Weekly Totals</h4>
+            <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="week"
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 9 }}
                     tickLine={false}
                     axisLine={{ stroke: '#e5e7eb' }}
                   />
                   <YAxis
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 9 }}
                     tickLine={false}
                     axisLine={{ stroke: '#e5e7eb' }}
+                    width={25}
                   />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'white',
                       border: '1px solid #e5e7eb',
                       borderRadius: '8px',
+                      fontSize: '11px',
                     }}
-                    formatter={(value) => [`${value} drinks`, 'Total']}
+                    formatter={(value) => [`${value}`, 'Drinks']}
                   />
                   <Bar dataKey="drinks" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -145,55 +141,29 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
           </div>
         )}
 
-        {/* Type Breakdown */}
+        {/* Type Breakdown - inline */}
         {typeBreakdown.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">By Type</h4>
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={typeBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      dataKey="value"
-                    >
-                      {typeBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+          <div className="flex flex-wrap gap-2 pt-2 border-t">
+            {typeBreakdown.map((item) => (
+              <div key={item.name} className="flex items-center gap-1">
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-[10px] text-gray-600">
+                  {item.name}: {item.percent}%
+                </span>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-2">
-                {typeBreakdown.map((item) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center gap-2"
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-sm text-gray-600">
-                      {item.name}: {item.percent}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         )}
 
         {entries.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No data available for this period
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            No data available
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

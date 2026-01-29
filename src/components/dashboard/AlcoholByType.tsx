@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { parseISO, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
@@ -88,16 +87,12 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
 
   if (entries.length === 0 || data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Drinks by Type</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            No data available for this period
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No data available for this period
+        </div>
+      </div>
     )
   }
 
@@ -105,23 +100,22 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
   const maxTotal = Math.max(...data.map((d) => d.total))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">What Drinking</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
+
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Stacked bars */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {data.map((yearData) => (
             <div key={yearData.year} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-gray-700">{yearData.year}</span>
-                <span className="text-gray-500">{yearData.total} drinks</span>
+                <span className="text-gray-500 text-xs">{yearData.total} drinks</span>
               </div>
 
               {/* Stacked bar */}
               <div
-                className="h-10 rounded-lg overflow-hidden flex"
+                className="h-8 rounded-lg overflow-hidden flex"
                 style={{ width: `${(yearData.total / maxTotal) * 100}%`, minWidth: '60%' }}
               >
                 {TYPE_ORDER.map((type) => {
@@ -132,16 +126,14 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
                     <div
                       key={type}
                       className={cn(
-                        'h-full flex items-center justify-center text-white text-xs font-medium',
+                        'h-full flex items-center justify-center text-white text-[10px] font-medium',
                         TYPE_COLORS[type].bg
                       )}
                       style={{ width: `${typeData.percent}%` }}
                       title={`${TYPE_LABELS[type]}: ${typeData.count} (${typeData.percent}%)`}
                     >
-                      {typeData.percent >= 10 && (
-                        <span className="truncate px-1">
-                          {TYPE_LABELS[type]}<br />{typeData.percent}%
-                        </span>
+                      {typeData.percent >= 12 && (
+                        <span className="truncate px-0.5">{typeData.percent}%</span>
                       )}
                     </div>
                   )
@@ -151,46 +143,16 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
           ))}
         </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
+        {/* Legend - compact */}
+        <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t">
           {TYPE_ORDER.map((type) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <div
-                className={cn('w-3 h-3 rounded', TYPE_COLORS[type].bg)}
-              />
-              <span className="text-xs text-gray-600">{TYPE_LABELS[type]}</span>
+            <div key={type} className="flex items-center gap-1">
+              <div className={cn('w-2.5 h-2.5 rounded', TYPE_COLORS[type].bg)} />
+              <span className="text-[10px] text-gray-600">{TYPE_LABELS[type]}</span>
             </div>
           ))}
         </div>
-
-        {/* Detailed breakdown for most recent year */}
-        {data[0] && (
-          <div className="mt-4 pt-4 border-t">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">
-              {data[0].year} Breakdown
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {TYPE_ORDER.map((type) => {
-                const typeData = data[0].byType[type]
-                return (
-                  <div
-                    key={type}
-                    className="text-center p-2 bg-gray-50 rounded-lg"
-                  >
-                    <p className="text-lg font-bold text-gray-900">
-                      {typeData?.count || 0}
-                    </p>
-                    <p className="text-xs text-gray-500">{TYPE_LABELS[type]}</p>
-                    <p className="text-xs text-gray-400">
-                      {typeData?.percent || 0}%
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

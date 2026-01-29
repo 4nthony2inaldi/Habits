@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { parseISO, subDays, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
@@ -132,16 +131,12 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
 
   if (entries.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Drinking Stats</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            No data available for this period
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No data available for this period
+        </div>
+      </div>
     )
   }
 
@@ -219,60 +214,56 @@ export function AlcoholStats({ entries }: AlcoholStatsProps) {
   ]
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">How Much Drinking</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-4 font-medium text-gray-500"></th>
-                <th className="text-center py-2 px-2 font-medium text-gray-500">
-                  Last<br />7
-                </th>
-                <th className="text-center py-2 px-2 font-medium text-gray-500">
-                  Last<br />30
-                </th>
-                <th className="text-center py-2 px-2 font-medium text-gray-500">
-                  {stats.lastYearLabel}
-                </th>
-                <th className="text-center py-2 px-2 font-medium text-gray-500">
-                  {stats.currentYearLabel}
-                </th>
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">How Much Drinking</h3>
+      <div className="flex-1 min-h-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-1.5 pr-4 font-medium text-gray-500"></th>
+              <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
+                Last 7
+              </th>
+              <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
+                Last 30
+              </th>
+              <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
+                {stats.lastYearLabel}
+              </th>
+              <th className="text-center py-1.5 px-2 font-medium text-gray-500 text-xs">
+                {stats.currentYearLabel}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr
+                key={row.label}
+                className={cn(
+                  idx % 2 === 0 ? 'bg-gray-50' : '',
+                  'hover:bg-gray-100'
+                )}
+              >
+                <td className="py-1 pr-4 text-gray-700 font-medium whitespace-nowrap text-xs">
+                  {row.label}
+                </td>
+                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                  {row.last7 || '-'}
+                </td>
+                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                  {row.last30 || '-'}
+                </td>
+                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                  {row.lastYear || '-'}
+                </td>
+                <td className="py-1 px-2 text-center text-gray-900 text-xs">
+                  {row.currentYear || '-'}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, idx) => (
-                <tr
-                  key={row.label}
-                  className={cn(
-                    idx % 2 === 0 ? 'bg-gray-50' : '',
-                    'hover:bg-gray-100'
-                  )}
-                >
-                  <td className="py-2 pr-4 text-gray-700 font-medium whitespace-nowrap">
-                    {row.label}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-900">
-                    {row.last7 || '-'}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-900">
-                    {row.last30 || '-'}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-900">
-                    {row.lastYear || '-'}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-900">
-                    {row.currentYear || '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

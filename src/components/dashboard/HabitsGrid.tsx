@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
 import { Check, X, Star } from 'lucide-react'
 import { format, subDays } from 'date-fns'
@@ -132,65 +131,61 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Healthy Habits</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="text-left text-xs font-medium text-gray-500 pb-3 pr-4">
-                  Habit
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Healthy Habits</h3>
+      <div className="flex-1 min-h-0 overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-4">
+                Habit
+              </th>
+              {dateHeaders.map((header, i) => (
+                <th
+                  key={i}
+                  className="text-center text-xs font-medium text-gray-500 pb-2 px-1 min-w-[36px]"
+                >
+                  <div>{header.day}</div>
+                  <div className="text-[10px] text-gray-400">{header.date}</div>
                 </th>
-                {dateHeaders.map((header, i) => (
-                  <th
-                    key={i}
-                    className="text-center text-xs font-medium text-gray-500 pb-2 px-1 min-w-[36px]"
-                  >
-                    <div>{header.day}</div>
-                    <div className="text-[10px] text-gray-400">{header.date}</div>
-                  </th>
-                ))}
-                <th className="text-right text-xs font-medium text-gray-500 pb-3 pl-4">
-                  Rate
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row) => (
-                <tr key={row.habit} className="border-t border-gray-100">
-                  <td className="py-2 pr-4">
-                    <span className="text-sm text-gray-700 whitespace-nowrap">
-                      {row.label}
-                    </span>
-                  </td>
-                  {row.days.map((status, i) => (
-                    <td key={i} className="text-center py-2 px-1">
-                      {renderDayCell(status, row.habit)}
-                    </td>
-                  ))}
-                  <td className="text-right py-2 pl-4">
-                    <span
-                      className={cn(
-                        'text-sm font-medium',
-                        row.completionRate >= 70
-                          ? 'text-green-600'
-                          : row.completionRate >= 40
-                          ? 'text-yellow-600'
-                          : 'text-gray-400'
-                      )}
-                    >
-                      {row.completionRate}%
-                    </span>
-                  </td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+              <th className="text-right text-xs font-medium text-gray-500 pb-2 pl-4">
+                Rate
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.habit} className="border-t border-gray-100">
+                <td className="py-1.5 pr-4">
+                  <span className="text-sm text-gray-700 whitespace-nowrap">
+                    {row.label}
+                  </span>
+                </td>
+                {row.days.map((status, i) => (
+                  <td key={i} className="text-center py-1.5 px-1">
+                    {renderDayCell(status, row.habit)}
+                  </td>
+                ))}
+                <td className="text-right py-1.5 pl-4">
+                  <span
+                    className={cn(
+                      'text-sm font-medium',
+                      row.completionRate >= 70
+                        ? 'text-green-600'
+                        : row.completionRate >= 40
+                        ? 'text-yellow-600'
+                        : 'text-gray-400'
+                    )}
+                  >
+                    {row.completionRate}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

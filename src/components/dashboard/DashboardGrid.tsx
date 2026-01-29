@@ -211,17 +211,17 @@ export function DashboardGrid({
         margin={[16, 16]}
       >
         {visibleWidgets.map((key) => (
-          <div key={key} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            {/* Drag handle */}
-            <div className="widget-drag-handle h-6 bg-gray-50 border-b border-gray-100 cursor-move flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <div key={key} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative group">
+            {/* Drag handle pill - positioned at top center, appears on hover */}
+            <div className="widget-drag-handle absolute top-1 left-1/2 -translate-x-1/2 z-10 cursor-move px-3 py-1 rounded-full bg-gray-100/80 hover:bg-gray-200/90 transition-all opacity-0 group-hover:opacity-100">
               <div className="flex gap-0.5">
-                <div className="w-1 h-1 rounded-full bg-gray-300" />
-                <div className="w-1 h-1 rounded-full bg-gray-300" />
-                <div className="w-1 h-1 rounded-full bg-gray-300" />
+                <div className="w-1 h-1 rounded-full bg-gray-400" />
+                <div className="w-1 h-1 rounded-full bg-gray-400" />
+                <div className="w-1 h-1 rounded-full bg-gray-400" />
               </div>
             </div>
-            {/* Widget content */}
-            <div className="h-[calc(100%-24px)] overflow-auto">
+            {/* Widget content - fills entire container */}
+            <div className="h-full overflow-hidden flex flex-col">
               {renderWidget(key)}
             </div>
           </div>

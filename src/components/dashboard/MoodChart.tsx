@@ -10,7 +10,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format, parseISO } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 
@@ -32,66 +31,59 @@ export function MoodChart({ entries }: MoodChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Mood Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center text-gray-500">
-            No mood data available for this period
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex flex-col p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          No mood data available for this period
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Mood Trend</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="formattedDate"
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
-              />
-              <YAxis
-                domain={[0, 10]}
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                }}
-                labelFormatter={(value) => `Date: ${value}`}
-                formatter={(value) => [`${value}/10`, 'Mood']}
-              />
-              <Line
-                type="monotone"
-                dataKey="mood"
-                stroke="#8b5cf6"
-                strokeWidth={2}
-                dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, fill: '#8b5cf6' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="h-full flex flex-col p-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Mood Trend</h3>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis
+              dataKey="formattedDate"
+              tick={{ fontSize: 10 }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
+            />
+            <YAxis
+              domain={[0, 10]}
+              tick={{ fontSize: 10 }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
+              width={25}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '11px',
+              }}
+              labelFormatter={(value) => `${value}`}
+              formatter={(value) => [`${value}/10`, 'Mood']}
+            />
+            <Line
+              type="monotone"
+              dataKey="mood"
+              stroke="#8b5cf6"
+              strokeWidth={2}
+              dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: '#8b5cf6' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   )
 }
