@@ -13,7 +13,7 @@ import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
 import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Lock, Unlock } from 'lucide-react'
 
 interface DashboardClientProps {
   currentUser: Profile
@@ -29,6 +29,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [widgetConfig, setWidgetConfig] = useState<DashboardWidgetConfig>(() =>
     getWidgetConfig(currentUser)
   )
+  const [gridLocked, setGridLocked] = useState(true)
 
   const { data: entries, isLoading } = useEntries({
     userId: selectedUserId,
@@ -89,6 +90,23 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
           config={widgetConfig}
           onConfigChange={setWidgetConfig}
         />
+        <button
+          onClick={() => setGridLocked(!gridLocked)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
+        >
+          {gridLocked ? (
+            <>
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Locked</span>
+            </>
+          ) : (
+            <>
+              <Unlock className="h-4 w-4" />
+              <span className="hidden sm:inline">Unlocked</span>
+            </>
+          )}
+        </button>
       </div>
 
       {isLoading ? (
@@ -117,6 +135,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             config={widgetConfig}
             profile={currentUser}
             onLayoutChange={handleLayoutChange}
+            locked={gridLocked}
           />
         </>
       )}
