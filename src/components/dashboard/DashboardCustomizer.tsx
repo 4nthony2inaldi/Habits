@@ -4,11 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { Settings2, X, Check, Loader2, GripVertical, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Settings2, X, Check, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { Profile, HabitType, EventType } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
-
-export type WidgetSize = 'half' | 'full'
 
 // Computed habits that are calculated from entry data
 export type ComputedHabitType = 'no_alcohol' | 'was_active'
@@ -46,8 +44,21 @@ export const allHabitLabels: Record<SelectableHabitType, string> = {
 
 export interface WidgetSettings {
   visible: boolean
-  size: WidgetSize
-  order: number
+}
+
+export interface GridLayoutItem {
+  x: number
+  y: number
+  w: number
+  h: number
+  minW?: number
+  minH?: number
+}
+
+export interface GridLayouts {
+  lg: Record<WidgetKey, GridLayoutItem>
+  md: Record<WidgetKey, GridLayoutItem>
+  sm: Record<WidgetKey, GridLayoutItem>
 }
 
 export interface KpiVisibility {
@@ -69,9 +80,10 @@ export interface DashboardWidgetConfig {
   selectedHabits: SelectableHabitType[]
   selectedEvents: EventType[]
   kpiVisibility: KpiVisibility
+  gridLayouts: GridLayouts
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'kpiVisibility'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'kpiVisibility' | 'gridLayouts'>
 export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
@@ -83,19 +95,57 @@ const defaultKpiVisibility: KpiVisibility = {
   busyKpi: true,
 }
 
+// Default grid layouts for different breakpoints (12 column grid)
+export const defaultGridLayouts: GridLayouts = {
+  lg: {
+    moodChart: { x: 0, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
+    workLocationChart: { x: 6, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
+    habitsGrid: { x: 0, y: 4, w: 12, h: 5, minW: 6, minH: 4 },
+    alcoholTracker: { x: 0, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
+    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
+    alcoholStats: { x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+    alcoholByType: { x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+    movementChart: { x: 0, y: 20, w: 6, h: 4, minW: 4, minH: 3 },
+    eventsTracker: { x: 6, y: 20, w: 6, h: 6, minW: 4, minH: 4 },
+  },
+  md: {
+    moodChart: { x: 0, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
+    workLocationChart: { x: 6, y: 0, w: 6, h: 4, minW: 3, minH: 3 },
+    habitsGrid: { x: 0, y: 4, w: 12, h: 5, minW: 6, minH: 4 },
+    alcoholTracker: { x: 0, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
+    alcoholCalendar: { x: 6, y: 9, w: 6, h: 5, minW: 4, minH: 4 },
+    alcoholStats: { x: 0, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+    alcoholByType: { x: 6, y: 14, w: 6, h: 6, minW: 4, minH: 4 },
+    movementChart: { x: 0, y: 20, w: 6, h: 4, minW: 4, minH: 3 },
+    eventsTracker: { x: 6, y: 20, w: 6, h: 6, minW: 4, minH: 4 },
+  },
+  sm: {
+    moodChart: { x: 0, y: 0, w: 12, h: 4, minW: 6, minH: 3 },
+    workLocationChart: { x: 0, y: 4, w: 12, h: 4, minW: 6, minH: 3 },
+    habitsGrid: { x: 0, y: 8, w: 12, h: 5, minW: 6, minH: 4 },
+    alcoholTracker: { x: 0, y: 13, w: 12, h: 5, minW: 6, minH: 4 },
+    alcoholCalendar: { x: 0, y: 18, w: 12, h: 5, minW: 6, minH: 4 },
+    alcoholStats: { x: 0, y: 23, w: 12, h: 6, minW: 6, minH: 4 },
+    alcoholByType: { x: 0, y: 29, w: 12, h: 6, minW: 6, minH: 4 },
+    movementChart: { x: 0, y: 35, w: 12, h: 4, minW: 6, minH: 3 },
+    eventsTracker: { x: 0, y: 39, w: 12, h: 6, minW: 6, minH: 4 },
+  },
+}
+
 const defaultConfig: DashboardWidgetConfig = {
-  moodChart: { visible: true, size: 'half', order: 0 },
-  workLocationChart: { visible: true, size: 'half', order: 1 },
-  habitsGrid: { visible: true, size: 'full', order: 2 },
-  alcoholTracker: { visible: true, size: 'half', order: 3 },
-  alcoholCalendar: { visible: true, size: 'half', order: 4 },
-  alcoholStats: { visible: true, size: 'half', order: 5 },
-  alcoholByType: { visible: true, size: 'half', order: 6 },
-  movementChart: { visible: true, size: 'half', order: 7 },
-  eventsTracker: { visible: true, size: 'full', order: 8 },
+  moodChart: { visible: true },
+  workLocationChart: { visible: true },
+  habitsGrid: { visible: true },
+  alcoholTracker: { visible: true },
+  alcoholCalendar: { visible: true },
+  alcoholStats: { visible: true },
+  alcoholByType: { visible: true },
+  movementChart: { visible: true },
+  eventsTracker: { visible: true },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
   kpiVisibility: defaultKpiVisibility,
+  gridLayouts: defaultGridLayouts,
 }
 
 const kpiLabels: Record<KpiKey, string> = {
@@ -104,7 +154,7 @@ const kpiLabels: Record<KpiKey, string> = {
   busyKpi: 'How Busy',
 }
 
-const widgetLabels: Record<WidgetKey, string> = {
+export const widgetLabels: Record<WidgetKey, string> = {
   moodChart: 'Mood Chart',
   workLocationChart: 'Work Location',
   habitsGrid: 'Habits Grid',
@@ -130,7 +180,6 @@ export function DashboardCustomizer({
   const [isOpen, setIsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [localConfig, setLocalConfig] = useState(config)
-  const [draggedItem, setDraggedItem] = useState<WidgetKey | null>(null)
   const [habitsExpanded, setHabitsExpanded] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -168,90 +217,22 @@ export function DashboardCustomizer({
     }))
   }
 
-  const toggleSize = (key: WidgetKey) => {
-    setLocalConfig((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], size: prev[key].size === 'half' ? 'full' : 'half' },
-    }))
-  }
-
   const toggleHabit = (habit: SelectableHabitType) => {
-    setLocalConfig((prev) => {
-      const currentHabits = prev.selectedHabits
-      const isSelected = currentHabits.includes(habit)
-      return {
-        ...prev,
-        selectedHabits: isSelected
-          ? currentHabits.filter((h) => h !== habit)
-          : [...currentHabits, habit],
-      }
-    })
-  }
-
-  const selectAllHabits = () => {
     setLocalConfig((prev) => ({
       ...prev,
-      selectedHabits: [...allHabits],
-    }))
-  }
-
-  const deselectAllHabits = () => {
-    setLocalConfig((prev) => ({
-      ...prev,
-      selectedHabits: [],
+      selectedHabits: prev.selectedHabits.includes(habit)
+        ? prev.selectedHabits.filter((h) => h !== habit)
+        : [...prev.selectedHabits, habit],
     }))
   }
 
   const toggleEvent = (event: EventType) => {
-    setLocalConfig((prev) => {
-      const currentEvents = prev.selectedEvents
-      const isSelected = currentEvents.includes(event)
-      return {
-        ...prev,
-        selectedEvents: isSelected
-          ? currentEvents.filter((e) => e !== event)
-          : [...currentEvents, event],
-      }
-    })
-  }
-
-  const selectAllEvents = () => {
     setLocalConfig((prev) => ({
       ...prev,
-      selectedEvents: [...allEvents],
+      selectedEvents: prev.selectedEvents.includes(event)
+        ? prev.selectedEvents.filter((e) => e !== event)
+        : [...prev.selectedEvents, event],
     }))
-  }
-
-  const deselectAllEvents = () => {
-    setLocalConfig((prev) => ({
-      ...prev,
-      selectedEvents: [],
-    }))
-  }
-
-  const handleDragStart = (key: WidgetKey) => {
-    setDraggedItem(key)
-  }
-
-  const handleDragOver = (e: React.DragEvent, targetKey: WidgetKey) => {
-    e.preventDefault()
-    if (!draggedItem || draggedItem === targetKey) return
-
-    setLocalConfig((prev) => {
-      const newConfig = { ...prev }
-      const draggedOrder = prev[draggedItem].order
-      const targetOrder = prev[targetKey].order
-
-      // Swap orders
-      newConfig[draggedItem] = { ...prev[draggedItem], order: targetOrder }
-      newConfig[targetKey] = { ...prev[targetKey], order: draggedOrder }
-
-      return newConfig
-    })
-  }
-
-  const handleDragEnd = () => {
-    setDraggedItem(null)
   }
 
   const handleSave = async () => {
@@ -275,114 +256,7 @@ export function DashboardCustomizer({
   }
 
   const hasChanges = JSON.stringify(localConfig) !== JSON.stringify(config)
-
-  // Sort widgets by order for display
   const widgetKeys = Object.keys(widgetLabels) as WidgetKey[]
-  const sortedWidgets = widgetKeys.sort(
-    (a, b) => localConfig[a].order - localConfig[b].order
-  )
-
-  const renderExpandableWidget = (key: WidgetKey) => {
-    const isHabits = key === 'habitsGrid'
-    const isEvents = key === 'eventsTracker'
-    const isExpandable = (isHabits || isEvents) && localConfig[key].visible
-    const isExpanded = isHabits ? habitsExpanded : eventsExpanded
-    const setExpanded = isHabits ? setHabitsExpanded : setEventsExpanded
-    const items = isHabits ? allHabits : allEvents
-    const selectedItems = isHabits ? localConfig.selectedHabits : localConfig.selectedEvents
-    const labels = isHabits ? allHabitLabels : eventLabels
-    const toggleItem = isHabits ? toggleHabit : toggleEvent
-    const selectAll = isHabits ? selectAllHabits : selectAllEvents
-    const deselectAll = isHabits ? deselectAllHabits : deselectAllEvents
-
-    if (!isExpandable) {
-      return (
-        <span className="text-sm text-gray-700 flex-1 truncate">
-          {widgetLabels[key]}
-        </span>
-      )
-    }
-
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(!isExpanded)}
-        className="flex items-center gap-1 text-sm text-gray-700 flex-1"
-      >
-        {isExpanded ? (
-          <ChevronDown className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5" />
-        )}
-        {widgetLabels[key]}
-        <span className="text-xs text-gray-400">
-          ({selectedItems.length}/{items.length})
-        </span>
-      </button>
-    )
-  }
-
-  const renderSelectionDropdown = (key: WidgetKey) => {
-    const isHabits = key === 'habitsGrid'
-    const isEvents = key === 'eventsTracker'
-
-    if (!isHabits && !isEvents) return null
-    if (!localConfig[key].visible) return null
-
-    const isExpanded = isHabits ? habitsExpanded : eventsExpanded
-    if (!isExpanded) return null
-
-    const items = isHabits ? allHabits : allEvents
-    const selectedItems = isHabits ? localConfig.selectedHabits : localConfig.selectedEvents
-    const labels = isHabits ? allHabitLabels : eventLabels
-    const toggleItem = isHabits
-      ? (item: string) => toggleHabit(item as SelectableHabitType)
-      : (item: string) => toggleEvent(item as EventType)
-    const selectAll = isHabits ? selectAllHabits : selectAllEvents
-    const deselectAll = isHabits ? deselectAllHabits : deselectAllEvents
-    const itemLabel = isHabits ? 'habits' : 'events'
-
-    return (
-      <div className="ml-6 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-600">Select {itemLabel} to show:</span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={selectAll}
-              className="text-xs text-purple-600 hover:underline"
-            >
-              All
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              type="button"
-              onClick={deselectAll}
-              className="text-xs text-purple-600 hover:underline"
-            >
-              None
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
-          {items.map((item) => (
-            <label
-              key={item}
-              className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selectedItems.includes(item as never)}
-                onChange={() => toggleItem(item)}
-                className="w-4 h-4 accent-purple-600 rounded"
-              />
-              <span className="text-xs text-gray-700">{labels[item as keyof typeof labels]}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="relative" ref={panelRef}>
@@ -440,63 +314,143 @@ export function DashboardCustomizer({
 
             {/* Widgets Section */}
             <p className="text-xs text-gray-500 mt-4 mb-2">
-              Widgets (drag to reorder)
+              Widgets (drag on dashboard to reposition/resize)
             </p>
-            {sortedWidgets.map((key) => (
-              <div key={key}>
-                <div
-                  draggable
-                  onDragStart={() => handleDragStart(key)}
-                  onDragOver={(e) => handleDragOver(e, key)}
-                  onDragEnd={handleDragEnd}
-                  className={cn(
-                    'flex items-center gap-2 p-2 rounded-lg border border-transparent transition-colors',
-                    draggedItem === key ? 'bg-purple-50 border-purple-200' : 'hover:bg-gray-50',
-                    !localConfig[key].visible && 'opacity-50'
-                  )}
-                >
-                  <GripVertical className="h-4 w-4 text-gray-400 cursor-grab flex-shrink-0" />
+            {widgetKeys.map((key) => {
+              const isHabits = key === 'habitsGrid'
+              const isEvents = key === 'eventsTracker'
+              const isExpandable = isHabits || isEvents
+              const isExpanded = isHabits ? habitsExpanded : eventsExpanded
+              const setExpanded = isHabits ? setHabitsExpanded : setEventsExpanded
 
-                  {renderExpandableWidget(key)}
-
-                  <button
-                    type="button"
-                    onClick={() => toggleSize(key)}
+              return (
+                <div key={key}>
+                  <div
                     className={cn(
-                      'p-1.5 rounded transition-colors',
-                      localConfig[key].size === 'full'
-                        ? 'bg-purple-100 text-purple-600'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      'flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50',
+                      !localConfig[key].visible && 'opacity-50'
                     )}
-                    title={localConfig[key].size === 'full' ? 'Full width' : 'Half width'}
                   >
-                    {localConfig[key].size === 'full' ? (
-                      <Maximize2 className="h-3.5 w-3.5" />
+                    {isExpandable && localConfig[key].visible ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(!isExpanded)}
+                        className="flex items-center gap-1 text-sm text-gray-700 flex-1"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        )}
+                        {widgetLabels[key]}
+                        <span className="text-xs text-gray-400">
+                          ({isHabits ? localConfig.selectedHabits.length : localConfig.selectedEvents.length}/
+                          {isHabits ? allHabits.length : allEvents.length})
+                        </span>
+                      </button>
                     ) : (
-                      <Minimize2 className="h-3.5 w-3.5" />
+                      <span className="text-sm text-gray-700 flex-1">
+                        {widgetLabels[key]}
+                      </span>
                     )}
-                  </button>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleWidget(key)}
-                    className={cn(
-                      'w-9 h-5 rounded-full transition-colors relative flex-shrink-0',
-                      localConfig[key].visible ? 'bg-purple-600' : 'bg-gray-200'
-                    )}
-                  >
-                    <span
+                    <button
+                      type="button"
+                      onClick={() => toggleWidget(key)}
                       className={cn(
-                        'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
-                        localConfig[key].visible ? 'translate-x-4' : 'translate-x-0.5'
+                        'w-9 h-5 rounded-full transition-colors relative flex-shrink-0',
+                        localConfig[key].visible ? 'bg-purple-600' : 'bg-gray-200'
                       )}
-                    />
-                  </button>
-                </div>
+                    >
+                      <span
+                        className={cn(
+                          'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                          localConfig[key].visible ? 'translate-x-4' : 'translate-x-0.5'
+                        )}
+                      />
+                    </button>
+                  </div>
 
-                {renderSelectionDropdown(key)}
-              </div>
-            ))}
+                  {/* Habits selection dropdown */}
+                  {isHabits && habitsExpanded && localConfig[key].visible && (
+                    <div className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-gray-600">Select habits:</span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [...allHabits] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            All
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+                        {allHabits.map((habit) => (
+                          <label key={habit} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={localConfig.selectedHabits.includes(habit)}
+                              onChange={() => toggleHabit(habit)}
+                              className="w-4 h-4 accent-purple-600 rounded"
+                            />
+                            <span className="text-xs text-gray-700">{allHabitLabels[habit]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Events selection dropdown */}
+                  {isEvents && eventsExpanded && localConfig[key].visible && (
+                    <div className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-gray-600">Select events:</span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedEvents: [...allEvents] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            All
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedEvents: [] }))}
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+                        {allEvents.map((event) => (
+                          <label key={event} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={localConfig.selectedEvents.includes(event)}
+                              onChange={() => toggleEvent(event)}
+                              className="w-4 h-4 accent-purple-600 rounded"
+                            />
+                            <span className="text-xs text-gray-700">{eventLabels[event]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <div className="p-4 border-t border-gray-100">
@@ -531,38 +485,13 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Start with defaults
   const result = { ...defaultConfig }
 
-  // Check if it has the new widget format
-  if (config.moodChart && typeof config.moodChart === 'object' && 'visible' in (config.moodChart as object)) {
-    // Merge widget settings - only for keys that exist in old config
-    for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
-      if (key in config && typeof config[key] === 'object') {
-        result[key] = { ...defaultConfig[key], ...(config[key] as WidgetSettings) }
-      }
-      // If key is NOT in old config, it keeps the default value (new widget)
-    }
-
-    // Find the max order from existing widgets to place new ones after
-    const existingOrders = Object.keys(config)
-      .filter(k => k in widgetLabels && typeof config[k] === 'object')
-      .map(k => (config[k] as WidgetSettings).order || 0)
-    const maxOrder = existingOrders.length > 0 ? Math.max(...existingOrders) : -1
-
-    // Assign orders to new widgets that weren't in old config
-    let nextOrder = maxOrder + 1
-    for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
-      if (!(key in config)) {
-        result[key] = { ...result[key], order: nextOrder++ }
-      }
-    }
-  } else {
-    // Migrate from old boolean format
-    for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
-      if (key in config) {
-        const value = config[key]
-        if (typeof value === 'boolean') {
-          result[key] = { ...defaultConfig[key], visible: value }
-        }
-      }
+  // Migrate widget visibility
+  for (const key of Object.keys(widgetLabels) as WidgetKey[]) {
+    if (key in config && typeof config[key] === 'object') {
+      const oldWidget = config[key] as Record<string, unknown>
+      result[key] = { visible: oldWidget.visible !== false }
+    } else if (key in config && typeof config[key] === 'boolean') {
+      result[key] = { visible: config[key] as boolean }
     }
   }
 
@@ -581,6 +510,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
     result.kpiVisibility = { ...defaultKpiVisibility, ...(config.kpiVisibility as KpiVisibility) }
   }
 
+  // Migrate gridLayouts or use defaults
+  if ('gridLayouts' in config && typeof config.gridLayouts === 'object') {
+    result.gridLayouts = { ...defaultGridLayouts, ...(config.gridLayouts as GridLayouts) }
+  }
+
   return result
 }
 
@@ -589,9 +523,6 @@ export function getWidgetConfig(profile: Profile): DashboardWidgetConfig {
   return migrateConfig(customMetrics)
 }
 
-export function getOrderedVisibleWidgets(config: DashboardWidgetConfig): WidgetKey[] {
-  const widgetKeys = Object.keys(widgetLabels) as WidgetKey[]
-  return widgetKeys
-    .filter((key) => config[key].visible)
-    .sort((a, b) => config[a].order - config[b].order)
+export function getVisibleWidgets(config: DashboardWidgetConfig): WidgetKey[] {
+  return (Object.keys(widgetLabels) as WidgetKey[]).filter((key) => config[key].visible)
 }

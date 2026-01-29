@@ -1,42 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { subDays } from 'date-fns'
 import { useEntries } from '@/lib/hooks/useEntries'
 import { useStats } from '@/lib/hooks/useStats'
 import { formatDateForInput } from '@/lib/utils/dates'
+import { createClient } from '@/lib/supabase/client'
 import { DateRangePicker } from '@/components/layout/DateRangePicker'
 import { UserSelector } from '@/components/layout/UserSelector'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
-import { MoodChart } from '@/components/dashboard/MoodChart'
-import { WorkLocationChart } from '@/components/dashboard/WorkLocationChart'
-import { HabitsGrid } from '@/components/dashboard/HabitsGrid'
-import { AlcoholTracker } from '@/components/dashboard/AlcoholTracker'
-import { AlcoholCalendar } from '@/components/dashboard/AlcoholCalendar'
-import { AlcoholStats } from '@/components/dashboard/AlcoholStats'
-import { AlcoholByType } from '@/components/dashboard/AlcoholByType'
-import { EventsTracker } from '@/components/dashboard/EventsTracker'
-import { MovementChart } from '@/components/dashboard/MovementChart'
-import { DashboardCustomizer, getWidgetConfig, getOrderedVisibleWidgets } from '@/components/dashboard/DashboardCustomizer'
-import type { DashboardWidgetConfig, WidgetKey } from '@/components/dashboard/DashboardCustomizer'
-import type { Profile, DailyEntryWithRelations } from '@/types/database'
+import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
+import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
+import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
+import type { Profile } from '@/types/database'
 import { Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils/cn'
 
 interface DashboardClientProps {
   currentUser: Profile
   users: { id: string; display_name: string }[]
-}
-
-// Widget component mapping (excluding habitsGrid and eventsTracker which need special handling)
-const widgetComponents: Record<Exclude<WidgetKey, 'habitsGrid' | 'eventsTracker'>, React.ComponentType<{ entries: DailyEntryWithRelations[] }>> = {
-  moodChart: MoodChart,
-  workLocationChart: WorkLocationChart,
-  alcoholTracker: AlcoholTracker,
-  alcoholCalendar: AlcoholCalendar,
-  alcoholStats: AlcoholStats,
-  alcoholByType: AlcoholByType,
-  movementChart: MovementChart,
 }
 
 export function DashboardClient({ currentUser, users }: DashboardClientProps) {
@@ -58,50 +39,27 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const stats = useStats(entries)
   const selectedUser = users.find((u) => u.id === selectedUserId)
 
-  // Get ordered visible widgets
-  const orderedWidgets = getOrderedVisibleWidgets(widgetConfig)
+  // Handle layout changes from drag/resize
+  const handleLayoutChange = useCallback(
+    async (newLayouts: GridLayouts) => {
+      const newConfig = { ...widgetConfig, gridLayouts: newLayouts }
+      setWidgetConfig(newConfig)
 
-  // Render widget with proper sizing
-  const renderWidget = (key: WidgetKey) => {
-    const settings = widgetConfig[key]
-    const wrapperClass = cn(
-      settings.size === 'full' ? 'lg:col-span-2' : 'lg:col-span-1',
-      'col-span-1'
-    )
-
-    // Special handling for habitsGrid to pass selectedHabits
-    if (key === 'habitsGrid') {
-      return (
-        <div key={key} className={wrapperClass}>
-          <HabitsGrid
-            entries={entries || []}
-            showDays={7}
-            selectedHabits={widgetConfig.selectedHabits}
-          />
-        </div>
-      )
-    }
-
-    // Special handling for eventsTracker to pass selectedEvents
-    if (key === 'eventsTracker') {
-      return (
-        <div key={key} className={wrapperClass}>
-          <EventsTracker
-            entries={entries || []}
-            selectedEvents={widgetConfig.selectedEvents}
-          />
-        </div>
-      )
-    }
-
-    const Component = widgetComponents[key]
-
-    return (
-      <div key={key} className={wrapperClass}>
-        <Component entries={entries || []} />
-      </div>
-    )
-  }
+      // Save to database
+      try {
+        const supabase = createClient()
+        await supabase
+          .from('profiles')
+          .update({
+            custom_metrics: newConfig as unknown as Record<string, unknown>,
+          })
+          .eq('id', currentUser.id)
+      } catch (error) {
+        console.error('Failed to save layout:', error)
+      }
+    },
+    [widgetConfig, currentUser.id]
+  )
 
   return (
     <div className="space-y-6">
@@ -153,12 +111,13 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             showBusy={widgetConfig.kpiVisibility.busyKpi}
           />
 
-          {/* Dynamic Widget Grid */}
-          {orderedWidgets.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {orderedWidgets.map(renderWidget)}
-            </div>
-          )}
+          {/* Draggable Widget Grid */}
+          <DashboardGrid
+            entries={entries || []}
+            config={widgetConfig}
+            profile={currentUser}
+            onLayoutChange={handleLayoutChange}
+          />
         </>
       )}
     </div>
