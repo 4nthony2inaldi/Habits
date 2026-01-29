@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
+import { Smile } from 'lucide-react'
 
 interface MoodChartProps {
   entries: DailyEntryWithRelations[]
@@ -35,7 +36,10 @@ export function MoodChart({ entries, title = 'Mood Over Time', subtitle }: MoodC
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Smile className="h-5 w-5 text-yellow-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -48,7 +52,10 @@ export function MoodChart({ entries, title = 'Mood Over Time', subtitle }: MoodC
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Smile className="h-5 w-5 text-yellow-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0">

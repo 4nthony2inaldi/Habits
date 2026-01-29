@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { Check, X, Star } from 'lucide-react'
+import { Check, X, Star, ListChecks } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels } from '@/types/forms'
@@ -136,7 +136,10 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <ListChecks className="h-5 w-5 text-green-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">

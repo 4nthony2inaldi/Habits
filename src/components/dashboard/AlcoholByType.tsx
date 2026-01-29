@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { parseISO, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
+import { Wine } from 'lucide-react'
 
 interface AlcoholByTypeProps {
   entries: DailyEntryWithRelations[]
@@ -91,7 +92,10 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Wine className="h-5 w-5 text-red-500" />
+            {title}
+          </h3>
           {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -104,9 +108,12 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Wine className="h-5 w-5 text-red-500" />
+          {title}
+        </h3>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
 
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         {/* Stacked bars - fills available space */}

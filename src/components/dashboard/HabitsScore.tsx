@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { format, subDays } from 'date-fns'
+import { Target } from 'lucide-react'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
@@ -130,7 +131,10 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Target className="h-5 w-5 text-orange-500" />
+          {title}
+        </h3>
         <p className="text-xs text-gray-500">{dateRangeLabel}</p>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center">

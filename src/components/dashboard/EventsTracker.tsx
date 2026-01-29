@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils/cn'
 import { differenceInDays, parseISO, subYears, isWithinInterval, format } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
 import { eventLabels } from '@/types/forms'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Calendar } from 'lucide-react'
 
 // Short labels for compact display
 const shortEventLabels: Record<EventType, string> = {
@@ -126,9 +126,12 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-      </div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-indigo-500" />
+            {title}
+          </h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No life events recorded yet
         </div>
@@ -139,7 +142,10 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-indigo-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">

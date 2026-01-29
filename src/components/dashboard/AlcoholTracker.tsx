@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils/cn'
 import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateAlcoholStats, calculateTotalDrinks } from '@/lib/utils/calculations'
-import { Beer, Wine, Martini, Droplet } from 'lucide-react'
+import { Beer, Wine, Martini, Droplet, TrendingUp } from 'lucide-react'
 
 interface AlcoholTrackerProps {
   entries: DailyEntryWithRelations[]
@@ -85,7 +85,10 @@ export function AlcoholTracker({ entries, title = 'Drinking Trends', subtitle }:
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-purple-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
 

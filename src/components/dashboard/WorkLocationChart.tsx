@@ -56,9 +56,12 @@ export function WorkLocationChart({ entries, title = 'Work Location', subtitle }
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-      </div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Building className="h-5 w-5 text-purple-500" />
+            {title}
+          </h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No work location data available
         </div>
@@ -69,7 +72,10 @@ export function WorkLocationChart({ entries, title = 'Work Location', subtitle }
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Building className="h-5 w-5 text-purple-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-center gap-4">

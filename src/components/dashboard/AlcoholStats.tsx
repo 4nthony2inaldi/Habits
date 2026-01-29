@@ -6,6 +6,7 @@ import { parseISO, subDays, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
 import type { AlcoholMetricType } from './DashboardCustomizer'
+import { BarChart3 } from 'lucide-react'
 
 interface AlcoholStatsProps {
   entries: DailyEntryWithRelations[]
@@ -150,7 +151,10 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-purple-500" />
+            {title}
+          </h3>
           {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -267,7 +271,10 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-purple-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">

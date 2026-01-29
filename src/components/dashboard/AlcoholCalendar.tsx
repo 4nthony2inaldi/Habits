@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils/cn'
 import { format, parseISO, eachDayOfInterval, getMonth, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
+import { CalendarDays } from 'lucide-react'
 
 interface AlcoholCalendarProps {
   entries: DailyEntryWithRelations[]
@@ -152,7 +153,10 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-purple-500" />
+            {title}
+          </h3>
           {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -238,7 +242,10 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <CalendarDays className="h-5 w-5 text-purple-500" />
+          {title}
+        </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
 
