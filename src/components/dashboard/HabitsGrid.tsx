@@ -18,16 +18,17 @@ interface HabitsGridProps {
   entries: DailyEntryWithRelations[]
   showDays?: number
   selectedHabits?: SelectableHabitType[]
+  dateRange: { start: Date; end: Date }
   title?: string
   subtitle?: string
 }
 
-export function HabitsGrid({ entries, showDays = 7, selectedHabits, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
+export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
   const data = useMemo(() => {
-    // Get last N days
+    // Get last N days from end of date range
     const dates: string[] = []
     for (let i = 0; i < showDays; i++) {
-      dates.unshift(format(subDays(new Date(), i + 1), 'yyyy-MM-dd'))
+      dates.unshift(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
     }
 
     // Create map of entries by date
@@ -83,19 +84,19 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, title = 'Hea
         trackedDays,
       }
     })
-  }, [entries, showDays, selectedHabits])
+  }, [entries, showDays, selectedHabits, dateRange.end])
 
   const dateHeaders = useMemo(() => {
     const headers: { day: string; date: string }[] = []
     for (let i = 0; i < showDays; i++) {
-      const d = subDays(new Date(), i + 1)
+      const d = subDays(dateRange.end, i)
       headers.unshift({
         day: format(d, 'EEE'),
         date: format(d, 'M/d'),
       })
     }
     return headers
-  }, [showDays])
+  }, [showDays, dateRange.end])
 
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
     if (status === null) {

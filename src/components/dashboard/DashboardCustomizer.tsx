@@ -114,7 +114,6 @@ export interface DashboardWidgetConfig {
   alcoholByType: WidgetSettings
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
-  travelRadialChart: WidgetSettings
   selectedHabits: SelectableHabitType[]
   selectedEvents: EventType[]
   selectedAlcoholMetrics: AlcoholMetricType[]
@@ -147,7 +146,6 @@ export const defaultWidgetTitles: WidgetTitles = {
   alcoholByType: { title: 'What Drinking' },
   movementChart: { title: 'Movement' },
   eventsTracker: { title: 'Life Events' },
-  travelRadialChart: { title: 'Travel Patterns' },
 }
 
 // Default grid layouts for different breakpoints (12 column grid)
@@ -164,7 +162,6 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
     movementChart: { x: 0, y: 20, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 20, w: 6, h: 6 },
-    travelRadialChart: { x: 0, y: 26, w: 6, h: 5 },
   },
   md: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
@@ -177,7 +174,6 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
     movementChart: { x: 0, y: 20, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 20, w: 6, h: 6 },
-    travelRadialChart: { x: 0, y: 26, w: 6, h: 5 },
   },
   sm: {
     moodChart: { x: 0, y: 0, w: 12, h: 4 },
@@ -190,7 +186,6 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholByType: { x: 0, y: 33, w: 12, h: 6 },
     movementChart: { x: 0, y: 39, w: 12, h: 4 },
     eventsTracker: { x: 0, y: 43, w: 12, h: 6 },
-    travelRadialChart: { x: 0, y: 49, w: 12, h: 5 },
   },
 }
 
@@ -205,7 +200,6 @@ const defaultConfig: DashboardWidgetConfig = {
   alcoholByType: { visible: true },
   movementChart: { visible: true },
   eventsTracker: { visible: true },
-  travelRadialChart: { visible: true },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
   selectedAlcoholMetrics: allAlcoholMetrics,
@@ -231,7 +225,6 @@ export const widgetLabels: Record<WidgetKey, string> = {
   alcoholByType: 'What Drinking',
   movementChart: 'Movement Chart',
   eventsTracker: 'Events Tracker',
-  travelRadialChart: 'Travel Patterns',
 }
 
 interface DashboardCustomizerProps {
