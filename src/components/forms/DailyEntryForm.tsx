@@ -72,6 +72,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(getYesterdayString())
   const [openSection, setOpenSection] = useState<string | null>('mood')
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const { data: existingEntry, isLoading: loadingEntry } = useEntryByDate(
     profile.id,
@@ -226,6 +227,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   }
 
   const onSubmit = async (data: DailyEntryFormData) => {
+    setSaveError(null)
     try {
       await createEntry.mutateAsync({
         userId: profile.id,
@@ -234,6 +236,8 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       router.push('/dashboard')
     } catch (error) {
       console.error('Failed to save entry:', error)
+      const message = error instanceof Error ? error.message : 'Failed to save entry. Please try again.'
+      setSaveError(message)
     }
   }
 
@@ -1066,6 +1070,14 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           className="min-h-[60px]"
         />
       </div>
+
+      {/* Error Display */}
+      {saveError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="font-medium">Error saving entry</p>
+          <p className="text-sm">{saveError}</p>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex gap-4 pt-2">
