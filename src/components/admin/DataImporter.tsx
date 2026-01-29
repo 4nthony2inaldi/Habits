@@ -96,93 +96,174 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
 
       const entry: ParsedEntry = { entry_date: '' }
 
+      // Initialize habits and events arrays
+      if (!entry.habits) entry.habits = []
+      if (!entry.events) entry.events = []
+
       headers.forEach((header, idx) => {
         const value = values[idx]?.trim()
+        const isYes = value?.toLowerCase() === 'yes' || value === '1' || value?.toLowerCase() === 'true'
 
-        switch (header) {
-          case 'entry_date':
-          case 'date':
-            entry.entry_date = normalizeDate(value)
-            break
-          case 'mood_score':
-          case 'mood':
-            entry.mood_score = value ? parseInt(value, 10) || null : null
-            break
-          case 'work_location':
-          case 'work':
-            if (value && VALID_WORK_LOCATIONS.includes(value.toLowerCase() as WorkLocation)) {
-              entry.work_location = value.toLowerCase() as WorkLocation
-            }
-            break
-          case 'beers':
-          case 'beer':
-            entry.beers = parseInt(value, 10) || 0
-            break
-          case 'seltzers':
-          case 'seltzer':
-            entry.seltzers = parseInt(value, 10) || 0
-            break
-          case 'wine':
-            entry.wine = parseInt(value, 10) || 0
-            break
-          case 'liquor':
-            entry.liquor = parseInt(value, 10) || 0
-            break
-          case 'shots':
-            entry.shots = parseInt(value, 10) || 0
-            break
-          case 'coffee':
-            entry.coffee = parseInt(value, 10) || 0
-            break
-          case 'steps':
-            entry.steps = value ? parseInt(value, 10) || null : null
-            break
-          case 'screen_time':
-            entry.screen_time = value ? parseInt(value, 10) || null : null
-            break
-          case 'sex':
-            entry.sex = parseInt(value, 10) || 0
-            break
-          case 'city_wake':
-            entry.city_wake = value || null
-            break
-          case 'miles_wake':
-            entry.miles_wake = value ? parseFloat(value) || null : null
-            break
-          case 'city_noon':
-            entry.city_noon = value || null
-            break
-          case 'miles_noon':
-            entry.miles_noon = value ? parseFloat(value) || null : null
-            break
-          case 'city_sleep':
-            entry.city_sleep = value || null
-            break
-          case 'miles_sleep':
-            entry.miles_sleep = value ? parseFloat(value) || null : null
-            break
-          case 'best_part':
-            entry.best_part = value || null
-            break
-          case 'notes':
-            entry.notes = value || null
-            break
-          case 'habits':
-          case 'healthy_habits':
-            if (value) {
-              entry.habits = value.split(/[;|]/).map(h => h.trim().toLowerCase()).filter(h =>
-                VALID_HABITS.includes(h as HabitType)
-              )
-            }
-            break
-          case 'events':
-          case 'life_events':
-            if (value) {
-              entry.events = value.split(/[;|]/).map(e => e.trim().toLowerCase()).filter(e =>
-                VALID_EVENTS.includes(e as EventType)
-              )
-            }
-            break
+        // Date fields
+        if (header === 'entry_date' || header === 'date') {
+          entry.entry_date = normalizeDate(value)
+        }
+        // Mood
+        else if (header === 'mood_score' || header === 'mood' || header === 'how_was_your_day?') {
+          entry.mood_score = value ? parseInt(value, 10) || null : null
+        }
+        // Work location
+        else if (header === 'work_location' || header === 'work' || header === 'i_worked:') {
+          entry.work_location = mapWorkLocation(value)
+        }
+        // Drinks - numeric
+        else if (header === 'beers' || header === 'beer') {
+          entry.beers = parseInt(value, 10) || 0
+        }
+        else if (header === 'seltzers' || header === 'seltzer') {
+          entry.seltzers = parseInt(value, 10) || 0
+        }
+        else if (header === 'wine' || header === 'glasses_of_wine') {
+          entry.wine = parseInt(value, 10) || 0
+        }
+        else if (header === 'liquor' || header === 'liquor_based_drinks') {
+          entry.liquor = parseInt(value, 10) || 0
+        }
+        else if (header === 'shots') {
+          entry.shots = parseInt(value, 10) || 0
+        }
+        else if (header === 'coffee' || header === 'cups_of_coffee') {
+          entry.coffee = parseInt(value, 10) || 0
+        }
+        // Other numeric fields
+        else if (header === 'steps' || header.includes('steps')) {
+          entry.steps = value ? parseInt(value.replace(/,/g, ''), 10) || null : null
+        }
+        else if (header === 'screen_time' || header.includes('screen_time')) {
+          entry.screen_time = value ? parseInt(value.replace(/,/g, ''), 10) || null : null
+        }
+        else if (header === 'sex') {
+          entry.sex = parseInt(value, 10) || 0
+        }
+        // Location fields
+        else if (header === 'city_wake' || header.includes('city_you_woke_up')) {
+          entry.city_wake = value || null
+        }
+        else if (header === 'miles_wake' || header.includes('miles_from_home_at_wake')) {
+          entry.miles_wake = value ? parseFloat(value) || null : null
+        }
+        else if (header === 'city_noon' || header.includes('city_at_noon')) {
+          entry.city_noon = value || null
+        }
+        else if (header === 'miles_noon' || header.includes('miles_from_home_at_noon')) {
+          entry.miles_noon = value ? parseFloat(value) || null : null
+        }
+        else if (header === 'city_sleep' || header.includes('city_you_went_to_sleep')) {
+          entry.city_sleep = value || null
+        }
+        else if (header === 'miles_sleep' || header.includes('miles_from_home_during_sleep')) {
+          entry.miles_sleep = value ? parseFloat(value) || null : null
+        }
+        // Text fields
+        else if (header === 'best_part' || header.includes('best_part_of_your_day')) {
+          entry.best_part = value || null
+        }
+        else if (header === 'notes' || header.includes('anything_you_would_like_to_note')) {
+          entry.notes = value || null
+        }
+        // Habits (Yes/No columns)
+        else if ((header.includes('exercise') || header.includes('went_out_of_your_way_to_exercise')) && isYes) {
+          entry.habits!.push('exercise')
+        }
+        else if ((header === '8+_hours_of_sleep' || header.includes('hours_of_sleep')) && isYes) {
+          entry.habits!.push('sleep_8hrs')
+        }
+        else if ((header === '8+_cups_of_water' || header.includes('cups_of_water')) && isYes) {
+          entry.habits!.push('water_8cups')
+        }
+        else if ((header.includes('breakfast') || header.includes('had_something_for_breakfast')) && isYes) {
+          entry.habits!.push('breakfast')
+        }
+        else if ((header.includes('vitamin') || header.includes('took_a_vitamin')) && isYes) {
+          entry.habits!.push('vitamin')
+        }
+        else if ((header.includes('read_5') || header.includes('pages_of_literature')) && isYes) {
+          entry.habits!.push('read_5pages')
+        }
+        else if ((header === 'ate_vegetables' || header.includes('ate_vegetables')) && isYes) {
+          entry.habits!.push('ate_vegetables')
+        }
+        else if ((header === 'ate_fruits' || header.includes('ate_fruit')) && isYes) {
+          entry.habits!.push('ate_fruit')
+        }
+        else if ((header.includes('family') || header.includes('interact_with_a_family')) && isYes) {
+          entry.habits!.push('family_interaction')
+        }
+        else if (header.includes('cooked_dinner') && isYes) {
+          entry.habits!.push('cooked_dinner')
+        }
+        else if (header.includes('journaled') && isYes) {
+          entry.habits!.push('journaled')
+        }
+        // Events (Yes/No columns)
+        else if ((header === 'took_pto' || header.includes('took_pto')) && isYes) {
+          entry.events!.push('pto')
+        }
+        else if ((header.includes('flight') || header.includes('took_a_flight')) && isYes) {
+          entry.events!.push('flight')
+        }
+        else if ((header.includes('train') || header.includes('took_a_train')) && isYes) {
+          entry.events!.push('train')
+        }
+        else if ((header === 'haircut' || header.includes('haircut')) && isYes) {
+          entry.events!.push('haircut')
+        }
+        else if ((header === 'doctor' || header.includes('doctor')) && isYes) {
+          entry.events!.push('doctor')
+        }
+        else if ((header === 'dentist' || header.includes('dentist')) && isYes) {
+          entry.events!.push('dentist')
+        }
+        else if ((header.includes('played_a_sport') || header === 'played_sport') && isYes) {
+          entry.events!.push('played_sport')
+        }
+        else if ((header.includes('went_to_a_sport') || header === 'attended_sport') && isYes) {
+          entry.events!.push('attended_sport')
+        }
+        else if ((header.includes('concert') || header.includes('went_to_a_concert')) && isYes) {
+          entry.events!.push('concert')
+        }
+        else if ((header.includes('stage_production') || header.includes('musical')) && isYes) {
+          entry.events!.push('stage_production')
+        }
+        else if ((header.includes('movies') || header.includes('went_to_the_movies')) && isYes) {
+          entry.events!.push('movies')
+        }
+        else if ((header.includes('museum') || header.includes('went_to_a_museum')) && isYes) {
+          entry.events!.push('museum')
+        }
+        else if ((header.includes('guys_night') || header.includes('guys_night')) && isYes) {
+          entry.events!.push('guys_night')
+        }
+        else if ((header.includes('self_care') || header.includes('massage') || header.includes('facial')) && isYes) {
+          entry.events!.push('other_selfcare')
+        }
+        // Semicolon-separated habits/events (for template format)
+        else if (header === 'habits' || header === 'healthy_habits') {
+          if (value) {
+            const habits = value.split(/[;|]/).map(h => h.trim().toLowerCase()).filter(h =>
+              VALID_HABITS.includes(h as HabitType)
+            )
+            entry.habits!.push(...habits)
+          }
+        }
+        else if (header === 'events' || header === 'life_events') {
+          if (value) {
+            const events = value.split(/[;|]/).map(e => e.trim().toLowerCase()).filter(e =>
+              VALID_EVENTS.includes(e as EventType)
+            )
+            entry.events!.push(...events)
+          }
         }
       })
 
@@ -337,7 +418,7 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Import Historical Data</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Upload a CSV file to import historical entries. Dates should be in YYYY-MM-DD format.
+            Upload a CSV file to import historical entries. Supports multiple date formats.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={downloadTemplate}>
@@ -529,13 +610,12 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
       <div className="bg-gray-50 rounded-lg p-4 text-sm">
         <h4 className="font-medium text-gray-900 mb-2">CSV Format Guide</h4>
         <ul className="space-y-1 text-gray-600">
-          <li><strong>entry_date</strong>: Required. Format: YYYY-MM-DD</li>
-          <li><strong>mood_score</strong>: 1-10</li>
-          <li><strong>work_location</strong>: home, office, field, or off</li>
-          <li><strong>beers, seltzers, wine, liquor, shots, coffee</strong>: Numbers</li>
-          <li><strong>steps, screen_time</strong>: Numbers</li>
-          <li><strong>habits</strong>: Semicolon-separated (e.g., breakfast;exercise;vitamin)</li>
-          <li><strong>events</strong>: Semicolon-separated (e.g., haircut;concert)</li>
+          <li><strong>Date</strong>: Required. Formats: DD/MM/YYYY, MM/DD/YYYY, or YYYY-MM-DD</li>
+          <li><strong>Mood</strong>: &quot;How was your day?&quot; or &quot;mood_score&quot; (1-10)</li>
+          <li><strong>Work</strong>: &quot;i worked:&quot; - accepts &quot;From home&quot;, &quot;In office&quot;, &quot;In the field&quot;, &quot;Didn&apos;t work&quot;</li>
+          <li><strong>Drinks</strong>: Beers, Glasses of Wine, Liquor Based Drinks, Seltzers, Shots, Cups of Coffee</li>
+          <li><strong>Habits</strong>: Yes/No columns for Exercise, Sleep, Water, Breakfast, Vitamin, Read, Vegetables, Fruits, Family</li>
+          <li><strong>Events</strong>: Yes/No columns for PTO, Flight, Train, Haircut, Doctor, Concert, Movies, Museum, etc.</li>
         </ul>
       </div>
     </div>
@@ -564,23 +644,63 @@ function parseCSVLine(line: string): string[] {
 }
 
 function normalizeDate(value: string): string {
-  // Try to parse various date formats
+  if (!value) return ''
+
+  // Try DD/MM/YYYY or MM/DD/YYYY format first
+  const parts = value.split(/[\/\-]/)
+  if (parts.length === 3) {
+    const [a, b, c] = parts
+
+    // If first part is 4 digits, assume YYYY-MM-DD
+    if (a.length === 4) {
+      return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`
+    }
+
+    // If last part is 4 digits (year), determine DD/MM vs MM/DD
+    if (c.length === 4) {
+      const day = parseInt(a, 10)
+      const month = parseInt(b, 10)
+
+      // If first number > 12, it must be a day (DD/MM/YYYY format)
+      if (day > 12) {
+        return `${c}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`
+      }
+      // If second number > 12, it must be a day (MM/DD/YYYY format)
+      if (month > 12) {
+        return `${c}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`
+      }
+      // Ambiguous case - assume DD/MM/YYYY (European format, common for this type of data)
+      return `${c}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`
+    }
+  }
+
+  // Try to parse as a date string
   const date = new Date(value)
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0]
   }
 
-  // Try MM/DD/YYYY format
-  const parts = value.split(/[\/\-]/)
-  if (parts.length === 3) {
-    const [a, b, c] = parts
-    // If first part is 4 digits, assume YYYY-MM-DD
-    if (a.length === 4) {
-      return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`
-    }
-    // Otherwise assume MM/DD/YYYY
-    return `${c}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`
+  return value
+}
+
+function mapWorkLocation(value: string): WorkLocation | null {
+  if (!value) return null
+
+  const lower = value.toLowerCase().trim()
+
+  // Map various work location strings to our enum values
+  if (lower === 'home' || lower === 'from home' || lower === 'wfh' || lower === 'remote') {
+    return 'home'
+  }
+  if (lower === 'office' || lower === 'in office' || lower === 'at office') {
+    return 'office'
+  }
+  if (lower === 'field' || lower === 'in the field' || lower === 'on site' || lower === 'onsite') {
+    return 'field'
+  }
+  if (lower === 'off' || lower === "didn't work" || lower === 'didnt work' || lower === 'no work' || lower === 'day off') {
+    return 'off'
   }
 
-  return value
+  return null
 }
