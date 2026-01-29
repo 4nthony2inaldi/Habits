@@ -116,7 +116,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="h-full flex flex-col p-4">
+      <div className="h-full flex flex-col p-4 overflow-hidden">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           No data available for this period
@@ -184,7 +184,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
   )
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-4 overflow-hidden">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">When Drinking</h3>
 
       {/* Responsive grid - fills available space */}

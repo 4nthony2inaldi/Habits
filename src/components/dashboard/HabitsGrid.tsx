@@ -131,9 +131,9 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
   }
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-4 overflow-hidden">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Healthy Habits</h3>
-      <div className="flex-1 min-h-0 overflow-x-auto">
+      <div className="flex-1 min-h-0">
         <table className="w-full">
           <thead>
             <tr>
