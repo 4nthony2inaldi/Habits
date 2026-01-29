@@ -68,19 +68,31 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parseCSV = useCallback((text: string): ParsedEntry[] => {
-    const lines = text.trim().split('\n')
+    const lines = text.trim().split('\n').map(line => line.replace(/\r$/, ''))
     if (lines.length < 2) {
       throw new Error('CSV must have at least a header row and one data row')
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
+    // Parse headers, removing any empty trailing headers (from trailing commas)
+    let headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
+    while (headers.length > 0 && headers[headers.length - 1] === '') {
+      headers.pop()
+    }
+
     const entries: ParsedEntry[] = []
 
     for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i])
-      if (values.length !== headers.length) {
-        throw new Error(`Row ${i + 1} has ${values.length} columns but header has ${headers.length}`)
+      const line = lines[i].trim()
+      if (!line) continue // Skip empty lines
+
+      let values = parseCSVLine(line)
+
+      // Pad with empty strings if row has fewer columns than headers
+      while (values.length < headers.length) {
+        values.push('')
       }
+      // Trim to header length if row has more columns
+      values = values.slice(0, headers.length)
 
       const entry: ParsedEntry = { entry_date: '' }
 
