@@ -85,11 +85,15 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
   }, [entries, showDays, selectedHabits])
 
   const dateHeaders = useMemo(() => {
-    const dates: string[] = []
+    const headers: { day: string; date: string }[] = []
     for (let i = 0; i < showDays; i++) {
-      dates.unshift(format(subDays(new Date(), i + 1), 'EEE'))
+      const d = subDays(new Date(), i + 1)
+      headers.unshift({
+        day: format(d, 'EEE'),
+        date: format(d, 'M/d'),
+      })
     }
-    return dates
+    return headers
   }, [showDays])
 
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
@@ -140,12 +144,13 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
                 <th className="text-left text-xs font-medium text-gray-500 pb-3 pr-4">
                   Habit
                 </th>
-                {dateHeaders.map((day, i) => (
+                {dateHeaders.map((header, i) => (
                   <th
                     key={i}
-                    className="text-center text-xs font-medium text-gray-500 pb-3 px-1 min-w-[36px]"
+                    className="text-center text-xs font-medium text-gray-500 pb-2 px-1 min-w-[36px]"
                   >
-                    {day}
+                    <div>{header.day}</div>
+                    <div className="text-[10px] text-gray-400">{header.date}</div>
                   </th>
                 ))}
                 <th className="text-right text-xs font-medium text-gray-500 pb-3 pl-4">
