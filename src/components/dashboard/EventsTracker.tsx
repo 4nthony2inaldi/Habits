@@ -86,14 +86,15 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Days Since...</h3>
-      <div className="flex-1 min-h-0 space-y-1.5 scrollbar-hidden">
+      <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">
         {eventData.map((item) => (
           <div
             key={item.event}
             className={cn(
-              'flex items-center justify-between p-2 rounded-lg',
+              'flex items-center justify-between px-2 rounded-lg flex-1',
               item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
             )}
+            style={{ minHeight: 0 }}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {item.isOverdue && (

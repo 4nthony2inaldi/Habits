@@ -64,9 +64,9 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Location</h3>
-      <div className="flex-1 min-h-0 flex items-center gap-4">
+      <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-center gap-4">
         {/* Pie Chart */}
-        <div className="w-32 h-32 flex-shrink-0">
+        <div className="flex-1 min-h-[100px] min-w-[100px] max-w-[150px] max-h-[150px] aspect-square">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -99,7 +99,7 @@ export function WorkLocationChart({ entries }: WorkLocationChartProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex-1 grid grid-cols-2 gap-2">
+        <div className="flex-shrink-0 grid grid-cols-2 gap-2">
           {data.map((item) => {
             const Icon = ICONS[item.name.toLowerCase() as keyof typeof ICONS] || Home
             return (

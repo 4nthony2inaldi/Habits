@@ -133,8 +133,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
   return (
     <div className="h-full flex flex-col p-4">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Healthy Habits</h3>
-      <div className="flex-1 min-h-0 scrollbar-hidden">
-        <table className="w-full">
+      <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
+        <table className="w-full h-full">
           <thead>
             <tr>
               <th className="text-left text-xs font-medium text-gray-500 pb-2 pr-4">
@@ -155,19 +155,23 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits }: HabitsGrid
             </tr>
           </thead>
           <tbody>
-            {data.map((row) => (
-              <tr key={row.habit} className="border-t border-gray-100">
-                <td className="py-1.5 pr-4">
+            {data.map((row, idx) => (
+              <tr
+                key={row.habit}
+                className="border-t border-gray-100"
+                style={{ height: `${100 / data.length}%` }}
+              >
+                <td className="pr-4 align-middle">
                   <span className="text-sm text-gray-700 whitespace-nowrap">
                     {row.label}
                   </span>
                 </td>
                 {row.days.map((status, i) => (
-                  <td key={i} className="text-center py-1.5 px-1">
+                  <td key={i} className="text-center px-1 align-middle">
                     {renderDayCell(status, row.habit)}
                   </td>
                 ))}
-                <td className="text-right py-1.5 pl-4">
+                <td className="text-right pl-4 align-middle">
                   <span
                     className={cn(
                       'text-sm font-medium',

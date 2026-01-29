@@ -195,7 +195,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
       </div>
 
       {/* Legend - compact */}
-      <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t">
+      <div className="flex items-center justify-center gap-1.5 mt-3 pt-3 border-t flex-shrink-0">
         <span className="text-xs text-gray-500">Less</span>
         <div className="w-3 h-3 rounded bg-gray-100" />
         <div className="w-3 h-3 rounded bg-purple-100" />

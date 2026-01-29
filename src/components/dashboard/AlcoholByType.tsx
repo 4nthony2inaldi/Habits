@@ -101,8 +101,8 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
       <h3 className="text-lg font-semibold text-gray-900 mb-3">What Drinking</h3>
 
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
-        {/* Stacked bars */}
-        <div className="space-y-3">
+        {/* Stacked bars - fills available space */}
+        <div className="flex-1 flex flex-col justify-evenly">
           {data.map((yearData) => (
             <div key={yearData.year} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
@@ -138,7 +138,7 @@ export function AlcoholByType({ entries }: AlcoholByTypeProps) {
         </div>
 
         {/* Legend - compact */}
-        <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t">
+        <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t flex-shrink-0">
           {TYPE_ORDER.map((type) => (
             <div key={type} className="flex items-center gap-1">
               <div className={cn('w-2.5 h-2.5 rounded', TYPE_COLORS[type].bg)} />

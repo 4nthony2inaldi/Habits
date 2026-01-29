@@ -105,11 +105,11 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
           </div>
         </div>
 
-        {/* Weekly Chart */}
+        {/* Weekly Chart - fills available space */}
         {weeklyData.length > 0 && (
-          <div className="flex-1 min-h-0">
-            <h4 className="text-xs font-medium text-gray-700 mb-2">Weekly Totals</h4>
-            <div className="h-32">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <h4 className="text-xs font-medium text-gray-700 mb-2 flex-shrink-0">Weekly Totals</h4>
+            <div className="flex-1 min-h-[100px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -143,7 +143,7 @@ export function AlcoholTracker({ entries }: AlcoholTrackerProps) {
 
         {/* Type Breakdown - inline */}
         {typeBreakdown.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2 border-t">
+          <div className="flex flex-wrap gap-2 pt-2 border-t flex-shrink-0">
             {typeBreakdown.map((item) => (
               <div key={item.name} className="flex items-center gap-1">
                 <div
