@@ -121,6 +121,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
           <DashboardGrid
             entries={entries || []}
             allEntries={allEntries || []}
+            dateRange={dateRange}
             config={widgetConfig}
             profile={currentUser}
             onLayoutChange={handleLayoutChange}

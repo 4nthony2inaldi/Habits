@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { differenceInDays, parseISO } from 'date-fns'
+import { differenceInDays, parseISO, subYears, isWithinInterval, format } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
 import { eventLabels } from '@/types/forms'
 import { AlertCircle } from 'lucide-react'
@@ -36,13 +36,31 @@ const shortEventLabels: Record<EventType, string> = {
 
 interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
+  dateRange: { start: Date; end: Date }
   overdueThreshold?: number
   selectedEvents?: EventType[]
   title?: string
   subtitle?: string
 }
 
-export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
+export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
+  // Calculate prior period (same duration, shifted back 1 year)
+  const { priorPeriod, hasPriorPeriod } = useMemo(() => {
+    const priorStart = subYears(dateRange.start, 1)
+    const priorEnd = subYears(dateRange.end, 1)
+
+    // Check if we have any data in the prior period
+    const hasData = entries.some((e) => {
+      const entryDate = parseISO(e.entry_date)
+      return isWithinInterval(entryDate, { start: priorStart, end: priorEnd })
+    })
+
+    return {
+      priorPeriod: { start: priorStart, end: priorEnd },
+      hasPriorPeriod: hasData,
+    }
+  }, [dateRange, entries])
+
   const eventData = useMemo(() => {
     const allEvents = Object.keys(eventLabels) as EventType[]
     // Filter by selectedEvents if provided
@@ -69,22 +87,25 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, 
         daysSince = differenceInDays(today, parseISO(lastDate))
       }
 
-      // Count occurrences for current and previous year
-      const currentYear = today.getFullYear()
-      const countCurrentYear = entriesWithEvent.filter(
-        (e) => parseISO(e.entry_date).getFullYear() === currentYear
-      ).length
-      const countPreviousYear = entriesWithEvent.filter(
-        (e) => parseISO(e.entry_date).getFullYear() === currentYear - 1
-      ).length
+      // Count occurrences in current period (selected date range)
+      const countCurrentPeriod = entriesWithEvent.filter((e) => {
+        const entryDate = parseISO(e.entry_date)
+        return isWithinInterval(entryDate, { start: dateRange.start, end: dateRange.end })
+      }).length
+
+      // Count occurrences in prior period (same range, 1 year earlier)
+      const countPriorPeriod = entriesWithEvent.filter((e) => {
+        const entryDate = parseISO(e.entry_date)
+        return isWithinInterval(entryDate, { start: priorPeriod.start, end: priorPeriod.end })
+      }).length
 
       return {
         event,
         label: shortEventLabels[event] || eventLabels[event],
         daysSince,
         lastDate,
-        countCurrentYear,
-        countPreviousYear,
+        countCurrentPeriod,
+        countPriorPeriod,
         totalCount: entriesWithEvent.length,
         isOverdue: daysSince !== null && daysSince > overdueThreshold,
       }
@@ -99,7 +120,7 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, 
         if (b.daysSince === null) return -1
         return a.daysSince - b.daysSince
       })
-  }, [entries, overdueThreshold, selectedEvents])
+  }, [entries, dateRange, priorPeriod, overdueThreshold, selectedEvents])
 
   if (eventData.length === 0) {
     return (
@@ -150,9 +171,12 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents, 
               >
                 {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
               </p>
-              <div className="text-right text-[10px] text-gray-500 min-w-[50px]">
-                {item.totalCount > 0 ? (
-                  <p>{item.countCurrentYear}x / {item.countPreviousYear}x</p>
+              <div className="text-right text-[10px] text-gray-500 min-w-[40px]">
+                {item.countCurrentPeriod > 0 || item.countPriorPeriod > 0 ? (
+                  <p>
+                    {item.countCurrentPeriod}x
+                    {hasPriorPeriod && <span className="text-gray-400"> / {item.countPriorPeriod}x</span>}
+                  </p>
                 ) : (
                   <p>-</p>
                 )}

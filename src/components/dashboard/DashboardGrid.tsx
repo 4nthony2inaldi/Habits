@@ -57,6 +57,7 @@ const ResponsiveGridLayout = Responsive as React.ComponentType<{
 interface DashboardGridProps {
   entries: DailyEntryWithRelations[]
   allEntries: DailyEntryWithRelations[] // All-time entries for EventsTracker
+  dateRange: { start: Date; end: Date }
   config: DashboardWidgetConfig
   profile: Profile
   onLayoutChange: (layouts: GridLayouts) => void
@@ -113,6 +114,7 @@ function fromRGLLayouts(layouts: Layouts, currentLayouts: GridLayouts): GridLayo
 export function DashboardGrid({
   entries,
   allEntries,
+  dateRange,
   config,
   profile,
   onLayoutChange,
@@ -200,7 +202,7 @@ export function DashboardGrid({
         return <MovementChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'eventsTracker':
         // Use allEntries so "days since" is always calculated from all-time data
-        return <EventsTracker entries={allEntries} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
+        return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
       default:
         return null
     }
