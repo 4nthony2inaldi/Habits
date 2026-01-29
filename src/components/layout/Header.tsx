@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Flame,
+  Shield,
 } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
@@ -62,6 +63,21 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
+            {/* Admin link - always visible first for admins */}
+            {profile?.is_admin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  'flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  pathname === '/admin' || pathname.startsWith('/admin/')
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                <span>Admin</span>
+              </Link>
+            )}
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -122,6 +138,22 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="container mx-auto px-4 py-3 space-y-1">
+            {/* Admin link - first in mobile menu for admins */}
+            {profile?.is_admin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  'flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium',
+                  pathname === '/admin' || pathname.startsWith('/admin/')
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-100 text-purple-700'
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Shield className="h-5 w-5" />
+                <span>Admin</span>
+              </Link>
+            )}
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
