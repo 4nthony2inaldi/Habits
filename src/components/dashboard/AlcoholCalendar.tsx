@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils/cn'
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, eachWeekOfInterval, subMonths, getMonth, getYear } from 'date-fns'
+import { format, parseISO, eachDayOfInterval, getMonth, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
 
@@ -11,8 +11,8 @@ interface AlcoholCalendarProps {
   entries: DailyEntryWithRelations[]
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 function getDrinkColor(drinks: number): string {
   if (drinks === 0) return 'bg-gray-100'
@@ -23,13 +23,12 @@ function getDrinkColor(drinks: number): string {
   return 'bg-purple-600 text-white'
 }
 
-function getDrinkColorHex(drinks: number): string {
-  if (drinks === 0) return '#f3f4f6'
-  if (drinks <= 1) return '#f3e8ff'
-  if (drinks <= 2) return '#e9d5ff'
-  if (drinks <= 4) return '#d8b4fe'
-  if (drinks <= 6) return '#a78bfa'
-  return '#7c3aed'
+interface MonthData {
+  month: string
+  monthNum: number
+  year: number
+  weeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[]
+  monthTotal: number
 }
 
 export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
@@ -41,7 +40,6 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
       entriesByDate.set(entry.entry_date, drinks)
     })
 
-    // Group by month and week
     if (entries.length === 0) return []
 
     // Get date range from entries
@@ -52,16 +50,13 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     const endDate = parseISO(sortedEntries[sortedEntries.length - 1].entry_date)
 
     // Group by month
-    const months: {
-      month: string
-      year: number
-      weeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[]
-    }[] = []
+    const months: MonthData[] = []
 
     let currentMonth = -1
     let currentYear = -1
     let currentWeeks: { days: { date: string; drinks: number; dayOfWeek: number }[] }[] = []
     let currentWeek: { date: string; drinks: number; dayOfWeek: number }[] = []
+    let monthTotal = 0
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate })
 
@@ -70,7 +65,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
       const year = getYear(day)
       const dateStr = format(day, 'yyyy-MM-dd')
       const dayOfWeek = day.getDay()
-      const drinks = entriesByDate.get(dateStr) ?? -1 // -1 means no entry
+      const drinks = entriesByDate.get(dateStr) ?? -1
 
       // New month
       if (month !== currentMonth || year !== currentYear) {
@@ -80,14 +75,17 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
         if (currentWeeks.length > 0) {
           months.push({
             month: MONTHS[currentMonth],
+            monthNum: currentMonth,
             year: currentYear,
             weeks: currentWeeks,
+            monthTotal,
           })
         }
         currentMonth = month
         currentYear = year
         currentWeeks = []
         currentWeek = []
+        monthTotal = 0
       }
 
       // New week (Sunday)
@@ -96,6 +94,7 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
         currentWeek = []
       }
 
+      if (drinks > 0) monthTotal += drinks
       currentWeek.push({ date: dateStr, drinks, dayOfWeek })
     })
 
@@ -106,8 +105,10 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     if (currentWeeks.length > 0) {
       months.push({
         month: MONTHS[currentMonth],
+        monthNum: currentMonth,
         year: currentYear,
         weeks: currentWeeks,
+        monthTotal,
       })
     }
 
@@ -129,83 +130,77 @@ export function AlcoholCalendar({ entries }: AlcoholCalendarProps) {
     )
   }
 
+  // Render a single month
+  const renderMonth = (monthData: MonthData) => (
+    <div key={`${monthData.month}-${monthData.year}`} className="flex-shrink-0">
+      {/* Month header */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-700">
+          {monthData.month} {monthData.year}
+        </span>
+        <span className="text-xs text-gray-500">
+          {Math.round(monthData.monthTotal)} drinks
+        </span>
+      </div>
+
+      {/* Day headers */}
+      <div className="flex gap-1 mb-1">
+        {DAYS.map((day, i) => (
+          <div key={i} className="w-6 h-5 text-center text-[10px] text-gray-400">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Weeks */}
+      <div className="space-y-1">
+        {monthData.weeks.map((week, weekIdx) => (
+          <div key={weekIdx} className="flex gap-1">
+            {/* Pad beginning of week */}
+            {week.days[0] && week.days[0].dayOfWeek > 0 &&
+              Array.from({ length: week.days[0].dayOfWeek }).map((_, i) => (
+                <div key={`pad-${i}`} className="w-6 h-6" />
+              ))
+            }
+
+            {week.days.map((day) => (
+              <div
+                key={day.date}
+                className={cn(
+                  'w-6 h-6 rounded text-[9px] flex items-center justify-center font-medium',
+                  day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
+                )}
+                title={`${day.date}: ${day.drinks < 0 ? 'No entry' : day.drinks + ' drinks'}`}
+              >
+                {day.drinks > 0 ? Math.round(day.drinks) : ''}
+              </div>
+            ))}
+
+            {/* Pad end of week */}
+            {week.days[week.days.length - 1] && week.days[week.days.length - 1].dayOfWeek < 6 &&
+              Array.from({ length: 6 - week.days[week.days.length - 1].dayOfWeek }).map((_, i) => (
+                <div key={`pad-end-${i}`} className="w-6 h-6" />
+              ))
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">When Drinking</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Day headers */}
-        <div className="flex gap-1 mb-2 pl-16">
-          {DAYS.map((day) => (
-            <div key={day} className="w-7 text-center text-[10px] text-gray-500">
-              {day}
-            </div>
-          ))}
-          <div className="w-10 text-center text-[10px] text-gray-500 font-medium">
-            Total
-          </div>
-        </div>
-
-        {/* Calendar grid */}
-        <div className="space-y-1 max-h-80 overflow-y-auto">
-          {calendarData.map((monthData, monthIdx) => (
-            <div key={`${monthData.month}-${monthData.year}`}>
-              {monthData.weeks.map((week, weekIdx) => {
-                const weekTotal = week.days.reduce((sum, d) => sum + (d.drinks > 0 ? d.drinks : 0), 0)
-                return (
-                  <div key={weekIdx} className="flex gap-1 items-center">
-                    {/* Month label on first week */}
-                    <div className="w-14 text-xs text-gray-500 text-right pr-2">
-                      {weekIdx === 0 ? `${monthData.month}` : ''}
-                    </div>
-
-                    {/* Days grid */}
-                    <div className="flex gap-1">
-                      {/* Pad beginning of week */}
-                      {week.days[0] && week.days[0].dayOfWeek > 0 &&
-                        Array.from({ length: week.days[0].dayOfWeek }).map((_, i) => (
-                          <div key={`pad-${i}`} className="w-7 h-7" />
-                        ))
-                      }
-
-                      {week.days.map((day) => (
-                        <div
-                          key={day.date}
-                          className={cn(
-                            'w-7 h-7 rounded text-[10px] flex items-center justify-center font-medium',
-                            day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
-                          )}
-                          title={`${day.date}: ${day.drinks < 0 ? 'No entry' : day.drinks + ' drinks'}`}
-                        >
-                          {day.drinks >= 0 ? (day.drinks > 0 ? Math.round(day.drinks) : '') : ''}
-                        </div>
-                      ))}
-
-                      {/* Pad end of week */}
-                      {week.days[week.days.length - 1] && week.days[week.days.length - 1].dayOfWeek < 6 &&
-                        Array.from({ length: 6 - week.days[week.days.length - 1].dayOfWeek }).map((_, i) => (
-                          <div key={`pad-end-${i}`} className="w-7 h-7" />
-                        ))
-                      }
-                    </div>
-
-                    {/* Week total */}
-                    <div className={cn(
-                      'w-10 text-xs font-bold text-center',
-                      weekTotal === 0 ? 'text-gray-300' : 'text-gray-700'
-                    )}>
-                      {weekTotal > 0 ? Math.round(weekTotal) : ''}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+        {/* Responsive grid - 1 col on mobile, 2 on md, 3 on lg, 4 on xl */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {calendarData.map(renderMonth)}
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t">
+        <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
           <span className="text-xs text-gray-500">Less</span>
           <div className="w-4 h-4 rounded bg-gray-100" />
           <div className="w-4 h-4 rounded bg-purple-100" />
