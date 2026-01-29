@@ -61,9 +61,12 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
         isOverdue: daysSince !== null && daysSince > overdueThreshold,
       }
     })
-      .filter((e) => e.totalCount > 0) // Only show events that have occurred
+      // When specific events are selected, show all of them (even if never occurred)
+      // When showing all events, only show ones that have occurred
+      .filter((e) => (selectedEvents && selectedEvents.length > 0) || e.totalCount > 0)
       .sort((a, b) => {
-        // Sort by days since (null values last)
+        // Sort by days since (null values last, meaning "never" goes to bottom)
+        if (a.daysSince === null && b.daysSince === null) return 0
         if (a.daysSince === null) return 1
         if (b.daysSince === null) return -1
         return a.daysSince - b.daysSince
@@ -111,16 +114,26 @@ export function EventsTracker({ entries, overdueThreshold = 30, selectedEvents }
                   <p
                     className={cn(
                       'text-lg font-bold',
-                      item.isOverdue ? 'text-orange-600' : 'text-gray-900'
+                      item.daysSince === null
+                        ? 'text-gray-400'
+                        : item.isOverdue
+                        ? 'text-orange-600'
+                        : 'text-gray-900'
                     )}
                   >
-                    {item.daysSince !== null ? `${item.daysSince}d` : '-'}
+                    {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
                   </p>
                 </div>
                 <div className="text-right text-xs text-gray-500 min-w-[60px]">
-                  <p>{item.countCurrentYear}x this year</p>
-                  {item.countPreviousYear > 0 && (
-                    <p>{item.countPreviousYear}x last year</p>
+                  {item.totalCount > 0 ? (
+                    <>
+                      <p>{item.countCurrentYear}x this year</p>
+                      {item.countPreviousYear > 0 && (
+                        <p>{item.countPreviousYear}x last year</p>
+                      )}
+                    </>
+                  ) : (
+                    <p>Not tracked</p>
                   )}
                 </div>
               </div>
