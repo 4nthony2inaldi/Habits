@@ -53,6 +53,12 @@ function calculateScoreForPeriod(
       } else if (habit === 'was_active') {
         const steps = entry.steps || 0
         isCompleted = steps >= 7500
+      } else if (habit === 'breakfast_at_home') {
+        isCompleted = entry.breakfast_location === 'home'
+      } else if (habit === 'lunch_at_home') {
+        isCompleted = entry.lunch_location === 'home'
+      } else if (habit === 'dinner_at_home') {
+        isCompleted = entry.dinner_location === 'home'
       } else {
         // Regular habits
         isCompleted = entry.healthy_habits.some((h) => h.habit_type === habit)
@@ -83,7 +89,7 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
   // Get habits to count
   const habitsToCount = useMemo(() => {
     const regularHabits = Object.keys(habitLabels) as HabitType[]
-    const computedHabits: SelectableHabitType[] = ['no_alcohol', 'was_active']
+    const computedHabits: SelectableHabitType[] = ['no_alcohol', 'was_active', 'breakfast_at_home', 'lunch_at_home', 'dinner_at_home']
     const allSelectableHabits: SelectableHabitType[] = [...regularHabits, ...computedHabits]
 
     return selectedHabits && selectedHabits.length > 0

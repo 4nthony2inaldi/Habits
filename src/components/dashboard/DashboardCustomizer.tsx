@@ -9,7 +9,7 @@ import type { Profile, HabitType, EventType } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
 
 // Computed habits that are calculated from entry data
-export type ComputedHabitType = 'no_alcohol' | 'was_active'
+export type ComputedHabitType = 'no_alcohol' | 'was_active' | 'breakfast_at_home' | 'lunch_at_home' | 'dinner_at_home'
 
 // All selectable habits (regular + computed)
 export type SelectableHabitType = HabitType | ComputedHabitType
@@ -17,6 +17,9 @@ export type SelectableHabitType = HabitType | ComputedHabitType
 export const computedHabitLabels: Record<ComputedHabitType, string> = {
   no_alcohol: "Didn't drink",
   was_active: 'Was active (7.5k+ steps)',
+  breakfast_at_home: 'Breakfast at home',
+  lunch_at_home: 'Lunch at home',
+  dinner_at_home: 'Dinner at home',
 }
 
 // Short labels for mobile display
@@ -36,6 +39,9 @@ export const shortHabitLabels: Record<SelectableHabitType, string> = {
   journaled: 'Journal',
   no_alcohol: 'Sober',
   was_active: 'Active',
+  breakfast_at_home: 'Brkfst Home',
+  lunch_at_home: 'Lunch Home',
+  dinner_at_home: 'Dinner Home',
 }
 
 // Combined labels for all selectable habits

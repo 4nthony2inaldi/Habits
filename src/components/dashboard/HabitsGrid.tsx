@@ -39,7 +39,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
 
     // Get all selectable habits, filter by selected if provided
     const regularHabits = Object.keys(habitLabels) as HabitType[]
-    const computedHabits: SelectableHabitType[] = ['no_alcohol', 'was_active']
+    const computedHabits: SelectableHabitType[] = ['no_alcohol', 'was_active', 'breakfast_at_home', 'lunch_at_home', 'dinner_at_home']
     const allSelectableHabits: SelectableHabitType[] = [...regularHabits, ...computedHabits]
 
     const habitsToShow = selectedHabits && selectedHabits.length > 0
@@ -63,6 +63,18 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
           if (steps >= 10000) return 'gold'
           if (steps >= 7500) return 'green'
           return false
+        }
+
+        if (habit === 'breakfast_at_home') {
+          return entry.breakfast_location === 'home'
+        }
+
+        if (habit === 'lunch_at_home') {
+          return entry.lunch_location === 'home'
+        }
+
+        if (habit === 'dinner_at_home') {
+          return entry.dinner_location === 'home'
         }
 
         // Regular habits
