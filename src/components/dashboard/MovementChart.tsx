@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AreaChart,
   Area,
@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils/cn'
 import { format, parseISO } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateStepsStats } from '@/lib/utils/calculations'
-import { Footprints, TrendingUp, Trophy } from 'lucide-react'
+import { Footprints, RefreshCw } from 'lucide-react'
+
+type ViewMode = 'daily' | 'monthly'
 
 interface MovementChartProps {
   entries: DailyEntryWithRelations[]
@@ -23,9 +25,10 @@ interface MovementChartProps {
 }
 
 export function MovementChart({ entries, title = 'Movement', subtitle }: MovementChartProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('daily')
   const stats = useMemo(() => calculateStepsStats(entries), [entries])
 
-  const chartData = useMemo(() => {
+  const dailyChartData = useMemo(() => {
     return [...entries]
       .filter((e) => e.steps !== null && e.steps > 0)
       .sort((a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime())
@@ -35,6 +38,36 @@ export function MovementChart({ entries, title = 'Movement', subtitle }: Movemen
         formattedDate: format(parseISO(entry.entry_date), 'MMM d'),
       }))
   }, [entries])
+
+  const monthlyChartData = useMemo(() => {
+    const validEntries = entries.filter((e) => e.steps !== null && e.steps > 0)
+
+    // Group by month
+    const monthMap = new Map<string, { total: number; count: number }>()
+    validEntries.forEach((entry) => {
+      const monthKey = format(parseISO(entry.entry_date), 'yyyy-MM')
+      const existing = monthMap.get(monthKey) || { total: 0, count: 0 }
+      monthMap.set(monthKey, {
+        total: existing.total + (entry.steps || 0),
+        count: existing.count + 1,
+      })
+    })
+
+    // Convert to chart data
+    return Array.from(monthMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([monthKey, data]) => ({
+        date: monthKey,
+        steps: Math.round(data.total / data.count),
+        formattedDate: format(parseISO(`${monthKey}-01`), 'MMM yy'),
+      }))
+  }, [entries])
+
+  const chartData = viewMode === 'daily' ? dailyChartData : monthlyChartData
+
+  const toggleViewMode = () => {
+    setViewMode((prev) => (prev === 'daily' ? 'monthly' : 'daily'))
+  }
 
   const topDays = useMemo(() => {
     return [...entries]
@@ -66,12 +99,22 @@ export function MovementChart({ entries, title = 'Movement', subtitle }: Movemen
 
   return (
     <div className="h-full flex flex-col p-4">
-      <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Footprints className="h-5 w-5 text-blue-500" />
-          {title}
-        </h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Footprints className="h-5 w-5 text-blue-500" />
+            {title}
+          </h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
+        <button
+          onClick={toggleViewMode}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+          title={viewMode === 'daily' ? 'Switch to monthly average' : 'Switch to daily view'}
+        >
+          <RefreshCw className="h-3 w-3" />
+          {viewMode === 'daily' ? 'Daily' : 'Monthly'}
+        </button>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-3 scrollbar-hidden">
@@ -125,7 +168,7 @@ export function MovementChart({ entries, title = 'Movement', subtitle }: Movemen
                   }}
                   formatter={(value) => [
                     `${Number(value).toLocaleString()}`,
-                    'Steps',
+                    viewMode === 'daily' ? 'Steps' : 'Avg Steps/Day',
                   ]}
                 />
                 <Area
