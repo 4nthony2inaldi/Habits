@@ -73,9 +73,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create profile for new user with dashboard config from admin
+    // Use upsert in case a trigger already created a skeleton profile
     const { error: profileError } = await serviceClient
       .from('profiles')
-      .insert({
+      .upsert({
         id: newUser.user.id,
         email: email,
         display_name: displayName,
@@ -87,16 +88,17 @@ export async function POST(request: NextRequest) {
         streak_warnings_enabled: true,
         weekly_digest_enabled: false,
         hidden_fields: [],
+        custom_habits: [],
         // Copy the admin's dashboard config so new user has same layout
-        custom_metrics: dashboardConfig || [],
-      })
+        custom_metrics: dashboardConfig || {},
+      }, { onConflict: 'id' })
 
     if (profileError) {
       console.error('Error creating profile:', profileError)
       // Clean up: delete the auth user since profile creation failed
       await serviceClient.auth.admin.deleteUser(newUser.user.id)
       return NextResponse.json(
-        { error: 'Failed to create user profile' },
+        { error: `Failed to create user profile: ${profileError.message}` },
         { status: 500 }
       )
     }
