@@ -636,9 +636,17 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   }, [chartData, comparisonChartData, config.comparison, activeMetrics])
 
   const currentTotals = useMemo(() => {
-    if (!entries || entries.length === 0) return { total: 0, avg: 0, count: 0 }
+    if (!entries || entries.length === 0) return { total: 0, avg: 0, count: 0, avg2: 0 }
     const total = entries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[0]), 0)
-    return { total, avg: Math.round((total / entries.length) * 100) / 100, count: entries.length }
+    const total2 = activeMetrics.length >= 2
+      ? entries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[1]), 0)
+      : 0
+    return {
+      total,
+      avg: Math.round((total / entries.length) * 100) / 100,
+      count: entries.length,
+      avg2: activeMetrics.length >= 2 ? Math.round((total2 / entries.length) * 100) / 100 : 0
+    }
   }, [entries, activeMetrics, getMetricValue])
 
   const changePercentage = useMemo(() => {
@@ -1030,12 +1038,21 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
         <div className="grid grid-cols-3 gap-4">
           <Card><CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{currentTotals.total.toLocaleString()}</p>
-            <p className="text-xs text-gray-500">Total</p>
+            <p className="text-2xl font-bold text-gray-900">{currentTotals.avg.toLocaleString()}</p>
+            <p className="text-xs text-gray-500">{correlation !== null ? getMetricLabel(activeMetrics[0]) : 'Average per Day'}</p>
           </CardContent></Card>
           <Card><CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{currentTotals.avg.toLocaleString()}</p>
-            <p className="text-xs text-gray-500">Average per Day</p>
+            {correlation !== null ? (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{currentTotals.avg2.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{getMetricLabel(activeMetrics[1])}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{currentTotals.total.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">Total</p>
+              </>
+            )}
           </CardContent></Card>
           <Card><CardContent className="p-4 text-center">
             {correlation !== null ? (
