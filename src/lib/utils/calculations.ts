@@ -68,7 +68,7 @@ export function calculateTotalDrinks(entry: DailyEntryWithRelations): number {
     (entry.seltzers || 0) +
     (entry.wine || 0) +
     (entry.liquor || 0) +
-    (entry.shots || 0) * 1.5
+    (entry.shots || 0)
   )
 }
 

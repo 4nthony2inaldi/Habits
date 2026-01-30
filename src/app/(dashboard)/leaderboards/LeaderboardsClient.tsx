@@ -70,6 +70,18 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     },
   })
 
+  // Create stable color mapping by userId (consistent across both charts)
+  const userColorMap = useMemo(() => {
+    if (!leaderboardUsers) return new Map<string, string>()
+    const map = new Map<string, string>()
+    // Sort by id to ensure consistent ordering
+    const sortedUsers = [...leaderboardUsers].sort((a, b) => a.id.localeCompare(b.id))
+    sortedUsers.forEach((user, index) => {
+      map.set(user.id, USER_COLORS[index % USER_COLORS.length])
+    })
+    return map
+  }, [leaderboardUsers])
+
   // Fetch entries for the month for all leaderboard users
   const { data: entries } = useQuery({
     queryKey: ['leaderboard-entries', monthStart, monthEnd],
@@ -330,7 +342,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                         <div className="flex items-center gap-2">
                           <span
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: USER_COLORS[index % USER_COLORS.length] }}
+                            style={{ backgroundColor: userColorMap.get(entry.userId) || USER_COLORS[0] }}
                           />
                           <span className={cn(
                             'font-medium',
@@ -381,12 +393,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                         labelFormatter={(day) => `Day ${day}`}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
-                      {drinksLeaderboard.map((user, index) => (
+                      {drinksLeaderboard.map((user) => (
                         <Line
                           key={user.userId}
                           type="monotone"
                           dataKey={user.displayName}
-                          stroke={USER_COLORS[index % USER_COLORS.length]}
+                          stroke={userColorMap.get(user.userId) || USER_COLORS[0]}
                           strokeWidth={user.isCurrentUser ? 2.5 : 1.5}
                           dot={false}
                         />
@@ -438,7 +450,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                         <div className="flex items-center gap-2">
                           <span
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: USER_COLORS[index % USER_COLORS.length] }}
+                            style={{ backgroundColor: userColorMap.get(entry.userId) || USER_COLORS[0] }}
                           />
                           <span className={cn(
                             'font-medium',
@@ -497,12 +509,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                         formatter={(value) => [typeof value === 'number' ? value.toLocaleString() : '0', '']}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
-                      {stepsLeaderboard.map((user, index) => (
+                      {stepsLeaderboard.map((user) => (
                         <Line
                           key={user.userId}
                           type="monotone"
                           dataKey={user.displayName}
-                          stroke={USER_COLORS[index % USER_COLORS.length]}
+                          stroke={userColorMap.get(user.userId) || USER_COLORS[0]}
                           strokeWidth={user.isCurrentUser ? 2.5 : 1.5}
                           dot={false}
                         />
