@@ -21,13 +21,14 @@ interface YearOverYearStepsProps {
   subtitle?: string
 }
 
-// Colors for different years
+// Colors for different years (consistent across all year-over-year charts)
+// Index 0 = current year, 1 = last year, etc.
 const YEAR_COLORS = [
   '#22c55e', // green - current year
-  '#3b82f6', // blue
-  '#f97316', // orange
-  '#9333ea', // purple
-  '#ef4444', // red
+  '#3b82f6', // blue - last year
+  '#f97316', // orange - 2 years ago
+  '#9333ea', // purple - 3 years ago
+  '#ef4444', // red - 4 years ago
 ]
 
 export function YearOverYearSteps({

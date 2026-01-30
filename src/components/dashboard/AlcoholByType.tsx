@@ -165,27 +165,30 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
                 'rounded-lg overflow-hidden flex w-full',
                 displayData.length === 1 ? 'flex-1 min-h-12' : 'h-8'
               )}>
-                {TYPE_ORDER.map((type) => {
-                  const typeData = itemData.byType[type]
-                  if (!typeData || typeData.percent === 0) return null
+                {/* Sort types by percentage (highest first) */}
+                {TYPE_ORDER
+                  .filter((type) => itemData.byType[type]?.percent > 0)
+                  .sort((a, b) => (itemData.byType[b]?.percent || 0) - (itemData.byType[a]?.percent || 0))
+                  .map((type) => {
+                    const typeData = itemData.byType[type]
 
-                  return (
-                    <div
-                      key={type}
-                      className={cn(
-                        'h-full flex items-center justify-center text-white font-medium',
-                        displayData.length === 1 ? 'text-base' : 'text-[10px]',
-                        TYPE_COLORS[type].bg
-                      )}
-                      style={{ width: `${typeData.percent}%` }}
-                      title={`${TYPE_LABELS[type]}: ${typeData.count} (${typeData.percent}%)`}
-                    >
-                      {typeData.percent >= 10 && (
-                        <span className="truncate px-1">{typeData.percent}%</span>
-                      )}
-                    </div>
-                  )
-                })}
+                    return (
+                      <div
+                        key={type}
+                        className={cn(
+                          'h-full flex items-center justify-center text-white font-medium',
+                          displayData.length === 1 ? 'text-base' : 'text-[10px]',
+                          TYPE_COLORS[type].bg
+                        )}
+                        style={{ width: `${typeData.percent}%` }}
+                        title={`${TYPE_LABELS[type]}: ${typeData.count} (${typeData.percent}%)`}
+                      >
+                        {typeData.percent >= 10 && (
+                          <span className="truncate px-1">{typeData.percent}%</span>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             </div>
           ))}
