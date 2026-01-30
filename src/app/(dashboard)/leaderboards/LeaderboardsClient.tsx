@@ -494,7 +494,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                           fontSize: '12px',
                         }}
                         labelFormatter={(day) => `Day ${day}`}
-                        formatter={(value: number) => [value.toLocaleString(), '']}
+                        formatter={(value) => [typeof value === 'number' ? value.toLocaleString() : '0', '']}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
                       {stepsLeaderboard.map((user, index) => (
