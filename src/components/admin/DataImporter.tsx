@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Upload, FileText, AlertCircle, CheckCircle, Download, Loader2 } from 'lucide-react'
 import type { Profile, HabitType, EventType, WorkLocation, MealLocation } from '@/types/database'
@@ -332,86 +331,34 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
     setImporting(true)
     setResult(null)
 
-    const supabase = createClient()
-    const importResult: ImportResult = { success: 0, errors: [], skipped: 0 }
+    try {
+      // Use admin API route to bypass RLS when importing for other users
+      const response = await fetch('/api/admin/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUserId,
+          entries: parsedData,
+          overwriteExisting,
+        }),
+      })
 
-    for (const entry of parsedData) {
-      try {
-        // Check if entry already exists for this date
-        const { data: existing } = await supabase
-          .from('daily_entries')
-          .select('id')
-          .eq('user_id', selectedUserId)
-          .eq('entry_date', entry.entry_date)
-          .single()
+      const importResult = await response.json()
 
-        if (existing && !overwriteExisting) {
-          importResult.skipped++
-          continue
-        }
-
-        // Prepare entry data (exclude habits and events)
-        const { habits, events, ...entryData } = entry
-        const insertData = {
-          ...entryData,
-          user_id: selectedUserId,
-        }
-
-        let entryId: string
-
-        if (existing && overwriteExisting) {
-          // Update existing entry
-          const { error: updateError } = await supabase
-            .from('daily_entries')
-            .update(insertData)
-            .eq('id', existing.id)
-
-          if (updateError) throw updateError
-          entryId = existing.id
-
-          // Delete existing habits and events
-          await supabase.from('healthy_habits').delete().eq('entry_id', entryId)
-          await supabase.from('life_events').delete().eq('entry_id', entryId)
-        } else {
-          // Insert new entry
-          const { data: newEntry, error: insertError } = await supabase
-            .from('daily_entries')
-            .insert(insertData)
-            .select('id')
-            .single()
-
-          if (insertError) throw insertError
-          entryId = newEntry.id
-        }
-
-        // Insert habits
-        if (habits && habits.length > 0) {
-          const habitInserts = habits.map(habit => ({
-            entry_id: entryId,
-            habit_type: habit as HabitType,
-          }))
-          await supabase.from('healthy_habits').insert(habitInserts)
-        }
-
-        // Insert events
-        if (events && events.length > 0) {
-          const eventInserts = events.map(event => ({
-            entry_id: entryId,
-            event_type: event as EventType,
-          }))
-          await supabase.from('life_events').insert(eventInserts)
-        }
-
-        importResult.success++
-      } catch (error) {
-        importResult.errors.push(
-          `${entry.entry_date}: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
+      if (!response.ok) {
+        throw new Error(importResult.error || 'Import failed')
       }
-    }
 
-    setResult(importResult)
-    setImporting(false)
+      setResult(importResult)
+    } catch (error) {
+      setResult({
+        success: 0,
+        errors: [error instanceof Error ? error.message : 'Import failed'],
+        skipped: 0,
+      })
+    } finally {
+      setImporting(false)
+    }
   }
 
   const downloadTemplate = () => {
