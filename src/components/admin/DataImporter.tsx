@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Upload, FileText, AlertCircle, CheckCircle, Download, Loader2 } from 'lucide-react'
-import type { Profile, HabitType, EventType, WorkLocation } from '@/types/database'
+import type { Profile, HabitType, EventType, WorkLocation, MealLocation } from '@/types/database'
 
 interface DataImporterProps {
   currentUser: Profile
@@ -24,6 +24,10 @@ interface ParsedEntry {
   steps?: number | null
   screen_time?: number | null
   sex?: number
+  // Meal locations (new form fields)
+  breakfast_location?: MealLocation | null
+  lunch_location?: MealLocation | null
+  dinner_location?: MealLocation | null
   city_wake?: string | null
   miles_wake?: number | null
   city_noon?: string | null
@@ -202,6 +206,8 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         }
         else if ((header.includes('breakfast') || header.includes('had_something_for_breakfast')) && isYes) {
           entry.habits!.push('breakfast')
+          // Also set new meal location field (assume home since old format didn't track location)
+          entry.breakfast_location = 'home'
         }
         else if ((header.includes('vitamin') || header.includes('took_a_vitamin')) && isYes) {
           entry.habits!.push('vitamin')
@@ -220,6 +226,8 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         }
         else if (header.includes('cooked_dinner') && isYes) {
           entry.habits!.push('cooked_dinner')
+          // Also set new meal location field (cooked dinner = dinner at home)
+          entry.dinner_location = 'home'
         }
         else if ((header.includes('journaled') || header === 'journaled_offline') && isYes) {
           entry.habits!.push('journaled')
