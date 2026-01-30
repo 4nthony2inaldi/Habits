@@ -694,7 +694,37 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     // Charts with multiple metrics or secondary dimension
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
-    const commonProps = { data: hasComparison ? mergedChartData : chartData, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 0, bottom: 5 } }
+    const chartDataToUse = hasComparison ? mergedChartData : chartData
+    const commonProps = { data: chartDataToUse, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 10, bottom: 60 } }
+
+    // Custom tick formatter for X-axis labels
+    const formatXAxisLabel = (value: string): string => {
+      if (!value) return ''
+      // Truncate long labels
+      if (value.length > 12) return value.substring(0, 10) + '…'
+      return value
+    }
+
+    // Custom X-axis tick component for better label positioning
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const CustomXAxisTick = (props: any) => {
+      const { x, y, payload } = props
+      return (
+        <g transform={`translate(${x},${y})`}>
+          <text
+            x={0}
+            y={0}
+            dy={8}
+            textAnchor="end"
+            fill="#666"
+            fontSize={11}
+            transform="rotate(-35)"
+          >
+            {formatXAxisLabel(payload?.value || '')}
+          </text>
+        </g>
+      )
+    }
 
     // Helper to get series label (metric label or secondary dimension value)
     const getSeriesLabel = (key: string): string => {
@@ -722,10 +752,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     switch (config.chartType) {
       case 'area':
         return (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={350}>
             <AreaChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
+              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} />
               <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
                 stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
               {useDualAxis && (
@@ -755,10 +785,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       case 'line':
         return (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={350}>
             <LineChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
+              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} />
               <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
                 stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
               {useDualAxis && (
@@ -787,10 +817,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'bar':
       case 'grouped_bar':
         return (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
+              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
@@ -809,10 +839,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       case 'stacked_bar':
         return (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
+              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
               <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
