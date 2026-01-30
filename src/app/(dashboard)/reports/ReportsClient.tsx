@@ -749,7 +749,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
     const chartDataToUse = hasComparison ? mergedChartData : chartData
-    const commonProps = { data: chartDataToUse, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 10, bottom: 60 } }
+    const commonProps = { data: chartDataToUse, margin: { top: 10, right: useDualAxis ? 50 : 20, left: 10, bottom: 60 } }
 
     // Calculate smart interval to prevent label overlap
     // Target ~10-12 labels max on the X-axis
@@ -763,6 +763,21 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       // Truncate long labels
       if (value.length > 12) return value.substring(0, 10) + '…'
       return value
+    }
+
+    // Smart Y-axis formatter for large numbers (k, M suffixes)
+    const formatYAxisValue = (value: number): string => {
+      if (value === 0) return '0'
+      const absValue = Math.abs(value)
+      if (absValue >= 1000000) {
+        const formatted = (value / 1000000)
+        return formatted % 1 === 0 ? `${formatted}M` : `${formatted.toFixed(1)}M`
+      }
+      if (absValue >= 1000) {
+        const formatted = (value / 1000)
+        return formatted % 1 === 0 ? `${formatted}k` : `${formatted.toFixed(1)}k`
+      }
+      return value.toLocaleString()
     }
 
     // Custom X-axis tick component for better label positioning
@@ -816,11 +831,11 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <AreaChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
-                stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={45}
+                tickFormatter={formatYAxisValue} stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
               {useDualAxis && (
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={50}
-                  stroke={CHART_COLORS[1]} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={45}
+                  tickFormatter={formatYAxisValue} stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
@@ -849,11 +864,11 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <LineChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
-                stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={45}
+                tickFormatter={formatYAxisValue} stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
               {useDualAxis && (
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={50}
-                  stroke={CHART_COLORS[1]} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={45}
+                  tickFormatter={formatYAxisValue} stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
@@ -881,7 +896,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
+              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
               {renderKeys.map((key, idx) => (
@@ -903,7 +918,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
+              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
               <Tooltip contentStyle={tooltipStyle} />
               <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
