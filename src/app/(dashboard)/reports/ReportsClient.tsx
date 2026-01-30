@@ -749,12 +749,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
     const chartDataToUse = hasComparison ? mergedChartData : chartData
-    const commonProps = { data: chartDataToUse, margin: { top: 5, right: 5, left: 0, bottom: 60 } }
+    const commonProps = { data: chartDataToUse, margin: { top: 5, right: 5, left: 0, bottom: 50 } }
 
     // Calculate smart interval to prevent label overlap
-    // Target ~10-12 labels max on the X-axis
+    // Target ~6 labels max on the X-axis (date labels are wide when rotated)
     const dataLength = chartDataToUse.length
-    const targetLabels = 10
+    const targetLabels = 6
     const xAxisInterval = dataLength <= targetLabels ? 0 : Math.ceil(dataLength / targetLabels) - 1
 
     // Custom tick formatter for X-axis labels
@@ -1011,7 +1011,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         </div>
 
         <Card><CardContent className="p-2 sm:p-4">
-          <div className="aspect-[4/3] sm:aspect-[16/9] w-full relative">{renderChart()}</div>
+          <div className="aspect-square sm:aspect-[3/2] w-full relative">{renderChart()}</div>
         </CardContent></Card>
 
         {config.chartType !== 'table' && chartData.length > 0 && (
