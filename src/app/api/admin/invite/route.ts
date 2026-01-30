@@ -72,26 +72,60 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create profile for new user with dashboard config from admin
-    // Use upsert in case a trigger already created a skeleton profile
-    const { error: profileError } = await serviceClient
+    // Wait a moment for any database trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Update the profile that was created by trigger (or create if it doesn't exist)
+    // First try to update existing profile
+    const { data: existingProfile } = await serviceClient
       .from('profiles')
-      .upsert({
-        id: newUser.user.id,
-        email: email,
-        display_name: displayName,
-        is_admin: false,
-        share_drinks: true,
-        share_steps: true,
-        leaderboard_anonymous: false,
-        reminder_enabled: false,
-        streak_warnings_enabled: true,
-        weekly_digest_enabled: false,
-        hidden_fields: [],
-        custom_habits: [],
-        // Copy the admin's dashboard config so new user has same layout
-        custom_metrics: dashboardConfig || {},
-      }, { onConflict: 'id' })
+      .select('id')
+      .eq('id', newUser.user.id)
+      .single()
+
+    let profileError
+    if (existingProfile) {
+      // Profile exists (created by trigger), update it
+      const { error } = await serviceClient
+        .from('profiles')
+        .update({
+          email: email,
+          display_name: displayName,
+          is_admin: false,
+          share_drinks: true,
+          share_steps: true,
+          leaderboard_anonymous: false,
+          reminder_enabled: false,
+          streak_warnings_enabled: true,
+          weekly_digest_enabled: false,
+          hidden_fields: [],
+          custom_habits: [],
+          // Copy the admin's dashboard config so new user has same layout
+          custom_metrics: dashboardConfig || {},
+        })
+        .eq('id', newUser.user.id)
+      profileError = error
+    } else {
+      // No profile exists, insert one
+      const { error } = await serviceClient
+        .from('profiles')
+        .insert({
+          id: newUser.user.id,
+          email: email,
+          display_name: displayName,
+          is_admin: false,
+          share_drinks: true,
+          share_steps: true,
+          leaderboard_anonymous: false,
+          reminder_enabled: false,
+          streak_warnings_enabled: true,
+          weekly_digest_enabled: false,
+          hidden_fields: [],
+          custom_habits: [],
+          custom_metrics: dashboardConfig || {},
+        })
+      profileError = error
+    }
 
     if (profileError) {
       console.error('Error creating profile:', profileError)
