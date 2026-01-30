@@ -81,6 +81,7 @@ interface ReportsClientProps {
 }
 
 const metricOptions: { value: ReportMetric; label: string; category: string }[] = [
+  // Alcohol
   { value: 'total_drinks', label: 'Total Drinks', category: 'Alcohol' },
   { value: 'beers', label: 'Beers', category: 'Alcohol' },
   { value: 'seltzers', label: 'Seltzers', category: 'Alcohol' },
@@ -89,14 +90,56 @@ const metricOptions: { value: ReportMetric; label: string; category: string }[] 
   { value: 'shots', label: 'Shots', category: 'Alcohol' },
   { value: 'sober_days', label: 'Sober Days', category: 'Alcohol' },
   { value: 'drinking_days', label: 'Drinking Days', category: 'Alcohol' },
+  // Wellness & Activity
   { value: 'mood_score', label: 'Mood Score', category: 'Wellness' },
   { value: 'steps', label: 'Steps', category: 'Activity' },
-  { value: 'coffee', label: 'Coffee', category: 'Consumption' },
   { value: 'screen_time', label: 'Screen Time (mins)', category: 'Activity' },
-  { value: 'healthy_habits_count', label: 'Healthy Habits Count', category: 'Habits' },
-  { value: 'life_events_count', label: 'Life Events Count', category: 'Events' },
+  { value: 'sex', label: 'Sex', category: 'Wellness' },
+  // Consumption & Location
+  { value: 'coffee', label: 'Coffee', category: 'Consumption' },
   { value: 'meals_out', label: 'Meals Out', category: 'Consumption' },
   { value: 'miles_traveled', label: 'Miles from Home', category: 'Location' },
+  // Aggregate counts
+  { value: 'healthy_habits_count', label: 'Total Habits Count', category: 'Habits' },
+  { value: 'life_events_count', label: 'Total Events Count', category: 'Events' },
+  // Individual Habits
+  { value: 'habit_sleep_8hrs', label: '8+ Hours of Sleep', category: 'Habits' },
+  { value: 'habit_breakfast', label: 'Had Breakfast', category: 'Habits' },
+  { value: 'habit_vitamin', label: 'Took Vitamin', category: 'Habits' },
+  { value: 'habit_water_8cups', label: '8+ Cups of Water', category: 'Habits' },
+  { value: 'habit_cooked_dinner', label: 'Cooked Dinner', category: 'Habits' },
+  { value: 'habit_exercise', label: 'Exercised', category: 'Habits' },
+  { value: 'habit_read_5pages', label: 'Read 5+ Pages', category: 'Habits' },
+  { value: 'habit_family_interaction', label: 'Family Interaction', category: 'Habits' },
+  { value: 'habit_family_phone', label: 'Family (Phone)', category: 'Habits' },
+  { value: 'habit_family_in_person', label: 'Family (In Person)', category: 'Habits' },
+  { value: 'habit_ate_fruit', label: 'Ate Fruit', category: 'Habits' },
+  { value: 'habit_ate_vegetables', label: 'Ate Vegetables', category: 'Habits' },
+  { value: 'habit_journaled', label: 'Journaled', category: 'Habits' },
+  // Individual Events
+  { value: 'event_pto', label: 'Took PTO', category: 'Events' },
+  { value: 'event_flight', label: 'Took a Flight', category: 'Events' },
+  { value: 'event_train', label: 'Took a Train', category: 'Events' },
+  { value: 'event_haircut', label: 'Haircut', category: 'Events' },
+  { value: 'event_doctor', label: 'Doctor Visit', category: 'Events' },
+  { value: 'event_dentist', label: 'Dentist Visit', category: 'Events' },
+  { value: 'event_played_sport', label: 'Played a Sport', category: 'Events' },
+  { value: 'event_attended_sport', label: 'Attended Sporting Event', category: 'Events' },
+  { value: 'event_concert', label: 'Went to Concert', category: 'Events' },
+  { value: 'event_stage_production', label: 'Stage Production', category: 'Events' },
+  { value: 'event_movies', label: 'Went to Movies', category: 'Events' },
+  { value: 'event_museum', label: 'Went to Museum', category: 'Events' },
+  { value: 'event_guys_night', label: 'Saw Friends', category: 'Events' },
+  { value: 'event_massage', label: 'Massage', category: 'Events' },
+  { value: 'event_facial', label: 'Facial', category: 'Events' },
+  { value: 'event_pedicure', label: 'Pedicure', category: 'Events' },
+  { value: 'event_manicure', label: 'Manicure', category: 'Events' },
+  { value: 'event_other_selfcare', label: 'Other Self-Care', category: 'Events' },
+  { value: 'event_diner', label: 'Went to Diner', category: 'Events' },
+  { value: 'event_ice_cream', label: 'Ate Ice Cream', category: 'Events' },
+  { value: 'event_park', label: 'Time in Park', category: 'Events' },
+  { value: 'event_subway', label: 'Took Subway', category: 'Events' },
+  { value: 'event_bus', label: 'Took Bus', category: 'Events' },
 ]
 
 const aggregationOptions: { value: ReportAggregation; label: string }[] = [
@@ -288,6 +331,16 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   }, [])
 
   const getMetricValue = useCallback((entry: DailyEntryWithRelations, metric: ReportMetric): number => {
+    // Handle individual habit metrics
+    if (metric.startsWith('habit_')) {
+      const habitType = metric.replace('habit_', '') as HabitType
+      return entry.healthy_habits.some(h => h.habit_type === habitType) ? 1 : 0
+    }
+    // Handle individual event metrics
+    if (metric.startsWith('event_')) {
+      const eventType = metric.replace('event_', '') as EventType
+      return entry.life_events.some(e => e.event_type === eventType) ? 1 : 0
+    }
     switch (metric) {
       case 'total_drinks': return calculateTotalDrinks(entry)
       case 'beers': return entry.beers || 0
@@ -301,6 +354,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'steps': return entry.steps || 0
       case 'coffee': return entry.coffee || 0
       case 'screen_time': return entry.screen_time || 0
+      case 'sex': return entry.sex || 0
       case 'healthy_habits_count': return entry.healthy_habits.length
       case 'life_events_count': return entry.life_events.length
       case 'meals_out':
