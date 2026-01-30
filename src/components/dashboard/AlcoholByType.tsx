@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { parseISO, getYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
-import { Wine } from 'lucide-react'
+import { Wine, RotateCcw } from 'lucide-react'
 
 interface AlcoholByTypeProps {
   entries: DailyEntryWithRelations[]
@@ -30,65 +30,85 @@ const TYPE_LABELS = {
 
 const TYPE_ORDER = ['wine', 'beers', 'seltzers', 'liquor', 'shots'] as const
 
-interface YearBreakdown {
-  year: number
+interface BreakdownData {
+  label: string
   total: number
   byType: Record<string, { count: number; percent: number }>
 }
 
 export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: AlcoholByTypeProps) {
+  const [viewMode, setViewMode] = useState<'total' | 'byYear'>('total')
+
   const data = useMemo(() => {
-    // Group entries by year
-    const byYear = new Map<number, DailyEntryWithRelations[]>()
+    // Calculate total breakdown for entire period
+    const totalBreakdown = {
+      beers: 0,
+      seltzers: 0,
+      wine: 0,
+      liquor: 0,
+      shots: 0,
+    }
+
+    // Group entries by year for by-year view
+    const byYear = new Map<number, typeof totalBreakdown>()
 
     entries.forEach((entry) => {
       const year = getYear(parseISO(entry.entry_date))
-      const yearEntries = byYear.get(year) || []
-      yearEntries.push(entry)
-      byYear.set(year, yearEntries)
+
+      // Add to total
+      totalBreakdown.beers += entry.beers || 0
+      totalBreakdown.seltzers += entry.seltzers || 0
+      totalBreakdown.wine += entry.wine || 0
+      totalBreakdown.liquor += entry.liquor || 0
+      totalBreakdown.shots += entry.shots || 0
+
+      // Add to year breakdown
+      const yearTotals = byYear.get(year) || { beers: 0, seltzers: 0, wine: 0, liquor: 0, shots: 0 }
+      yearTotals.beers += entry.beers || 0
+      yearTotals.seltzers += entry.seltzers || 0
+      yearTotals.wine += entry.wine || 0
+      yearTotals.liquor += entry.liquor || 0
+      yearTotals.shots += entry.shots || 0
+      byYear.set(year, yearTotals)
     })
 
-    // Calculate breakdown for each year
-    const yearBreakdowns: YearBreakdown[] = []
+    // Helper to convert totals to breakdown data
+    const toBreakdownData = (label: string, totals: typeof totalBreakdown): BreakdownData | null => {
+      const total = totals.beers + totals.seltzers + totals.wine + totals.liquor + totals.shots
+      if (total === 0) return null
 
-    byYear.forEach((yearEntries, year) => {
-      const totals = {
-        beers: 0,
-        seltzers: 0,
-        wine: 0,
-        liquor: 0,
-        shots: 0,
-      }
-
-      yearEntries.forEach((entry) => {
-        totals.beers += entry.beers || 0
-        totals.seltzers += entry.seltzers || 0
-        totals.wine += entry.wine || 0
-        totals.liquor += entry.liquor || 0
-        totals.shots += entry.shots || 0
+      const byType: Record<string, { count: number; percent: number }> = {}
+      Object.entries(totals).forEach(([type, count]) => {
+        byType[type] = {
+          count,
+          percent: Math.round((count / total) * 100),
+        }
       })
 
-      const total = totals.beers + totals.seltzers + totals.wine + totals.liquor + totals.shots
+      return { label, total, byType }
+    }
 
-      if (total > 0) {
-        const byType: Record<string, { count: number; percent: number }> = {}
+    // Total view data
+    const totalData = toBreakdownData('Total', totalBreakdown)
 
-        Object.entries(totals).forEach(([type, count]) => {
-          byType[type] = {
-            count,
-            percent: Math.round((count / total) * 100),
-          }
-        })
-
-        yearBreakdowns.push({ year, total, byType })
-      }
+    // By year view data
+    const yearBreakdowns: BreakdownData[] = []
+    byYear.forEach((yearTotals, year) => {
+      const breakdown = toBreakdownData(String(year), yearTotals)
+      if (breakdown) yearBreakdowns.push(breakdown)
     })
+    yearBreakdowns.sort((a, b) => Number(b.label) - Number(a.label))
 
-    // Sort by year descending
-    return yearBreakdowns.sort((a, b) => b.year - a.year)
+    return {
+      total: totalData ? [totalData] : [],
+      byYear: yearBreakdowns,
+      hasMultipleYears: yearBreakdowns.length > 1,
+    }
   }, [entries])
 
-  if (entries.length === 0 || data.length === 0) {
+  const displayData = viewMode === 'total' ? data.total : data.byYear
+
+  if (entries.length === 0 || displayData.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
@@ -107,28 +127,40 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
 
   return (
     <div className="h-full flex flex-col p-4">
-      <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Wine className="h-5 w-5 text-red-500" />
-          {title}
-        </h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Wine className="h-5 w-5 text-red-500" />
+            {title}
+          </h3>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
+        {data.hasMultipleYears && (
+          <button
+            onClick={() => setViewMode(viewMode === 'total' ? 'byYear' : 'total')}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+            title={viewMode === 'total' ? 'Show by year' : 'Show total'}
+          >
+            <RotateCcw className="h-3 w-3" />
+            {viewMode === 'total' ? 'By Year' : 'Total'}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         {/* Stacked bars - fills available space */}
         <div className="flex-1 flex flex-col justify-evenly">
-          {data.map((yearData) => (
-            <div key={yearData.year} className="space-y-1">
+          {displayData.map((itemData) => (
+            <div key={itemData.label} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-700">{yearData.year}</span>
-                <span className="text-gray-500 text-xs">{yearData.total} drinks</span>
+                <span className="font-medium text-gray-700">{itemData.label}</span>
+                <span className="text-gray-500 text-xs">{itemData.total} drinks</span>
               </div>
 
               {/* Stacked bar - always 100% width since we show percentages */}
               <div className="h-8 rounded-lg overflow-hidden flex w-full">
                 {TYPE_ORDER.map((type) => {
-                  const typeData = yearData.byType[type]
+                  const typeData = itemData.byType[type]
                   if (!typeData || typeData.percent === 0) return null
 
                   return (
