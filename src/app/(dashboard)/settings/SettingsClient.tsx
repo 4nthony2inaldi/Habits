@@ -20,6 +20,7 @@ import {
   Save,
   Loader2,
   Smartphone,
+  Lock,
 } from 'lucide-react'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 
@@ -49,6 +50,13 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   const [reminderTime, setReminderTime] = useState(profile.reminder_time || '21:00')
   const [streakWarnings, setStreakWarnings] = useState(profile.streak_warnings_enabled)
   const [weeklyDigest, setWeeklyDigest] = useState(profile.weekly_digest_enabled)
+
+  // Password change
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   const toggleHiddenField = (field: string) => {
     setHiddenFields((prev) =>
@@ -81,6 +89,37 @@ export function SettingsClient({ profile }: SettingsClientProps) {
       console.error('Failed to save settings:', error)
     }
     setSaving(false)
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError(null)
+    setPasswordSuccess(false)
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (error) throw error
+
+      setPasswordSuccess(true)
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'Failed to change password')
+    }
+    setChangingPassword(false)
   }
 
   return (
@@ -116,6 +155,62 @@ export function SettingsClient({ profile }: SettingsClientProps) {
               placeholder="For distance calculations"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Password Change */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Lock className="h-5 w-5" />
+            Change Password
+          </CardTitle>
+          <CardDescription>
+            Update your account password
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">New Password</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
+          </div>
+          {passwordError && (
+            <p className="text-sm text-red-600">{passwordError}</p>
+          )}
+          {passwordSuccess && (
+            <p className="text-sm text-green-600 flex items-center gap-1">
+              <Check className="h-4 w-4" />
+              Password changed successfully
+            </p>
+          )}
+          <Button
+            onClick={handleChangePassword}
+            disabled={changingPassword || !newPassword || !confirmPassword}
+            variant="outline"
+          >
+            {changingPassword ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Lock className="h-4 w-4 mr-2" />
+            )}
+            Change Password
+          </Button>
         </CardContent>
       </Card>
 
