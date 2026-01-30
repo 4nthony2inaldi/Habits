@@ -749,7 +749,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
     const chartDataToUse = hasComparison ? mergedChartData : chartData
-    const commonProps = { data: chartDataToUse, margin: { top: 10, right: useDualAxis ? 50 : 20, left: 10, bottom: 60 } }
+    const commonProps = { data: chartDataToUse, margin: { top: 5, right: 5, left: 0, bottom: 60 } }
 
     // Calculate smart interval to prevent label overlap
     // Target ~10-12 labels max on the X-axis
@@ -1010,8 +1010,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent></Card>
         </div>
 
-        <Card><CardContent className="p-4">
-          <div className="aspect-[4/3] sm:aspect-[16/9] w-full">{renderChart()}</div>
+        <Card><CardContent className="p-2 sm:p-4">
+          <div className="aspect-[4/3] sm:aspect-[16/9] w-full relative">{renderChart()}</div>
         </CardContent></Card>
 
         {config.chartType !== 'table' && chartData.length > 0 && (
