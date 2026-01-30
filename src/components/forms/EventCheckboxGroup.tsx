@@ -1,7 +1,6 @@
 'use client'
 
 import { cn } from '@/lib/utils/cn'
-import { Check } from 'lucide-react'
 import type { EventType } from '@/types/database'
 import { eventLabels } from '@/types/forms'
 
@@ -47,7 +46,7 @@ export function EventCheckboxGroup({
             <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               {category}
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="flex flex-wrap gap-2">
               {visibleEvents.map((event) => {
                 const isSelected = selected.includes(event as EventType)
                 return (
@@ -56,23 +55,13 @@ export function EventCheckboxGroup({
                     type="button"
                     onClick={() => toggleEvent(event as EventType)}
                     className={cn(
-                      'flex items-center gap-2 p-2 rounded-lg border text-left text-sm transition-colors',
+                      'px-3 py-1.5 rounded-full text-sm border transition-colors',
                       isSelected
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        ? 'bg-purple-100 text-purple-700 border-purple-300'
+                        : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center',
-                        isSelected
-                          ? 'border-purple-500 bg-purple-500'
-                          : 'border-gray-300'
-                      )}
-                    >
-                      {isSelected && <Check className="h-2.5 w-2.5 text-white" />}
-                    </div>
-                    <span className="truncate">{eventLabels[event as EventType]}</span>
+                    {eventLabels[event as EventType]}
                   </button>
                 )
               })}

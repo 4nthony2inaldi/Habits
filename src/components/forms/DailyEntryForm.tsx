@@ -36,35 +36,37 @@ interface DailyEntryFormProps {
   profile: Profile
 }
 
-// Checkbox component for habits and events
-function CheckboxItem({
-  id,
+// Pill button component for habits and events
+function PillButton({
   label,
   checked,
   onChange,
+  color = 'green',
 }: {
-  id: string
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
+  color?: 'green' | 'purple'
 }) {
+  const colorClasses = color === 'green'
+    ? checked
+      ? 'bg-green-100 text-green-700 border-green-300'
+      : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+    : checked
+      ? 'bg-purple-100 text-purple-700 border-purple-300'
+      : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+
   return (
-    <label
-      htmlFor={id}
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
       className={cn(
-        'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors',
-        checked ? 'bg-purple-50 text-purple-700' : 'hover:bg-gray-50'
+        'px-3 py-1.5 rounded-full text-sm border transition-colors text-center',
+        colorClasses
       )}
     >
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-      />
-      <span className="text-sm">{label}</span>
-    </label>
+      {label}
+    </button>
   )
 }
 
@@ -412,13 +414,12 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-2">
             <Controller
               name="healthy_habits"
               control={control}
               render={({ field }) => (
-                <CheckboxItem
-                  id="family_phone"
+                <PillButton
                   label="Family (phone)"
                   checked={field.value.includes('family_phone')}
                   onChange={() => field.onChange(toggleHabit('family_phone', field.value as HabitType[]))}
@@ -429,8 +430,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               name="healthy_habits"
               control={control}
               render={({ field }) => (
-                <CheckboxItem
-                  id="family_in_person"
+                <PillButton
                   label="Family (in-person)"
                   checked={field.value.includes('family_in_person')}
                   onChange={() => field.onChange(toggleHabit('family_in_person', field.value as HabitType[]))}
@@ -441,11 +441,11 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               name="sex"
               control={control}
               render={({ field }) => (
-                <CheckboxItem
-                  id="had_sex"
+                <PillButton
                   label="Had Sex"
                   checked={(field.value || 0) > 0}
                   onChange={(checked) => field.onChange(checked ? 1 : 0)}
+                  color="purple"
                 />
               )}
             />
@@ -467,15 +467,13 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             name="healthy_habits"
             control={control}
             render={({ field }) => (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <CheckboxItem
-                  id="sleep_8hrs"
+              <div className="flex flex-wrap gap-2 items-center">
+                <PillButton
                   label="8+ hrs Sleep"
                   checked={field.value.includes('sleep_8hrs')}
                   onChange={() => field.onChange(toggleHabit('sleep_8hrs', field.value as HabitType[]))}
                 />
-                <CheckboxItem
-                  id="vitamin"
+                <PillButton
                   label="Vitamin"
                   checked={field.value.includes('vitamin')}
                   onChange={() => field.onChange(toggleHabit('vitamin', field.value as HabitType[]))}
@@ -571,26 +569,23 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             </div>
           </div>
 
-          {/* Healthy eating checkboxes */}
+          {/* Healthy eating pills */}
           <Controller
             name="healthy_habits"
             control={control}
             render={({ field }) => (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                <CheckboxItem
-                  id="ate_fruit"
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <PillButton
                   label="Ate Fruit"
                   checked={field.value.includes('ate_fruit')}
                   onChange={() => field.onChange(toggleHabit('ate_fruit', field.value as HabitType[]))}
                 />
-                <CheckboxItem
-                  id="ate_vegetables"
+                <PillButton
                   label="Ate Vegetables"
                   checked={field.value.includes('ate_vegetables')}
                   onChange={() => field.onChange(toggleHabit('ate_vegetables', field.value as HabitType[]))}
                 />
-                <CheckboxItem
-                  id="water_8cups"
+                <PillButton
                   label="8+ Cups Water"
                   checked={field.value.includes('water_8cups')}
                   onChange={() => field.onChange(toggleHabit('water_8cups', field.value as HabitType[]))}
@@ -610,7 +605,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         onToggle={() => toggleSection('work')}
         summary={summaries.work}
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-wrap gap-4 items-end">
           <div className="space-y-2">
             <Label>Worked from?</Label>
             <Controller
@@ -635,14 +630,12 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
             name="life_events"
             control={control}
             render={({ field }) => (
-              <div className="pt-6">
-                <CheckboxItem
-                  id="pto"
-                  label="Took PTO"
-                  checked={field.value.includes('pto')}
-                  onChange={() => field.onChange(toggleEvent('pto', field.value as EventType[]))}
-                />
-              </div>
+              <PillButton
+                label="Took PTO"
+                checked={field.value.includes('pto')}
+                onChange={() => field.onChange(toggleEvent('pto', field.value as EventType[]))}
+                color="purple"
+              />
             )}
           />
         </div>
@@ -806,7 +799,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         summary={summaries.movement}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-2">
               <Label htmlFor="steps">Steps</Label>
               <Input
@@ -815,34 +808,30 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 min={0}
                 placeholder="From phone"
                 {...register('steps', { valueAsNumber: true })}
+                className="w-32"
               />
             </div>
             <Controller
               name="healthy_habits"
               control={control}
               render={({ field }) => (
-                <div className="pt-6">
-                  <CheckboxItem
-                    id="exercise"
-                    label="Intentional Exercise"
-                    checked={field.value.includes('exercise')}
-                    onChange={() => field.onChange(toggleHabit('exercise', field.value as HabitType[]))}
-                  />
-                </div>
+                <PillButton
+                  label="Intentional Exercise"
+                  checked={field.value.includes('exercise')}
+                  onChange={() => field.onChange(toggleHabit('exercise', field.value as HabitType[]))}
+                />
               )}
             />
             <Controller
               name="life_events"
               control={control}
               render={({ field }) => (
-                <div className="pt-6">
-                  <CheckboxItem
-                    id="played_sport"
-                    label="Played a Sport"
-                    checked={field.value.includes('played_sport')}
-                    onChange={() => field.onChange(toggleEvent('played_sport', field.value as EventType[]))}
-                  />
-                </div>
+                <PillButton
+                  label="Played a Sport"
+                  checked={field.value.includes('played_sport')}
+                  onChange={() => field.onChange(toggleEvent('played_sport', field.value as EventType[]))}
+                  color="purple"
+                />
               )}
             />
           </div>
@@ -862,54 +851,54 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           name="life_events"
           control={control}
           render={({ field }) => (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <CheckboxItem
-                id="haircut"
+            <div className="flex flex-wrap gap-2">
+              <PillButton
                 label="Haircut"
                 checked={field.value.includes('haircut')}
                 onChange={() => field.onChange(toggleEvent('haircut', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="massage"
+              <PillButton
                 label="Massage"
                 checked={field.value.includes('massage')}
                 onChange={() => field.onChange(toggleEvent('massage', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="manicure"
+              <PillButton
                 label="Manicure"
                 checked={field.value.includes('manicure')}
                 onChange={() => field.onChange(toggleEvent('manicure', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="pedicure"
+              <PillButton
                 label="Pedicure"
                 checked={field.value.includes('pedicure')}
                 onChange={() => field.onChange(toggleEvent('pedicure', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="facial"
+              <PillButton
                 label="Facial"
                 checked={field.value.includes('facial')}
                 onChange={() => field.onChange(toggleEvent('facial', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="doctor"
+              <PillButton
                 label="Doctor"
                 checked={field.value.includes('doctor')}
                 onChange={() => field.onChange(toggleEvent('doctor', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="dentist"
+              <PillButton
                 label="Dentist"
                 checked={field.value.includes('dentist')}
                 onChange={() => field.onChange(toggleEvent('dentist', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="other_selfcare"
+              <PillButton
                 label="Other"
                 checked={field.value.includes('other_selfcare')}
                 onChange={() => field.onChange(toggleEvent('other_selfcare', field.value as EventType[]))}
+                color="purple"
               />
             </div>
           )}
@@ -928,60 +917,60 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           name="life_events"
           control={control}
           render={({ field }) => (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <CheckboxItem
-                id="concert"
+            <div className="flex flex-wrap gap-2">
+              <PillButton
                 label="Concert"
                 checked={field.value.includes('concert')}
                 onChange={() => field.onChange(toggleEvent('concert', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="stage_production"
+              <PillButton
                 label="Stage Play"
                 checked={field.value.includes('stage_production')}
                 onChange={() => field.onChange(toggleEvent('stage_production', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="attended_sport"
+              <PillButton
                 label="Sporting Event"
                 checked={field.value.includes('attended_sport')}
                 onChange={() => field.onChange(toggleEvent('attended_sport', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="movies"
+              <PillButton
                 label="Movies"
                 checked={field.value.includes('movies')}
                 onChange={() => field.onChange(toggleEvent('movies', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="museum"
+              <PillButton
                 label="Museum"
                 checked={field.value.includes('museum')}
                 onChange={() => field.onChange(toggleEvent('museum', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="park"
+              <PillButton
                 label="Park"
                 checked={field.value.includes('park')}
                 onChange={() => field.onChange(toggleEvent('park', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="diner"
+              <PillButton
                 label="Diner"
                 checked={field.value.includes('diner')}
                 onChange={() => field.onChange(toggleEvent('diner', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="ice_cream"
+              <PillButton
                 label="Ice Cream"
                 checked={field.value.includes('ice_cream')}
                 onChange={() => field.onChange(toggleEvent('ice_cream', field.value as EventType[]))}
+                color="purple"
               />
-              <CheckboxItem
-                id="guys_night"
+              <PillButton
                 label="Saw Friends"
                 checked={field.value.includes('guys_night')}
                 onChange={() => field.onChange(toggleEvent('guys_night', field.value as EventType[]))}
+                color="purple"
               />
             </div>
           )}
@@ -991,8 +980,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           control={control}
           render={({ field }) => (
             <div className="mt-3 pt-3 border-t">
-              <CheckboxItem
-                id="read_5pages"
+              <PillButton
                 label="Read 5+ Pages"
                 checked={field.value.includes('read_5pages')}
                 onChange={() => field.onChange(toggleHabit('read_5pages', field.value as HabitType[]))}
@@ -1017,18 +1005,18 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               name="life_events"
               control={control}
               render={({ field }) => (
-                <div className="grid grid-cols-2 gap-2">
-                  <CheckboxItem
-                    id="flight"
+                <div className="flex flex-wrap gap-2">
+                  <PillButton
                     label="Took a Flight"
                     checked={field.value.includes('flight')}
                     onChange={() => field.onChange(toggleEvent('flight', field.value as EventType[]))}
+                    color="purple"
                   />
-                  <CheckboxItem
-                    id="train"
+                  <PillButton
                     label="Took a Train"
                     checked={field.value.includes('train')}
                     onChange={() => field.onChange(toggleEvent('train', field.value as EventType[]))}
+                    color="purple"
                   />
                 </div>
               )}
