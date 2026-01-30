@@ -333,9 +333,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     }
   }, [])
 
-  // Multi-metric chart data
-  const chartData = useMemo(() => {
-    if (!entries || entries.length === 0) return []
+  // Check if using secondary dimension (only when single metric)
+  const useSecondaryDimension = activeMetrics.length === 1 && config.secondaryDimension && config.secondaryDimension !== config.dimension
+
+  // Multi-metric or multi-dimension chart data
+  const { chartData, seriesKeys } = useMemo(() => {
+    if (!entries || entries.length === 0) return { chartData: [], seriesKeys: [] as string[] }
 
     let filteredEntries = [...entries]
     if (selectedHabits.length > 0) {
@@ -360,7 +363,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           habitData[label] = (habitData[label] || 0) + 1
         })
       })
-      return Object.entries(habitData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+      return {
+        chartData: Object.entries(habitData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+        seriesKeys: ['value']
+      }
     }
 
     if (config.dimension === 'event') {
@@ -371,10 +377,74 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           eventData[label] = (eventData[label] || 0) + 1
         })
       })
-      return Object.entries(eventData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+      return {
+        chartData: Object.entries(eventData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+        seriesKeys: ['value']
+      }
     }
 
-    // Group by dimension for each metric
+    // Aggregate values helper
+    const aggregateValues = (values: number[], count: number): number => {
+      switch (config.aggregation) {
+        case 'sum': return values.reduce((a, b) => a + b, 0)
+        case 'avg': return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+        case 'count': return count
+        case 'min': return values.length > 0 ? Math.min(...values) : 0
+        case 'max': return values.length > 0 ? Math.max(...values) : 0
+        default: return values.reduce((a, b) => a + b, 0)
+      }
+    }
+
+    // Secondary dimension mode: group by primary, then split by secondary
+    if (useSecondaryDimension && config.secondaryDimension) {
+      const grouped: Record<string, Record<string, { values: number[]; count: number }>> = {}
+      const allSecondaryKeys = new Set<string>()
+
+      filteredEntries.forEach((entry) => {
+        const primaryKey = getDimensionKey(entry, config.dimension)
+        const secondaryKey = getDimensionKey(entry, config.secondaryDimension!)
+        allSecondaryKeys.add(secondaryKey)
+
+        if (!grouped[primaryKey]) grouped[primaryKey] = {}
+        if (!grouped[primaryKey][secondaryKey]) grouped[primaryKey][secondaryKey] = { values: [], count: 0 }
+        grouped[primaryKey][secondaryKey].values.push(getMetricValue(entry, activeMetrics[0]))
+        grouped[primaryKey][secondaryKey].count++
+      })
+
+      // Sort secondary keys
+      let sortedSecondaryKeys = Array.from(allSecondaryKeys)
+      if (config.secondaryDimension === 'year') {
+        sortedSecondaryKeys.sort()
+      } else if (config.secondaryDimension === 'day_of_week') {
+        sortedSecondaryKeys.sort((a, b) => dayOfWeekNames.indexOf(a) - dayOfWeekNames.indexOf(b))
+      } else if (config.secondaryDimension === 'month_of_year') {
+        sortedSecondaryKeys.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
+      } else {
+        sortedSecondaryKeys.sort()
+      }
+
+      let result = Object.entries(grouped).map(([name, secondaryData]) => {
+        const row: Record<string, string | number> = { name, sortKey: name }
+        sortedSecondaryKeys.forEach((secKey) => {
+          const data = secondaryData[secKey] || { values: [], count: 0 }
+          row[secKey] = Math.round(aggregateValues(data.values, data.count) * 100) / 100
+        })
+        return row
+      })
+
+      // Sort by primary dimension
+      result.sort((a, b) => {
+        if (config.dimension === 'day_of_week') return dayOfWeekNames.indexOf(a.name as string) - dayOfWeekNames.indexOf(b.name as string)
+        if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name as string) - monthNames.indexOf(b.name as string)
+        if (config.dimension === 'day_of_month') return parseInt(a.name as string) - parseInt(b.name as string)
+        if (config.dimension === 'week_of_year') return parseInt((a.name as string).replace('Week ', '')) - parseInt((b.name as string).replace('Week ', ''))
+        return (a.sortKey as string).localeCompare(b.sortKey as string)
+      })
+
+      return { chartData: result, seriesKeys: sortedSecondaryKeys }
+    }
+
+    // Standard multi-metric mode
     const grouped: Record<string, Record<string, { values: number[]; count: number }>> = {}
 
     filteredEntries.forEach((entry) => {
@@ -388,25 +458,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       })
     })
 
-    // Aggregate values
-    const aggregateValues = (values: number[], count: number): number => {
-      switch (config.aggregation) {
-        case 'sum': return values.reduce((a, b) => a + b, 0)
-        case 'avg': return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
-        case 'count': return count
-        case 'min': return Math.min(...values)
-        case 'max': return Math.max(...values)
-        default: return values.reduce((a, b) => a + b, 0)
-      }
-    }
-
     let result = Object.entries(grouped).map(([name, metricData]) => {
       const row: Record<string, string | number> = { name, sortKey: name }
       activeMetrics.forEach((metric) => {
         const data = metricData[metric] || { values: [], count: 0 }
         row[metric] = Math.round(aggregateValues(data.values, data.count) * 100) / 100
       })
-      // For single metric compatibility
       if (activeMetrics.length === 1) {
         row.value = row[activeMetrics[0]]
       }
@@ -452,8 +509,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       })
     }
 
-    return result
-  }, [entries, config, selectedHabits, selectedEvents, getDimensionKey, getMetricValue, activeMetrics])
+    return { chartData: result, seriesKeys: activeMetrics as string[] }
+  }, [entries, config, selectedHabits, selectedEvents, getDimensionKey, getMetricValue, activeMetrics, useSecondaryDimension])
 
   const comparisonData = useMemo(() => {
     if (!comparisonEntries || comparisonEntries.length === 0 || config.comparison === 'none') return null
@@ -491,7 +548,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   const addMetric = (metric: ReportMetric) => {
     if (!activeMetrics.includes(metric)) {
       const newMetrics = [...activeMetrics, metric]
-      setConfig({ ...config, metrics: newMetrics, metric: newMetrics[0] })
+      // Clear secondary dimension when adding multiple metrics
+      setConfig({ ...config, metrics: newMetrics, metric: newMetrics[0], secondaryDimension: newMetrics.length > 1 ? null : config.secondaryDimension })
     }
   }
 
@@ -539,16 +597,18 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       )
     }
 
-    // Table - supports multiple metrics
+    // Table - supports multiple metrics or secondary dimension
     if (config.chartType === 'table') {
+      const tableKeys = useSecondaryDimension ? seriesKeys : activeMetrics
+      const getTableLabel = (key: string) => useSecondaryDimension ? key : getMetricLabel(key as ReportMetric)
       return (
         <div className="overflow-auto max-h-80">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="text-left p-3 font-medium text-gray-700">{dimensionLabel}</th>
-                {activeMetrics.map((metric) => (
-                  <th key={metric} className="text-right p-3 font-medium text-gray-700">{getMetricLabel(metric)}</th>
+                {tableKeys.map((key) => (
+                  <th key={key} className="text-right p-3 font-medium text-gray-700">{getTableLabel(key)}</th>
                 ))}
               </tr>
             </thead>
@@ -556,9 +616,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               {chartData.map((item, idx) => (
                 <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="p-3">{item.name}</td>
-                  {activeMetrics.map((metric) => (
-                    <td key={metric} className="p-3 text-right font-medium">
-                      {((item as Record<string, unknown>)[metric] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
+                  {tableKeys.map((key) => (
+                    <td key={key} className="p-3 text-right font-medium">
+                      {((item as Record<string, unknown>)[key] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
                     </td>
                   ))}
                 </tr>
@@ -569,9 +629,19 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       )
     }
 
-    // Charts with multiple metrics
-    const useDualAxis = config.dualAxis && activeMetrics.length >= 2
+    // Charts with multiple metrics or secondary dimension
+    const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const commonProps = { data: chartData, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 0, bottom: 5 } }
+
+    // Helper to get series label (metric label or secondary dimension value)
+    const getSeriesLabel = (key: string): string => {
+      if (useSecondaryDimension) return key // Secondary dimension values are used as-is
+      return getMetricLabel(key as ReportMetric)
+    }
+
+    // Determine which keys to render as series
+    const renderKeys = useSecondaryDimension ? seriesKeys : activeMetrics
+    const showLegend = renderKeys.length > 1
 
     switch (config.chartType) {
       case 'area':
@@ -587,9 +657,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
-              {activeMetrics.length > 1 && <Legend />}
-              {activeMetrics.map((metric, idx) => (
-                <Area key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+              {showLegend && <Legend />}
+              {renderKeys.map((key, idx) => (
+                <Area key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]}
@@ -612,9 +682,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
-              {activeMetrics.length > 1 && <Legend />}
-              {activeMetrics.map((metric, idx) => (
-                <Line key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+              {showLegend && <Legend />}
+              {renderKeys.map((key, idx) => (
+                <Line key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2}
                   dot={{ fill: CHART_COLORS[idx % CHART_COLORS.length], r: 3 }} />
@@ -632,9 +702,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
-              {activeMetrics.length > 1 && <Legend />}
-              {activeMetrics.map((metric, idx) => (
-                <Bar key={metric} dataKey={metric} name={getMetricLabel(metric)}
+              {showLegend && <Legend />}
+              {renderKeys.map((key, idx) => (
+                <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
               ))}
             </BarChart>
@@ -681,7 +751,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       <div className="flex-1 min-w-0 space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">{chartTitle} by {dimensionLabel}</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {chartTitle} by {dimensionLabel}
+              {useSecondaryDimension && config.secondaryDimension && (
+                <span className="text-gray-500 font-normal">, split by {dimensionOptions.find(d => d.value === config.secondaryDimension)?.label}</span>
+              )}
+            </h1>
             <p className="text-sm text-gray-500">
               {format(parseISO(startDate), 'MMM d, yyyy')} - {format(parseISO(endDate), 'MMM d, yyyy')}
             </p>
@@ -744,8 +819,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
                       <th className="text-left p-2 font-medium text-gray-700">{dimensionLabel}</th>
-                      {activeMetrics.map((metric) => (
-                        <th key={metric} className="text-right p-2 font-medium text-gray-700">{getMetricLabel(metric)}</th>
+                      {(useSecondaryDimension ? seriesKeys : activeMetrics).map((key) => (
+                        <th key={key} className="text-right p-2 font-medium text-gray-700">
+                          {useSecondaryDimension ? key : getMetricLabel(key as ReportMetric)}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -753,15 +830,15 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                     {chartData.slice(0, 10).map((item, idx) => (
                       <tr key={idx} className="border-b border-gray-100">
                         <td className="p-2">{item.name}</td>
-                        {activeMetrics.map((metric) => (
-                          <td key={metric} className="p-2 text-right">
-                            {((item as Record<string, unknown>)[metric] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
+                        {(useSecondaryDimension ? seriesKeys : activeMetrics).map((key) => (
+                          <td key={key} className="p-2 text-right">
+                            {((item as Record<string, unknown>)[key] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
                           </td>
                         ))}
                       </tr>
                     ))}
                     {chartData.length > 10 && (
-                      <tr><td colSpan={activeMetrics.length + 1} className="p-2 text-center text-gray-400 text-xs">+ {chartData.length - 10} more</td></tr>
+                      <tr><td colSpan={(useSecondaryDimension ? seriesKeys : activeMetrics).length + 1} className="p-2 text-center text-gray-400 text-xs">+ {chartData.length - 10} more</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -875,7 +952,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-gray-500 mb-1">Group By</p>
-            <select value={config.dimension} onChange={(e) => setConfig({ ...config, dimension: e.target.value as ReportDimension })}
+            <select value={config.dimension} onChange={(e) => setConfig({ ...config, dimension: e.target.value as ReportDimension, secondaryDimension: null })}
               className="w-full h-9 px-2 rounded border border-gray-200 text-sm">
               {Object.entries(dimensionOptions.reduce((acc, opt) => {
                 if (!acc[opt.group]) acc[opt.group] = []
@@ -887,6 +964,29 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 </optgroup>
               ))}
             </select>
+            {/* Secondary dimension - only for single metric and supported chart types */}
+            {activeMetrics.length === 1 && ['line', 'area', 'bar', 'grouped_bar', 'table'].includes(config.chartType) && (
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-500 mb-1">Split By (optional)</p>
+                <select
+                  value={config.secondaryDimension || ''}
+                  onChange={(e) => setConfig({ ...config, secondaryDimension: e.target.value ? e.target.value as ReportDimension : null })}
+                  className="w-full h-8 px-2 rounded border border-gray-200 text-xs"
+                >
+                  <option value="">None</option>
+                  {dimensionOptions
+                    .filter((opt) => opt.value !== config.dimension)
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+                {config.secondaryDimension && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Creates separate lines/bars for each {dimensionOptions.find(d => d.value === config.secondaryDimension)?.label.toLowerCase()}
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

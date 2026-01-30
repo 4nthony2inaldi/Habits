@@ -98,6 +98,7 @@ export interface ReportConfig {
   metrics?: ReportMetric[] // Multiple metrics for line/area/table charts
   aggregation: ReportAggregation
   dimension: ReportDimension
+  secondaryDimension?: ReportDimension | null // Split into series by this dimension (e.g., drinks by month, split by year)
   chartType: ReportChartType
   datePreset: DatePresetType
   customStartDate?: string
