@@ -519,6 +519,68 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     return { total, avg: Math.round(avg * 100) / 100, count: comparisonEntries.length }
   }, [comparisonEntries, config.comparison, getMetricValue, activeMetrics])
 
+  // Process comparison entries into chart data format (for overlay on charts)
+  const comparisonChartData = useMemo(() => {
+    if (!comparisonEntries || comparisonEntries.length === 0 || config.comparison === 'none') return null
+    if (useSecondaryDimension) return null // Don't support comparison with secondary dimension
+    if (config.dimension === 'habit' || config.dimension === 'event') return null // Not meaningful for these
+
+    // Aggregate values helper
+    const aggregateValues = (values: number[], count: number): number => {
+      switch (config.aggregation) {
+        case 'sum': return values.reduce((a, b) => a + b, 0)
+        case 'avg': return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+        case 'count': return count
+        case 'min': return values.length > 0 ? Math.min(...values) : 0
+        case 'max': return values.length > 0 ? Math.max(...values) : 0
+        default: return values.reduce((a, b) => a + b, 0)
+      }
+    }
+
+    const grouped: Record<string, Record<string, { values: number[]; count: number }>> = {}
+
+    comparisonEntries.forEach((entry) => {
+      const key = getDimensionKey(entry, config.dimension)
+      if (!grouped[key]) grouped[key] = {}
+
+      activeMetrics.forEach((metric) => {
+        if (!grouped[key][metric]) grouped[key][metric] = { values: [], count: 0 }
+        grouped[key][metric].values.push(getMetricValue(entry, metric))
+        grouped[key][metric].count++
+      })
+    })
+
+    const result: Record<string, Record<string, number>> = {}
+    Object.entries(grouped).forEach(([name, metricData]) => {
+      result[name] = {}
+      activeMetrics.forEach((metric) => {
+        const data = metricData[metric] || { values: [], count: 0 }
+        result[name][metric] = Math.round(aggregateValues(data.values, data.count) * 100) / 100
+      })
+    })
+
+    return result
+  }, [comparisonEntries, config.comparison, config.dimension, config.aggregation, getDimensionKey, getMetricValue, activeMetrics, useSecondaryDimension])
+
+  // Merge comparison data into chart data
+  const { mergedChartData, comparisonSeriesKeys } = useMemo(() => {
+    if (!comparisonChartData || config.comparison === 'none') {
+      return { mergedChartData: chartData, comparisonSeriesKeys: [] as string[] }
+    }
+
+    const compKeys = activeMetrics.map(m => `${m}_comparison`)
+    const merged = chartData.map((item) => {
+      const newItem: Record<string, string | number> = { ...item }
+      const compData = comparisonChartData[item.name as string]
+      activeMetrics.forEach((metric) => {
+        newItem[`${metric}_comparison`] = compData ? compData[metric] : 0
+      })
+      return newItem
+    })
+
+    return { mergedChartData: merged, comparisonSeriesKeys: compKeys }
+  }, [chartData, comparisonChartData, config.comparison, activeMetrics])
+
   const currentTotals = useMemo(() => {
     if (!entries || entries.length === 0) return { total: 0, avg: 0, count: 0 }
     const total = entries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[0]), 0)
@@ -631,17 +693,31 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
     // Charts with multiple metrics or secondary dimension
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
-    const commonProps = { data: chartData, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 0, bottom: 5 } }
+    const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
+    const commonProps = { data: hasComparison ? mergedChartData : chartData, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 0, bottom: 5 } }
 
     // Helper to get series label (metric label or secondary dimension value)
     const getSeriesLabel = (key: string): string => {
       if (useSecondaryDimension) return key // Secondary dimension values are used as-is
+      // Handle comparison keys
+      if (key.endsWith('_comparison')) {
+        const baseMetric = key.replace('_comparison', '') as ReportMetric
+        const periodLabel = config.comparison === 'previous_year' ? 'Prior Year' : 'Prior Period'
+        return activeMetrics.length === 1 ? periodLabel : `${getMetricLabel(baseMetric)} (${periodLabel})`
+      }
+      // For current period with comparison active, add label
+      if (hasComparison && activeMetrics.length === 1) {
+        return 'Current Period'
+      }
       return getMetricLabel(key as ReportMetric)
     }
 
     // Determine which keys to render as series
     const renderKeys = useSecondaryDimension ? seriesKeys : activeMetrics
-    const showLegend = renderKeys.length > 1
+    const showLegend = renderKeys.length > 1 || hasComparison
+
+    // Comparison color (muted gray)
+    const COMPARISON_COLOR = '#9ca3af'
 
     switch (config.chartType) {
       case 'area':
@@ -658,6 +734,14 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               )}
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
+              {/* Comparison series first (so they appear behind) */}
+              {hasComparison && comparisonSeriesKeys.map((key, idx) => (
+                <Area key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
+                  yAxisId="left"
+                  stroke={COMPARISON_COLOR}
+                  fill={COMPARISON_COLOR}
+                  fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 5" />
+              ))}
               {renderKeys.map((key, idx) => (
                 <Area key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
@@ -683,6 +767,13 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               )}
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend />}
+              {/* Comparison series first (so they appear behind) */}
+              {hasComparison && comparisonSeriesKeys.map((key, idx) => (
+                <Line key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
+                  yAxisId="left"
+                  stroke={COMPARISON_COLOR} strokeWidth={2} strokeDasharray="5 5"
+                  dot={{ fill: COMPARISON_COLOR, r: 2 }} />
+              ))}
               {renderKeys.map((key, idx) => (
                 <Line key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
@@ -706,6 +797,11 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               {renderKeys.map((key, idx) => (
                 <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
+              ))}
+              {/* Comparison bars */}
+              {hasComparison && comparisonSeriesKeys.map((key, idx) => (
+                <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
+                  fill={COMPARISON_COLOR} radius={[4, 4, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
