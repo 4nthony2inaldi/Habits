@@ -94,7 +94,8 @@ export type DatePresetType = 'last30' | 'last90' | 'thisYear' | 'lastYear' | 'al
 export type ComparisonType = 'none' | 'previous_period' | 'previous_year'
 
 export interface ReportConfig {
-  metric: ReportMetric
+  metric: ReportMetric // Primary metric (for backwards compatibility)
+  metrics?: ReportMetric[] // Multiple metrics for line/area/table charts
   aggregation: ReportAggregation
   dimension: ReportDimension
   chartType: ReportChartType

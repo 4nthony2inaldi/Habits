@@ -39,7 +39,6 @@ import { calculateTotalDrinks } from '@/lib/utils/calculations'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils/cn'
 import { habitLabels, eventLabels } from '@/types/forms'
 import type {
@@ -81,7 +80,6 @@ interface ReportsClientProps {
   profile: Profile
 }
 
-// Metric options with labels and categories
 const metricOptions: { value: ReportMetric; label: string; category: string }[] = [
   { value: 'total_drinks', label: 'Total Drinks', category: 'Alcohol' },
   { value: 'beers', label: 'Beers', category: 'Alcohol' },
@@ -126,15 +124,15 @@ const dimensionOptions: { value: ReportDimension; label: string; group: string }
   { value: 'work_location', label: 'Work Location', group: 'Category' },
 ]
 
-const chartTypeOptions: { value: ReportChartType; label: string; icon: typeof BarChart3 }[] = [
-  { value: 'line', label: 'Line', icon: LineChartIcon },
-  { value: 'area', label: 'Area', icon: AreaChartIcon },
-  { value: 'bar', label: 'Bar', icon: BarChart3 },
-  { value: 'stacked_bar', label: 'Stacked', icon: Layers },
-  { value: 'pie', label: 'Pie', icon: PieChartIcon },
-  { value: 'kpi', label: 'KPI', icon: Hash },
-  { value: 'table', label: 'Table', icon: Table },
-  { value: 'grouped_bar', label: 'Grouped', icon: LayoutGrid },
+const chartTypeOptions: { value: ReportChartType; label: string; icon: typeof BarChart3; supportsMultiMetric: boolean }[] = [
+  { value: 'line', label: 'Line', icon: LineChartIcon, supportsMultiMetric: true },
+  { value: 'area', label: 'Area', icon: AreaChartIcon, supportsMultiMetric: true },
+  { value: 'bar', label: 'Bar', icon: BarChart3, supportsMultiMetric: true },
+  { value: 'stacked_bar', label: 'Stacked', icon: Layers, supportsMultiMetric: false },
+  { value: 'pie', label: 'Pie', icon: PieChartIcon, supportsMultiMetric: false },
+  { value: 'kpi', label: 'KPI', icon: Hash, supportsMultiMetric: false },
+  { value: 'table', label: 'Table', icon: Table, supportsMultiMetric: true },
+  { value: 'grouped_bar', label: 'Grouped', icon: LayoutGrid, supportsMultiMetric: true },
 ]
 
 const datePresetOptions: { value: DatePresetType; label: string }[] = [
@@ -153,6 +151,7 @@ const CHART_COLORS = [
 
 const defaultConfig: ReportConfig = {
   metric: 'total_drinks',
+  metrics: ['total_drinks'],
   aggregation: 'sum',
   dimension: 'month',
   chartType: 'area',
@@ -176,7 +175,17 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   const [editingReportId, setEditingReportId] = useState<string | null>(null)
   const [showComparison, setShowComparison] = useState(false)
 
-  // Calculate date range
+  // Get active metrics (use metrics array or fall back to single metric)
+  const activeMetrics = useMemo(() => {
+    if (config.metrics && config.metrics.length > 0) return config.metrics
+    return [config.metric]
+  }, [config.metrics, config.metric])
+
+  // Check if current chart type supports multiple metrics
+  const supportsMultiMetric = useMemo(() => {
+    return chartTypeOptions.find(c => c.value === config.chartType)?.supportsMultiMetric ?? false
+  }, [config.chartType])
+
   const { startDate, endDate, comparisonStartDate, comparisonEndDate } = useMemo(() => {
     const today = new Date()
     const yesterday = getYesterdayString()
@@ -184,18 +193,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     let end: string
 
     switch (config.datePreset) {
-      case 'last30':
-        start = formatDateForInput(subDays(today, 30))
-        end = yesterday
-        break
-      case 'last90':
-        start = formatDateForInput(subDays(today, 90))
-        end = yesterday
-        break
-      case 'thisYear':
-        start = formatDateForInput(startOfYear(today))
-        end = yesterday
-        break
+      case 'last30': start = formatDateForInput(subDays(today, 30)); end = yesterday; break
+      case 'last90': start = formatDateForInput(subDays(today, 90)); end = yesterday; break
+      case 'thisYear': start = formatDateForInput(startOfYear(today)); end = yesterday; break
       case 'lastYear':
         start = formatDateForInput(startOfYear(subYears(today, 1)))
         end = formatDateForInput(subDays(startOfYear(today), 1))
@@ -204,10 +204,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         start = customStartDate || formatDateForInput(subYears(today, 10))
         end = customEndDate || yesterday
         break
-      case 'allTime':
-      default:
-        start = formatDateForInput(subYears(today, 10))
-        end = yesterday
+      default: start = formatDateForInput(subYears(today, 10)); end = yesterday
     }
 
     let compStart: string | undefined
@@ -226,12 +223,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     return { startDate: start, endDate: end, comparisonStartDate: compStart, comparisonEndDate: compEnd }
   }, [config.datePreset, config.comparison, customStartDate, customEndDate])
 
-  const { data: entries, isLoading: entriesLoading } = useEntries({
-    userId: profile.id,
-    startDate,
-    endDate,
-  })
-
+  const { data: entries, isLoading: entriesLoading } = useEntries({ userId: profile.id, startDate, endDate })
   const { data: comparisonEntries } = useEntries({
     userId: profile.id,
     startDate: comparisonStartDate || '',
@@ -279,13 +271,16 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       const { error } = await supabase.from('saved_reports').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-reports'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-reports'] }),
   })
 
   const loadReport = useCallback((report: SavedReport) => {
-    setConfig(report.config as ReportConfig)
+    const loadedConfig = report.config as ReportConfig
+    // Ensure metrics array exists
+    if (!loadedConfig.metrics) {
+      loadedConfig.metrics = [loadedConfig.metric]
+    }
+    setConfig(loadedConfig)
     setEditingReportId(report.id)
     setReportName(report.name)
     setShowOnDashboard(report.show_on_dashboard)
@@ -338,6 +333,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     }
   }, [])
 
+  // Multi-metric chart data
   const chartData = useMemo(() => {
     if (!entries || entries.length === 0) return []
 
@@ -355,6 +351,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       })
     }
 
+    // Special handling for habit/event dimensions (single metric only)
     if (config.dimension === 'habit') {
       const habitData: Record<string, number> = {}
       filteredEntries.forEach((entry) => {
@@ -377,61 +374,99 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       return Object.entries(eventData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     }
 
-    const grouped: Record<string, { values: number[]; count: number }> = {}
+    // Group by dimension for each metric
+    const grouped: Record<string, Record<string, { values: number[]; count: number }>> = {}
+
     filteredEntries.forEach((entry) => {
       const key = getDimensionKey(entry, config.dimension)
-      if (!grouped[key]) grouped[key] = { values: [], count: 0 }
-      grouped[key].values.push(getMetricValue(entry, config.metric))
-      grouped[key].count++
+      if (!grouped[key]) grouped[key] = {}
+
+      activeMetrics.forEach((metric) => {
+        if (!grouped[key][metric]) grouped[key][metric] = { values: [], count: 0 }
+        grouped[key][metric].values.push(getMetricValue(entry, metric))
+        grouped[key][metric].count++
+      })
     })
 
-    let result = Object.entries(grouped).map(([name, { values, count }]) => {
-      let value: number
+    // Aggregate values
+    const aggregateValues = (values: number[], count: number): number => {
       switch (config.aggregation) {
-        case 'sum': value = values.reduce((a, b) => a + b, 0); break
-        case 'avg': value = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0; break
-        case 'count': value = count; break
-        case 'min': value = Math.min(...values); break
-        case 'max': value = Math.max(...values); break
-        default: value = values.reduce((a, b) => a + b, 0)
+        case 'sum': return values.reduce((a, b) => a + b, 0)
+        case 'avg': return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+        case 'count': return count
+        case 'min': return Math.min(...values)
+        case 'max': return Math.max(...values)
+        default: return values.reduce((a, b) => a + b, 0)
       }
-      return { name, value: Math.round(value * 100) / 100, sortKey: name }
-    })
-
-    result.sort((a, b) => {
-      if (config.dimension === 'work_location') return b.value - a.value
-      if (config.dimension === 'day_of_week') return dayOfWeekNames.indexOf(a.name) - dayOfWeekNames.indexOf(b.name)
-      if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name) - monthNames.indexOf(b.name)
-      if (config.dimension === 'day_of_month') return parseInt(a.name) - parseInt(b.name)
-      if (config.dimension === 'week_of_year') return parseInt(a.name.replace('Week ', '')) - parseInt(b.name.replace('Week ', ''))
-      return a.sortKey.localeCompare(b.sortKey)
-    })
-
-    if (config.aggregation === 'cumulative') {
-      let cumulative = 0
-      result = result.map((item) => { cumulative += item.value; return { ...item, value: cumulative } })
     }
 
+    let result = Object.entries(grouped).map(([name, metricData]) => {
+      const row: Record<string, string | number> = { name, sortKey: name }
+      activeMetrics.forEach((metric) => {
+        const data = metricData[metric] || { values: [], count: 0 }
+        row[metric] = Math.round(aggregateValues(data.values, data.count) * 100) / 100
+      })
+      // For single metric compatibility
+      if (activeMetrics.length === 1) {
+        row.value = row[activeMetrics[0]]
+      }
+      return row
+    })
+
+    // Sort
+    result.sort((a, b) => {
+      if (config.dimension === 'work_location') return (b.value as number || 0) - (a.value as number || 0)
+      if (config.dimension === 'day_of_week') return dayOfWeekNames.indexOf(a.name as string) - dayOfWeekNames.indexOf(b.name as string)
+      if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name as string) - monthNames.indexOf(b.name as string)
+      if (config.dimension === 'day_of_month') return parseInt(a.name as string) - parseInt(b.name as string)
+      if (config.dimension === 'week_of_year') return parseInt((a.name as string).replace('Week ', '')) - parseInt((b.name as string).replace('Week ', ''))
+      return (a.sortKey as string).localeCompare(b.sortKey as string)
+    })
+
+    // Cumulative
+    if (config.aggregation === 'cumulative') {
+      const cumulatives: Record<string, number> = {}
+      activeMetrics.forEach(m => cumulatives[m] = 0)
+      result = result.map((item) => {
+        const newItem = { ...item }
+        activeMetrics.forEach((metric) => {
+          cumulatives[metric] += (item[metric] as number) || 0
+          newItem[metric] = cumulatives[metric]
+        })
+        if (activeMetrics.length === 1) newItem.value = newItem[activeMetrics[0]]
+        return newItem
+      })
+    }
+
+    // Percent
     if (config.aggregation === 'percent') {
-      const total = result.reduce((sum, item) => sum + item.value, 0)
-      result = result.map((item) => ({ ...item, value: total > 0 ? Math.round((item.value / total) * 1000) / 10 : 0 }))
+      const totals: Record<string, number> = {}
+      activeMetrics.forEach(m => totals[m] = result.reduce((sum, item) => sum + ((item[m] as number) || 0), 0))
+      result = result.map((item) => {
+        const newItem = { ...item }
+        activeMetrics.forEach((metric) => {
+          newItem[metric] = totals[metric] > 0 ? Math.round(((item[metric] as number) / totals[metric]) * 1000) / 10 : 0
+        })
+        if (activeMetrics.length === 1) newItem.value = newItem[activeMetrics[0]]
+        return newItem
+      })
     }
 
     return result
-  }, [entries, config, selectedHabits, selectedEvents, getDimensionKey, getMetricValue])
+  }, [entries, config, selectedHabits, selectedEvents, getDimensionKey, getMetricValue, activeMetrics])
 
   const comparisonData = useMemo(() => {
     if (!comparisonEntries || comparisonEntries.length === 0 || config.comparison === 'none') return null
-    const total = comparisonEntries.reduce((sum, entry) => sum + getMetricValue(entry, config.metric), 0)
+    const total = comparisonEntries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[0]), 0)
     const avg = comparisonEntries.length > 0 ? total / comparisonEntries.length : 0
     return { total, avg: Math.round(avg * 100) / 100, count: comparisonEntries.length }
-  }, [comparisonEntries, config, getMetricValue])
+  }, [comparisonEntries, config.comparison, getMetricValue, activeMetrics])
 
   const currentTotals = useMemo(() => {
     if (!entries || entries.length === 0) return { total: 0, avg: 0, count: 0 }
-    const total = entries.reduce((sum, entry) => sum + getMetricValue(entry, config.metric), 0)
+    const total = entries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[0]), 0)
     return { total, avg: Math.round((total / entries.length) * 100) / 100, count: entries.length }
-  }, [entries, config.metric, getMetricValue])
+  }, [entries, activeMetrics, getMetricValue])
 
   const changePercentage = useMemo(() => {
     if (!comparisonData) return null
@@ -453,10 +488,30 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     setShowOnDashboard(false)
   }
 
-  const metricLabel = metricOptions.find((m) => m.value === config.metric)?.label || config.metric
-  const dimensionLabel = dimensionOptions.find((d) => d.value === config.dimension)?.label || config.dimension
+  const addMetric = (metric: ReportMetric) => {
+    if (!activeMetrics.includes(metric)) {
+      const newMetrics = [...activeMetrics, metric]
+      setConfig({ ...config, metrics: newMetrics, metric: newMetrics[0] })
+    }
+  }
 
+  const removeMetric = (metric: ReportMetric) => {
+    if (activeMetrics.length > 1) {
+      const newMetrics = activeMetrics.filter(m => m !== metric)
+      setConfig({ ...config, metrics: newMetrics, metric: newMetrics[0] })
+    }
+  }
+
+  const getMetricLabel = (metric: ReportMetric) => metricOptions.find(m => m.value === metric)?.label || metric
+  const dimensionLabel = dimensionOptions.find((d) => d.value === config.dimension)?.label || config.dimension
   const tooltipStyle = { backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px' }
+
+  // Build title from metrics
+  const chartTitle = useMemo(() => {
+    if (activeMetrics.length === 1) return getMetricLabel(activeMetrics[0])
+    if (activeMetrics.length === 2) return `${getMetricLabel(activeMetrics[0])} and ${getMetricLabel(activeMetrics[1])}`
+    return `${getMetricLabel(activeMetrics[0])} and ${activeMetrics.length - 1} more`
+  }, [activeMetrics])
 
   const renderChart = () => {
     if (entriesLoading) {
@@ -465,12 +520,14 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     if (chartData.length === 0) {
       return <div className="flex items-center justify-center h-80 text-gray-500">No data available</div>
     }
+
+    // KPI - single metric only
     if (config.chartType === 'kpi') {
       const value = config.aggregation === 'avg' ? currentTotals.avg : currentTotals.total
       return (
         <div className="flex flex-col items-center justify-center h-80">
           <p className="text-6xl font-bold text-purple-600">{value.toLocaleString()}</p>
-          <p className="text-gray-500 mt-2">{metricLabel}</p>
+          <p className="text-gray-500 mt-2">{getMetricLabel(activeMetrics[0])}</p>
           {changePercentage !== null && (
             <div className={cn('flex items-center gap-1 mt-3 text-sm font-medium',
               changePercentage > 0 ? 'text-green-600' : changePercentage < 0 ? 'text-red-600' : 'text-gray-500')}>
@@ -481,6 +538,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         </div>
       )
     }
+
+    // Table - supports multiple metrics
     if (config.chartType === 'table') {
       return (
         <div className="overflow-auto max-h-80">
@@ -488,14 +547,20 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="text-left p-3 font-medium text-gray-700">{dimensionLabel}</th>
-                <th className="text-right p-3 font-medium text-gray-700">{metricLabel}</th>
+                {activeMetrics.map((metric) => (
+                  <th key={metric} className="text-right p-3 font-medium text-gray-700">{getMetricLabel(metric)}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {chartData.map((item, idx) => (
                 <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="p-3">{item.name}</td>
-                  <td className="p-3 text-right font-medium">{item.value.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}</td>
+                  {activeMetrics.map((metric) => (
+                    <td key={metric} className="p-3 text-right font-medium">
+                      {((item as Record<string, unknown>)[metric] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -504,6 +569,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       )
     }
 
+    // Charts with multiple metrics
     const commonProps = { data: chartData, margin: { top: 10, right: 20, left: 0, bottom: 5 } }
 
     switch (config.chartType) {
@@ -515,10 +581,17 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="#c4b5fd" strokeWidth={2} />
+              {activeMetrics.length > 1 && <Legend />}
+              {activeMetrics.map((metric, idx) => (
+                <Area key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+                  stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                  fillOpacity={0.3} strokeWidth={2} />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         )
+
       case 'line':
         return (
           <ResponsiveContainer width="100%" height={320}>
@@ -527,12 +600,34 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 3 }} />
+              {activeMetrics.length > 1 && <Legend />}
+              {activeMetrics.map((metric, idx) => (
+                <Line key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+                  stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2}
+                  dot={{ fill: CHART_COLORS[idx % CHART_COLORS.length], r: 3 }} />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         )
+
       case 'bar':
       case 'grouped_bar':
+        return (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart {...commonProps}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
+              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
+              <Tooltip contentStyle={tooltipStyle} />
+              {activeMetrics.length > 1 && <Legend />}
+              {activeMetrics.map((metric, idx) => (
+                <Bar key={metric} dataKey={metric} name={getMetricLabel(metric)}
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )
+
       case 'stacked_bar':
         return (
           <ResponsiveContainer width="100%" height={320}>
@@ -541,15 +636,16 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )
+
       case 'pie':
         return (
           <ResponsiveContainer width="100%" height={320}>
             <PieChart>
-              <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}
+              <Pie data={chartData} dataKey={activeMetrics[0]} nameKey="name" cx="50%" cy="50%" outerRadius={100}
                 label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {chartData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
               </Pie>
@@ -558,37 +654,33 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             </PieChart>
           </ResponsiveContainer>
         )
+
       default:
         return null
     }
   }
 
+  const availableMetrics = metricOptions.filter(m => !activeMetrics.includes(m.value))
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-4">
-        {/* Title Row */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              {metricLabel} by {dimensionLabel}
-            </h1>
+            <h1 className="text-xl font-semibold text-gray-900">{chartTitle} by {dimensionLabel}</h1>
             <p className="text-sm text-gray-500">
               {format(parseISO(startDate), 'MMM d, yyyy')} - {format(parseISO(endDate), 'MMM d, yyyy')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowSavedReports(!showSavedReports)}>
-              <FolderOpen className="h-4 w-4 mr-1" />
-              Saved
+              <FolderOpen className="h-4 w-4 mr-1" />Saved
             </Button>
-            <Button variant="outline" size="sm" onClick={handleNewReport}>
-              <Plus className="h-4 w-4" />
-            </Button>
+            <Button variant="outline" size="sm" onClick={handleNewReport}><Plus className="h-4 w-4" /></Button>
           </div>
         </div>
 
-        {/* Saved Reports Dropdown */}
         {showSavedReports && (
           <Card>
             <CardContent className="p-3">
@@ -614,36 +706,23 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </Card>
         )}
 
-        {/* KPI Summary Row */}
         <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{currentTotals.total.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">Total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{currentTotals.avg.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">Average per Day</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{currentTotals.count}</p>
-              <p className="text-xs text-gray-500">Day Count</p>
-            </CardContent>
-          </Card>
+          <Card><CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">{currentTotals.total.toLocaleString()}</p>
+            <p className="text-xs text-gray-500">Total</p>
+          </CardContent></Card>
+          <Card><CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">{currentTotals.avg.toLocaleString()}</p>
+            <p className="text-xs text-gray-500">Average per Day</p>
+          </CardContent></Card>
+          <Card><CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">{currentTotals.count}</p>
+            <p className="text-xs text-gray-500">Day Count</p>
+          </CardContent></Card>
         </div>
 
-        {/* Chart */}
-        <Card>
-          <CardContent className="p-4">
-            {renderChart()}
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4">{renderChart()}</CardContent></Card>
 
-        {/* Data Table (when not already showing table view) */}
         {config.chartType !== 'table' && chartData.length > 0 && (
           <Card>
             <CardContent className="p-4">
@@ -652,18 +731,24 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
                       <th className="text-left p-2 font-medium text-gray-700">{dimensionLabel}</th>
-                      <th className="text-right p-2 font-medium text-gray-700">{metricLabel}</th>
+                      {activeMetrics.map((metric) => (
+                        <th key={metric} className="text-right p-2 font-medium text-gray-700">{getMetricLabel(metric)}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {chartData.slice(0, 10).map((item, idx) => (
                       <tr key={idx} className="border-b border-gray-100">
                         <td className="p-2">{item.name}</td>
-                        <td className="p-2 text-right">{item.value.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}</td>
+                        {activeMetrics.map((metric) => (
+                          <td key={metric} className="p-2 text-right">
+                            {((item as Record<string, unknown>)[metric] as number)?.toLocaleString()}{config.aggregation === 'percent' ? '%' : ''}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                     {chartData.length > 10 && (
-                      <tr><td colSpan={2} className="p-2 text-center text-gray-400 text-xs">+ {chartData.length - 10} more</td></tr>
+                      <tr><td colSpan={activeMetrics.length + 1} className="p-2 text-center text-gray-400 text-xs">+ {chartData.length - 10} more</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -675,7 +760,6 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       {/* Sidebar */}
       <div className="w-full lg:w-72 space-y-4">
-        {/* Chart Type */}
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-gray-500 mb-2">Chart Type</p>
@@ -694,7 +778,6 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent>
         </Card>
 
-        {/* Time Range */}
         <Card>
           <CardContent className="p-3 space-y-3">
             <div>
@@ -710,8 +793,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 <Input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="h-8 text-xs" />
               </div>
             )}
-            <button onClick={() => setShowComparison(!showComparison)}
-              className="text-xs text-purple-600 hover:text-purple-700">
+            <button onClick={() => setShowComparison(!showComparison)} className="text-xs text-purple-600 hover:text-purple-700">
               + Comparison to Previous
             </button>
             {showComparison && (
@@ -725,26 +807,46 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent>
         </Card>
 
-        {/* Metric */}
+        {/* Metrics - chips with add */}
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs font-medium text-gray-500 mb-1">Metric</p>
-            <select value={config.metric} onChange={(e) => setConfig({ ...config, metric: e.target.value as ReportMetric })}
-              className="w-full h-9 px-2 rounded border border-gray-200 text-sm">
-              {Object.entries(metricOptions.reduce((acc, opt) => {
-                if (!acc[opt.category]) acc[opt.category] = []
-                acc[opt.category].push(opt)
-                return acc
-              }, {} as Record<string, typeof metricOptions>)).map(([category, options]) => (
-                <optgroup key={category} label={category}>
-                  {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </optgroup>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Metrics</p>
+              <span className="text-xs text-gray-400">{activeMetrics.length}/{supportsMultiMetric ? '10' : '1'}</span>
+            </div>
+            <div className="space-y-1">
+              {activeMetrics.map((metric) => (
+                <div key={metric} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                  <span className="truncate">{getMetricLabel(metric)}</span>
+                  {activeMetrics.length > 1 && (
+                    <button onClick={() => removeMetric(metric)} className="text-gray-400 hover:text-gray-600">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               ))}
-            </select>
+              {supportsMultiMetric && availableMetrics.length > 0 && (
+                <select
+                  value=""
+                  onChange={(e) => { if (e.target.value) addMetric(e.target.value as ReportMetric) }}
+                  className="w-full h-8 px-2 rounded border border-dashed border-gray-300 text-xs text-gray-500"
+                >
+                  <option value="">+ Add Metric</option>
+                  {Object.entries(availableMetrics.reduce((acc, opt) => {
+                    if (!acc[opt.category]) acc[opt.category] = []
+                    acc[opt.category].push(opt)
+                    return acc
+                  }, {} as Record<string, typeof metricOptions>)).map(([category, options]) => (
+                    <optgroup key={category} label={category}>
+                      {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Dimension */}
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-gray-500 mb-1">Group By</p>
@@ -763,7 +865,6 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent>
         </Card>
 
-        {/* Aggregation */}
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-gray-500 mb-1">Aggregation</p>
@@ -774,7 +875,6 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent>
         </Card>
 
-        {/* Filters */}
         <Card>
           <CardContent className="p-3">
             <button onClick={() => setShowFilters(!showFilters)}
@@ -821,18 +921,15 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent>
         </Card>
 
-        {/* Save */}
         <Card>
           <CardContent className="p-3 space-y-2">
-            <Input placeholder="Report name" value={reportName} onChange={(e) => setReportName(e.target.value)}
-              className="h-8 text-sm" />
+            <Input placeholder="Report name" value={reportName} onChange={(e) => setReportName(e.target.value)} className="h-8 text-sm" />
             <label className="flex items-center gap-2 text-xs text-gray-600">
               <input type="checkbox" checked={showOnDashboard} onChange={(e) => setShowOnDashboard(e.target.checked)}
                 className="rounded border-gray-300" />
               Show on Dashboard
             </label>
-            <Button onClick={handleSaveReport} disabled={!reportName.trim() || saveReportMutation.isPending}
-              className="w-full h-8 text-sm">
+            <Button onClick={handleSaveReport} disabled={!reportName.trim() || saveReportMutation.isPending} className="w-full h-8 text-sm">
               {saveReportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
               {editingReportId ? 'Update' : 'Save'}
             </Button>
