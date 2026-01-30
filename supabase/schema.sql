@@ -46,6 +46,22 @@ CREATE TABLE IF NOT EXISTS notification_log (
 
 CREATE INDEX IF NOT EXISTS idx_notification_log_user ON notification_log(user_id, sent_at);
 
+-- Saved reports for custom ad-hoc charts
+CREATE TABLE IF NOT EXISTS saved_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  show_on_dashboard BOOLEAN DEFAULT FALSE,
+  dashboard_order INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_reports_user ON saved_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_saved_reports_dashboard ON saved_reports(user_id, show_on_dashboard) WHERE show_on_dashboard = true;
+
 -- User goals
 CREATE TABLE IF NOT EXISTS user_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,6 +185,7 @@ ALTER TABLE life_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goal_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_reports ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read all profiles (for leaderboards) but only update their own
 CREATE POLICY "Users can view all profiles" ON profiles
@@ -308,6 +325,29 @@ CREATE POLICY "Admins can view all snapshots" ON goal_snapshots
 CREATE POLICY "Users can view own notifications" ON notification_log
   FOR SELECT USING (auth.uid() = user_id);
 
+-- Saved reports: Users can manage their own reports
+CREATE POLICY "Users can view own reports" ON saved_reports
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own reports" ON saved_reports
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own reports" ON saved_reports
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own reports" ON saved_reports
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Allow admins to view all reports
+CREATE POLICY "Admins can view all reports" ON saved_reports
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
 -- Function to automatically create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -341,6 +381,13 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_daily_entries_updated_at ON daily_entries;
 CREATE TRIGGER update_daily_entries_updated_at
     BEFORE UPDATE ON daily_entries
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger for updated_at on saved_reports
+DROP TRIGGER IF EXISTS update_saved_reports_updated_at ON saved_reports;
+CREATE TRIGGER update_saved_reports_updated_at
+    BEFORE UPDATE ON saved_reports
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

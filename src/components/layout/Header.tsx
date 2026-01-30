@@ -17,6 +17,7 @@ import {
   X,
   Flame,
   Shield,
+  BarChart3,
 } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
@@ -28,6 +29,7 @@ interface HeaderProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'New Entry', href: '/entry', icon: PlusCircle },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Leaderboards', href: '/leaderboards', icon: Trophy },
   { name: 'Goals', href: '/goals', icon: Target },
   { name: 'Settings', href: '/settings', icon: Settings },

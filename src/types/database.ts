@@ -63,6 +63,58 @@ export type NotificationType =
   | 'weekly_digest'
   | 'behind_nudge'
 
+// Report configuration types
+export type ReportMetric =
+  | 'total_drinks'
+  | 'beers'
+  | 'seltzers'
+  | 'wine'
+  | 'liquor'
+  | 'shots'
+  | 'mood_score'
+  | 'steps'
+  | 'coffee'
+  | 'screen_time'
+  | 'sex'
+  | 'healthy_habits_count'
+  | 'life_events_count'
+  | 'sober_days'
+  | 'drinking_days'
+  | 'meals_out'
+  | 'miles_traveled'
+
+export type ReportAggregation = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'cumulative' | 'percent'
+
+export type ReportDimension = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'habit' | 'event' | 'work_location'
+
+export type ReportChartType = 'kpi' | 'bar' | 'stacked_bar' | 'grouped_bar' | 'line' | 'area' | 'pie' | 'table'
+
+export type DatePresetType = 'last30' | 'last90' | 'thisYear' | 'lastYear' | 'allTime' | 'custom'
+
+export type ComparisonType = 'none' | 'previous_period' | 'previous_year'
+
+export interface ReportConfig {
+  metric: ReportMetric
+  aggregation: ReportAggregation
+  dimension: ReportDimension
+  chartType: ReportChartType
+  datePreset: DatePresetType
+  customStartDate?: string
+  customEndDate?: string
+  comparison: ComparisonType
+  // Optional breakdown by habit/event
+  breakdownBy?: 'habit' | 'event' | null
+  // Filter settings (similar to history page)
+  filters?: {
+    habits?: string[]
+    events?: string[]
+    workLocation?: string
+    drinkFilter?: string
+    moodMin?: number
+    moodMax?: number
+  }
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -395,6 +447,41 @@ export interface Database {
           metadata?: Json | null
         }
       }
+      saved_reports: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          config: ReportConfig
+          show_on_dashboard: boolean
+          dashboard_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description?: string | null
+          config: ReportConfig
+          show_on_dashboard?: boolean
+          dashboard_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          description?: string | null
+          config?: ReportConfig
+          show_on_dashboard?: boolean
+          dashboard_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -422,6 +509,10 @@ export type LifeEvent = Database['public']['Tables']['life_events']['Row']
 
 export type UserGoal = Database['public']['Tables']['user_goals']['Row']
 export type GoalSnapshot = Database['public']['Tables']['goal_snapshots']['Row']
+
+export type SavedReport = Database['public']['Tables']['saved_reports']['Row']
+export type SavedReportInsert = Database['public']['Tables']['saved_reports']['Insert']
+export type SavedReportUpdate = Database['public']['Tables']['saved_reports']['Update']
 
 // Extended types for API responses
 export type DailyEntryWithRelations = DailyEntry & {
