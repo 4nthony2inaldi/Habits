@@ -194,6 +194,16 @@ CREATE POLICY "Users can view leaderboard entries" ON daily_entries
     )
   );
 
+-- Allow admins to view all entries
+CREATE POLICY "Admins can view all entries" ON daily_entries
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
 CREATE POLICY "Users can create own entries" ON daily_entries
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -219,6 +229,16 @@ CREATE POLICY "Users can delete own habits" ON healthy_habits
     EXISTS (SELECT 1 FROM daily_entries WHERE id = entry_id AND user_id = auth.uid())
   );
 
+-- Allow admins to view all habits
+CREATE POLICY "Admins can view all habits" ON healthy_habits
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
 -- Life events: Follow parent entry permissions
 CREATE POLICY "Users can view own events" ON life_events
   FOR SELECT USING (
@@ -235,6 +255,16 @@ CREATE POLICY "Users can delete own events" ON life_events
     EXISTS (SELECT 1 FROM daily_entries WHERE id = entry_id AND user_id = auth.uid())
   );
 
+-- Allow admins to view all events
+CREATE POLICY "Admins can view all events" ON life_events
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
 -- Goals: Users can only access their own goals
 CREATE POLICY "Users can view own goals" ON user_goals
   FOR SELECT USING (auth.uid() = user_id);
@@ -248,10 +278,30 @@ CREATE POLICY "Users can update own goals" ON user_goals
 CREATE POLICY "Users can delete own goals" ON user_goals
   FOR DELETE USING (auth.uid() = user_id);
 
+-- Allow admins to view all goals
+CREATE POLICY "Admins can view all goals" ON user_goals
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
 -- Goal snapshots: Follow parent goal permissions
 CREATE POLICY "Users can view own snapshots" ON goal_snapshots
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM user_goals WHERE id = goal_id AND user_id = auth.uid())
+  );
+
+-- Allow admins to view all snapshots
+CREATE POLICY "Admins can view all snapshots" ON goal_snapshots
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
   );
 
 -- Notification log: Users can view their own notifications
