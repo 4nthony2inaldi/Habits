@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { parseISO, subDays, getYear } from 'date-fns'
+import { parseISO, subDays, getYear, getDayOfYear } from 'date-fns'
 import type { DailyEntryWithRelations } from '@/types/database'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
 import type { AlcoholMetricType } from './DashboardCustomizer'
@@ -108,35 +108,32 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     const currentYear = getYear(today)
     const lastYear = currentYear - 1
     const twoYearsAgo = currentYear - 2
+    const currentDayOfYear = getDayOfYear(today)
 
     // Filter entries by time period
-    const last7 = entries.filter((e) => {
-      const date = parseISO(e.entry_date)
-      return date >= subDays(today, 7)
-    })
-
     const last30 = entries.filter((e) => {
       const date = parseISO(e.entry_date)
       return date >= subDays(today, 30)
     })
 
+    // Current year: all entries up to today
     const thisYear = entries.filter((e) => {
       const date = parseISO(e.entry_date)
       return getYear(date) === currentYear
     })
 
+    // Prior years: only include entries up to current day of year (YTD comparison)
     const prevYear = entries.filter((e) => {
       const date = parseISO(e.entry_date)
-      return getYear(date) === lastYear
+      return getYear(date) === lastYear && getDayOfYear(date) <= currentDayOfYear
     })
 
     const twoYearsAgoEntries = entries.filter((e) => {
       const date = parseISO(e.entry_date)
-      return getYear(date) === twoYearsAgo
+      return getYear(date) === twoYearsAgo && getDayOfYear(date) <= currentDayOfYear
     })
 
     return {
-      last7: calculatePeriodStats(last7),
       last30: calculatePeriodStats(last30),
       currentYear: calculatePeriodStats(thisYear),
       lastYear: calculatePeriodStats(prevYear),
@@ -167,7 +164,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
   const allRows: Array<{
     key: AlcoholMetricType
     label: string
-    last7: number | string
     last30: number | string
     twoYearsAgo: number | string
     lastYear: number | string
@@ -175,8 +171,7 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
   }> = [
     {
       key: 'totalDrinks',
-      label: 'Total',
-      last7: stats.last7.totalDrinks,
+      label: 'YTD',
       last30: stats.last30.totalDrinks,
       twoYearsAgo: stats.twoYearsAgo.totalDrinks,
       lastYear: stats.lastYear.totalDrinks,
@@ -185,7 +180,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'avgWeekly',
       label: 'Weekly',
-      last7: stats.last7.avgWeekly,
       last30: stats.last30.avgWeekly,
       twoYearsAgo: stats.twoYearsAgo.avgWeekly,
       lastYear: stats.lastYear.avgWeekly,
@@ -194,7 +188,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'daysWithDrink',
       label: '1+',
-      last7: stats.last7.daysWithDrink,
       last30: `${stats.last30.daysWithDrinkPercent}%`,
       twoYearsAgo: `${stats.twoYearsAgo.daysWithDrinkPercent}%`,
       lastYear: `${stats.lastYear.daysWithDrinkPercent}%`,
@@ -203,7 +196,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'daysWith2Plus',
       label: '2+',
-      last7: stats.last7.daysWith2Plus,
       last30: `${stats.last30.daysWith2PlusPercent}%`,
       twoYearsAgo: `${stats.twoYearsAgo.daysWith2PlusPercent}%`,
       lastYear: `${stats.lastYear.daysWith2PlusPercent}%`,
@@ -212,7 +204,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'daysWith6Plus',
       label: '6+',
-      last7: stats.last7.daysWith6Plus,
       last30: `${stats.last30.daysWith6PlusPercent}%`,
       twoYearsAgo: `${stats.twoYearsAgo.daysWith6PlusPercent}%`,
       lastYear: `${stats.lastYear.daysWith6PlusPercent}%`,
@@ -221,7 +212,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'beers',
       label: 'Beers',
-      last7: stats.last7.beers,
       last30: stats.last30.beers,
       twoYearsAgo: stats.twoYearsAgo.beers,
       lastYear: stats.lastYear.beers,
@@ -230,7 +220,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'seltzers',
       label: 'Seltzers',
-      last7: stats.last7.seltzers,
       last30: stats.last30.seltzers,
       twoYearsAgo: stats.twoYearsAgo.seltzers,
       lastYear: stats.lastYear.seltzers,
@@ -239,7 +228,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'wine',
       label: 'Wine',
-      last7: stats.last7.wine,
       last30: stats.last30.wine,
       twoYearsAgo: stats.twoYearsAgo.wine,
       lastYear: stats.lastYear.wine,
@@ -248,7 +236,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'liquor',
       label: 'Liquor',
-      last7: stats.last7.liquor,
       last30: stats.last30.liquor,
       twoYearsAgo: stats.twoYearsAgo.liquor,
       lastYear: stats.lastYear.liquor,
@@ -257,7 +244,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     {
       key: 'shots',
       label: 'Shots',
-      last7: stats.last7.shots,
       last30: stats.last30.shots,
       twoYearsAgo: stats.twoYearsAgo.shots,
       lastYear: stats.lastYear.shots,
@@ -282,9 +268,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
           <thead>
             <tr className="border-b">
               <th className="text-left py-1.5 font-medium text-gray-500 w-16"></th>
-              <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
-                L7
-              </th>
               <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
                 L30
               </th>
@@ -311,9 +294,6 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
               >
                 <td className="text-gray-700 font-medium text-xs align-middle truncate">
                   {row.label}
-                </td>
-                <td className="text-center text-gray-900 text-xs align-middle">
-                  {row.last7 || '-'}
                 </td>
                 <td className="text-center text-gray-900 text-xs align-middle">
                   {row.last30 || '-'}

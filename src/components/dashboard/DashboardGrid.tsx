@@ -200,7 +200,7 @@ export function DashboardGrid({
       case 'alcoholCalendar':
         return <AlcoholCalendar entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholStats':
-        return <AlcoholStats entries={entries} selectedMetrics={config.selectedAlcoholMetrics} title={titles.title} subtitle={titles.subtitle} />
+        return <AlcoholStats entries={allEntries} selectedMetrics={config.selectedAlcoholMetrics} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholByType':
         return <AlcoholByType entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'drinksYearOverYear':
