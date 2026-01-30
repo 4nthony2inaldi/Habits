@@ -691,12 +691,17 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
     result.kpiVisibility = { ...defaultKpiVisibility, ...(config.kpiVisibility as KpiVisibility) }
   }
 
-  // Migrate gridLayouts or use defaults
+  // Migrate gridLayouts - deep merge to preserve new widget defaults
   if ('gridLayouts' in config && typeof config.gridLayouts === 'object') {
-    result.gridLayouts = { ...defaultGridLayouts, ...(config.gridLayouts as GridLayouts) }
+    const oldLayouts = config.gridLayouts as Partial<GridLayouts>
+    result.gridLayouts = {
+      lg: { ...defaultGridLayouts.lg, ...(oldLayouts.lg || {}) },
+      md: { ...defaultGridLayouts.md, ...(oldLayouts.md || {}) },
+      sm: { ...defaultGridLayouts.sm, ...(oldLayouts.sm || {}) },
+    }
   }
 
-  // Migrate widgetTitles or use defaults
+  // Migrate widgetTitles - merge to preserve new widget defaults
   if ('widgetTitles' in config && typeof config.widgetTitles === 'object') {
     result.widgetTitles = { ...defaultWidgetTitles, ...(config.widgetTitles as WidgetTitles) }
   }
