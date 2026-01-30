@@ -12,6 +12,15 @@ interface AlcoholByTypeProps {
   subtitle?: string
 }
 
+interface TooltipData {
+  label: string
+  percent: number
+  count: number
+  color: string
+  x: number
+  y: number
+}
+
 const TYPE_COLORS = {
   wine: { bg: 'bg-red-500', hex: '#ef4444' },
   beers: { bg: 'bg-blue-500', hex: '#3b82f6' },
@@ -38,6 +47,27 @@ interface BreakdownData {
 
 export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: AlcoholByTypeProps) {
   const [viewMode, setViewMode] = useState<'total' | 'byYear'>('total')
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+
+  const handleSegmentHover = (
+    type: string,
+    typeData: { count: number; percent: number },
+    event: React.MouseEvent
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setTooltip({
+      label: TYPE_LABELS[type as keyof typeof TYPE_LABELS],
+      percent: typeData.percent,
+      count: typeData.count,
+      color: TYPE_COLORS[type as keyof typeof TYPE_COLORS].hex,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    })
+  }
+
+  const handleSegmentLeave = () => {
+    setTooltip(null)
+  }
 
   const data = useMemo(() => {
     // Calculate total breakdown for entire period
@@ -171,20 +201,23 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
                   .sort((a, b) => (itemData.byType[b]?.percent || 0) - (itemData.byType[a]?.percent || 0))
                   .map((type) => {
                     const typeData = itemData.byType[type]
+                    // Only show text if segment is wide enough (15%+ for single bar, 12%+ for multi)
+                    const minPercentForText = displayData.length === 1 ? 15 : 12
 
                     return (
                       <div
                         key={type}
                         className={cn(
-                          'h-full flex items-center justify-center text-white font-medium',
+                          'h-full flex items-center justify-center text-white font-medium cursor-pointer transition-opacity hover:opacity-90',
                           displayData.length === 1 ? 'text-base' : 'text-[10px]',
                           TYPE_COLORS[type].bg
                         )}
                         style={{ width: `${typeData.percent}%` }}
-                        title={`${TYPE_LABELS[type]}: ${typeData.count} (${typeData.percent}%)`}
+                        onMouseEnter={(e) => handleSegmentHover(type, typeData, e)}
+                        onMouseLeave={handleSegmentLeave}
                       >
-                        {typeData.percent >= 10 && (
-                          <span className="truncate px-1">{typeData.percent}%</span>
+                        {typeData.percent >= minPercentForText && (
+                          <span>{typeData.percent}%</span>
                         )}
                       </div>
                     )
@@ -204,6 +237,31 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
           ))}
         </div>
       </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="bg-gray-900 text-white rounded-lg shadow-lg px-3 py-2 text-sm mb-2">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: tooltip.color }}
+              />
+              <span className="font-medium">{tooltip.label}</span>
+            </div>
+            <div className="text-gray-300 text-xs mt-1">
+              {tooltip.count} drinks ({tooltip.percent}%)
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

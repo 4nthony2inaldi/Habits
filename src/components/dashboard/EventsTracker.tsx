@@ -153,7 +153,7 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
           <div
             key={item.event}
             className={cn(
-              'flex items-center justify-between px-2 rounded-lg flex-1',
+              'flex items-center px-2 rounded-lg flex-1',
               item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
             )}
             style={{ minHeight: 0 }}
@@ -164,10 +164,10 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
               )}
               <span className="text-xs text-gray-700 truncate">{item.label}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               <p
                 className={cn(
-                  'text-sm font-bold',
+                  'text-sm font-bold w-12 text-right',
                   item.daysSince === null
                     ? 'text-gray-400'
                     : item.isOverdue
@@ -177,14 +177,14 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
               >
                 {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
               </p>
-              <div className="text-right text-[10px] text-gray-500 min-w-[40px]">
+              <div className="text-[10px] text-gray-500 w-14 text-right">
                 {item.countCurrentPeriod > 0 || item.countPriorPeriod > 0 ? (
-                  <p>
+                  <span>
                     {item.countCurrentPeriod}x
                     {hasPriorPeriod && <span className="text-gray-400"> / {item.countPriorPeriod}x</span>}
-                  </p>
+                  </span>
                 ) : (
-                  <p>-</p>
+                  <span>-</span>
                 )}
               </div>
             </div>
