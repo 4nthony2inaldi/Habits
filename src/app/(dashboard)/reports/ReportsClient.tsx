@@ -749,7 +749,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
     const chartDataToUse = hasComparison ? mergedChartData : chartData
-    const commonProps = { data: chartDataToUse, margin: { top: 5, right: 5, left: 0, bottom: 35 } }
+    const commonProps = { data: chartDataToUse, margin: { top: 15, right: 5, left: 0, bottom: 25 } }
 
     // Calculate smart interval to prevent label overlap
     // Target ~4 labels max on the X-axis (date labels are wide when rotated)
