@@ -752,17 +752,19 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const commonProps = { data: chartDataToUse, margin: { top: 5, right: 5, left: 0, bottom: 50 } }
 
     // Calculate smart interval to prevent label overlap
-    // Target ~6 labels max on the X-axis (date labels are wide when rotated)
+    // Target ~5 labels max on the X-axis (date labels are wide when rotated)
     const dataLength = chartDataToUse.length
-    const targetLabels = 6
+    const targetLabels = 5
     const xAxisInterval = dataLength <= targetLabels ? 0 : Math.ceil(dataLength / targetLabels) - 1
 
     // Custom tick formatter for X-axis labels
     const formatXAxisLabel = (value: string): string => {
       if (!value) return ''
-      // Truncate long labels
-      if (value.length > 12) return value.substring(0, 10) + '…'
-      return value
+      // Shorten 4-digit years to 2-digit (e.g., "Dec 2025" -> "Dec '25")
+      const shortened = value.replace(/\b(20)(\d{2})\b/g, "'$2")
+      // Truncate if still too long
+      if (shortened.length > 10) return shortened.substring(0, 8) + '…'
+      return shortened
     }
 
     // Smart Y-axis formatter for large numbers (k, M suffixes)
