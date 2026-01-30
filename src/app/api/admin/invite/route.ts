@@ -44,6 +44,15 @@ export async function POST(request: NextRequest) {
 
     // Use service client to create user
     const serviceClient = await createServiceClient()
+
+    // Verify service role key is available
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json(
+        { error: 'Server configuration error: Service role key not available' },
+        { status: 500 }
+      )
+    }
+
     const temporaryPassword = generateTemporaryPassword()
 
     // Create auth user
@@ -73,68 +82,56 @@ export async function POST(request: NextRequest) {
     }
 
     // Wait a moment for any database trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Update the profile that was created by trigger (or create if it doesn't exist)
-    // First try to update existing profile
-    const { data: existingProfile } = await serviceClient
+    // Try to update the profile - the trigger should have created it
+    // Use select().single() with returning to verify the update worked
+    const profileData = {
+      email: email,
+      display_name: displayName,
+      is_admin: false,
+      share_drinks: true,
+      share_steps: true,
+      leaderboard_anonymous: false,
+      reminder_enabled: false,
+      streak_warnings_enabled: true,
+      weekly_digest_enabled: false,
+      hidden_fields: [],
+      custom_habits: [],
+      // Copy the admin's dashboard config so new user has same layout
+      custom_metrics: dashboardConfig || {},
+    }
+
+    // First, try to update
+    const { data: updatedProfile, error: updateError } = await serviceClient
       .from('profiles')
-      .select('id')
+      .update(profileData)
       .eq('id', newUser.user.id)
+      .select('id, custom_metrics')
       .single()
 
-    let profileError
-    if (existingProfile) {
-      // Profile exists (created by trigger), update it
-      const { error } = await serviceClient
-        .from('profiles')
-        .update({
-          email: email,
-          display_name: displayName,
-          is_admin: false,
-          share_drinks: true,
-          share_steps: true,
-          leaderboard_anonymous: false,
-          reminder_enabled: false,
-          streak_warnings_enabled: true,
-          weekly_digest_enabled: false,
-          hidden_fields: [],
-          custom_habits: [],
-          // Copy the admin's dashboard config so new user has same layout
-          custom_metrics: dashboardConfig || {},
-        })
-        .eq('id', newUser.user.id)
-      profileError = error
-    } else {
-      // No profile exists, insert one
-      const { error } = await serviceClient
+    if (updateError) {
+      console.error('Update error:', updateError)
+      // Update failed - try insert instead
+      const { error: insertError } = await serviceClient
         .from('profiles')
         .insert({
           id: newUser.user.id,
-          email: email,
-          display_name: displayName,
-          is_admin: false,
-          share_drinks: true,
-          share_steps: true,
-          leaderboard_anonymous: false,
-          reminder_enabled: false,
-          streak_warnings_enabled: true,
-          weekly_digest_enabled: false,
-          hidden_fields: [],
-          custom_habits: [],
-          custom_metrics: dashboardConfig || {},
+          ...profileData,
         })
-      profileError = error
-    }
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError)
-      // Clean up: delete the auth user since profile creation failed
-      await serviceClient.auth.admin.deleteUser(newUser.user.id)
-      return NextResponse.json(
-        { error: `Failed to create user profile: ${profileError.message}` },
-        { status: 500 }
-      )
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        // Clean up: delete the auth user since profile creation failed
+        await serviceClient.auth.admin.deleteUser(newUser.user.id)
+        return NextResponse.json(
+          { error: `Failed to create user profile: ${insertError.message}` },
+          { status: 500 }
+        )
+      }
+    } else {
+      // Verify the config was actually saved
+      console.log('Profile updated, custom_metrics:', updatedProfile?.custom_metrics ? 'present' : 'missing')
     }
 
     return NextResponse.json({
