@@ -184,6 +184,16 @@ CREATE POLICY "Users can insert own profile" ON profiles
 CREATE POLICY "Users can view own entries" ON daily_entries
   FOR SELECT USING (auth.uid() = user_id);
 
+-- Allow users to view entries from users who opted into leaderboards
+CREATE POLICY "Users can view leaderboard entries" ON daily_entries
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = daily_entries.user_id
+      AND (profiles.share_drinks = true OR profiles.share_steps = true)
+    )
+  );
+
 CREATE POLICY "Users can create own entries" ON daily_entries
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
