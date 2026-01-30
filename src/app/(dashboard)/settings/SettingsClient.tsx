@@ -19,7 +19,9 @@ import {
   Check,
   Save,
   Loader2,
+  Smartphone,
 } from 'lucide-react'
+import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 
 interface SettingsClientProps {
   profile: Profile
@@ -167,39 +169,34 @@ export function SettingsClient({ profile }: SettingsClientProps) {
         </CardContent>
       </Card>
 
-      {/* Notifications */}
+      {/* Push Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Smartphone className="h-5 w-5" />
+            Push Notifications
+          </CardTitle>
+          <CardDescription>
+            Receive notifications directly on this device
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushNotificationSettings
+            reminderTime={reminderTime}
+            onReminderTimeChange={setReminderTime}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Other Notifications */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Bell className="h-5 w-5" />
-            Notifications
+            Other Notifications
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <div>
-              <span className="font-medium">Daily Reminder</span>
-              <p className="text-sm text-gray-500">Get reminded to log your day</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={reminderEnabled}
-              onChange={(e) => setReminderEnabled(e.target.checked)}
-              className="w-5 h-5 accent-purple-600"
-            />
-          </label>
-          {reminderEnabled && (
-            <div className="pl-4 space-y-2">
-              <Label htmlFor="reminderTime">Reminder Time</Label>
-              <Input
-                id="reminderTime"
-                type="time"
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-                className="max-w-[150px]"
-              />
-            </div>
-          )}
           <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
             <div>
               <span className="font-medium">Streak Warnings</span>
