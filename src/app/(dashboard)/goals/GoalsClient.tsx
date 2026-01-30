@@ -201,8 +201,9 @@ export function GoalsClient({ profile, initialGoals }: GoalsClientProps) {
         ).length
         break
       case 'breakfast':
+        // Count days with breakfast in either old format (healthy_habits) or new format (breakfast_location)
         current = entries.filter((e) =>
-          e.healthy_habits.some((h) => h.habit_type === 'breakfast')
+          e.healthy_habits.some((h) => h.habit_type === 'breakfast') || e.breakfast_location !== null
         ).length
         break
       case 'total_drinks':

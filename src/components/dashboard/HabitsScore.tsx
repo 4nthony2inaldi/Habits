@@ -59,6 +59,11 @@ function calculateScoreForPeriod(
         isCompleted = entry.lunch_location === 'home'
       } else if (habit === 'dinner_at_home') {
         isCompleted = entry.dinner_location === 'home'
+      } else if (habit === 'breakfast') {
+        // 'breakfast' habit: check both old format (healthy_habits) and new format (breakfast_location)
+        const hasOldFormat = entry.healthy_habits.some((h) => h.habit_type === 'breakfast')
+        const hasNewFormat = entry.breakfast_location !== null
+        isCompleted = hasOldFormat || hasNewFormat
       } else {
         // Regular habits
         isCompleted = entry.healthy_habits.some((h) => h.habit_type === habit)

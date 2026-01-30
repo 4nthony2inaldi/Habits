@@ -77,6 +77,13 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
           return entry.dinner_location === 'home'
         }
 
+        // 'breakfast' habit: check both old format (healthy_habits) and new format (breakfast_location)
+        if (habit === 'breakfast') {
+          const hasOldFormat = entry.healthy_habits.some((h) => h.habit_type === 'breakfast')
+          const hasNewFormat = entry.breakfast_location !== null
+          return hasOldFormat || hasNewFormat
+        }
+
         // Regular habits
         return entry.healthy_habits.some((h) => h.habit_type === habit)
       })
