@@ -121,6 +121,7 @@ export interface DashboardWidgetConfig {
   alcoholStats: WidgetSettings
   alcoholByType: WidgetSettings
   drinksYearOverYear: WidgetSettings
+  stepsYearOverYear: WidgetSettings
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
   selectedHabits: SelectableHabitType[]
@@ -154,6 +155,7 @@ export const defaultWidgetTitles: WidgetTitles = {
   alcoholStats: { title: 'How Much Drinking' },
   alcoholByType: { title: 'What Drinking' },
   drinksYearOverYear: { title: 'Drinks Year over Year' },
+  stepsYearOverYear: { title: 'Steps Year over Year' },
   movementChart: { title: 'Movement' },
   eventsTracker: { title: 'Life Events' },
 }
@@ -171,8 +173,9 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
     alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
     drinksYearOverYear: { x: 0, y: 20, w: 12, h: 5 },
-    movementChart: { x: 0, y: 25, w: 6, h: 4 },
-    eventsTracker: { x: 6, y: 25, w: 6, h: 6 },
+    stepsYearOverYear: { x: 0, y: 25, w: 12, h: 5 },
+    movementChart: { x: 0, y: 30, w: 6, h: 4 },
+    eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
   },
   md: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
@@ -184,8 +187,9 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholStats: { x: 0, y: 14, w: 6, h: 6 },
     alcoholByType: { x: 6, y: 14, w: 6, h: 6 },
     drinksYearOverYear: { x: 0, y: 20, w: 12, h: 5 },
-    movementChart: { x: 0, y: 25, w: 6, h: 4 },
-    eventsTracker: { x: 6, y: 25, w: 6, h: 6 },
+    stepsYearOverYear: { x: 0, y: 25, w: 12, h: 5 },
+    movementChart: { x: 0, y: 30, w: 6, h: 4 },
+    eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
   },
   sm: {
     moodChart: { x: 0, y: 0, w: 12, h: 4 },
@@ -197,8 +201,9 @@ export const defaultGridLayouts: GridLayouts = {
     alcoholStats: { x: 0, y: 27, w: 12, h: 6 },
     alcoholByType: { x: 0, y: 33, w: 12, h: 6 },
     drinksYearOverYear: { x: 0, y: 39, w: 12, h: 5 },
-    movementChart: { x: 0, y: 44, w: 12, h: 4 },
-    eventsTracker: { x: 0, y: 48, w: 12, h: 6 },
+    stepsYearOverYear: { x: 0, y: 44, w: 12, h: 5 },
+    movementChart: { x: 0, y: 49, w: 12, h: 4 },
+    eventsTracker: { x: 0, y: 53, w: 12, h: 6 },
   },
 }
 
@@ -212,6 +217,7 @@ const defaultConfig: DashboardWidgetConfig = {
   alcoholStats: { visible: true },
   alcoholByType: { visible: true },
   drinksYearOverYear: { visible: true },
+  stepsYearOverYear: { visible: true },
   movementChart: { visible: true },
   eventsTracker: { visible: true },
   selectedHabits: allHabits,
@@ -238,6 +244,7 @@ export const widgetLabels: Record<WidgetKey, string> = {
   alcoholStats: 'How Much Drinking',
   alcoholByType: 'What Drinking',
   drinksYearOverYear: 'Drinks Year over Year',
+  stepsYearOverYear: 'Steps Year over Year',
   movementChart: 'Movement Chart',
   eventsTracker: 'Events Tracker',
 }
