@@ -219,8 +219,47 @@ export function DashboardGrid({
     )
   }
 
+  // When locked, render a simple static grid instead of react-grid-layout
+  // This completely bypasses the library's touch event handling
+  if (locked) {
+    // Determine which breakpoint to use based on container width
+    const breakpoint = containerWidth >= 1200 ? 'lg' : containerWidth >= 996 ? 'md' : 'sm'
+    const cols = 12
+    const rowHeight = 60
+    const margin = 16
+
+    // Sort widgets by their y position, then x position for consistent ordering
+    const sortedWidgets = [...visibleWidgets].sort((a, b) => {
+      const layoutA = config.gridLayouts[breakpoint][a] || defaultGridLayouts[breakpoint][a]
+      const layoutB = config.gridLayouts[breakpoint][b] || defaultGridLayouts[breakpoint][b]
+      if (layoutA.y !== layoutB.y) return layoutA.y - layoutB.y
+      return layoutA.x - layoutB.x
+    })
+
+    return (
+      <div ref={containerRef} className="flex flex-col gap-4">
+        {sortedWidgets.map((key) => {
+          const layout = config.gridLayouts[breakpoint][key] || defaultGridLayouts[breakpoint][key]
+          // Calculate height based on the layout's h value
+          const height = layout.h * rowHeight + (layout.h - 1) * margin
+
+          return (
+            <div
+              key={key}
+              className="bg-white rounded-lg shadow-sm border border-gray-200"
+              style={{ minHeight: height }}
+            >
+              {renderWidget(key)}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // When unlocked, use the full react-grid-layout
   return (
-    <div ref={containerRef} className={locked ? 'grid-locked' : ''}>
+    <div ref={containerRef}>
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
