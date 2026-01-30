@@ -331,31 +331,46 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
     setImporting(true)
     setResult(null)
 
+    const totalResult: ImportResult = { success: 0, errors: [], skipped: 0 }
+    const BATCH_SIZE = 50 // Process in batches to avoid timeouts
+
     try {
-      // Use admin API route to bypass RLS when importing for other users
-      const response = await fetch('/api/admin/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedUserId,
-          entries: parsedData,
-          overwriteExisting,
-        }),
-      })
+      // Process in batches to avoid serverless function timeouts
+      for (let i = 0; i < parsedData.length; i += BATCH_SIZE) {
+        const batch = parsedData.slice(i, i + BATCH_SIZE)
 
-      const importResult = await response.json()
+        const response = await fetch('/api/admin/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: selectedUserId,
+            entries: batch,
+            overwriteExisting,
+          }),
+        })
 
-      if (!response.ok) {
-        throw new Error(importResult.error || 'Import failed')
+        const batchResult = await response.json()
+
+        if (!response.ok) {
+          throw new Error(batchResult.error || 'Import failed')
+        }
+
+        // Accumulate results
+        totalResult.success += batchResult.success || 0
+        totalResult.skipped += batchResult.skipped || 0
+        if (batchResult.errors) {
+          totalResult.errors.push(...batchResult.errors)
+        }
+
+        // Update progress
+        setResult({ ...totalResult })
       }
 
-      setResult(importResult)
+      setResult(totalResult)
     } catch (error) {
-      setResult({
-        success: 0,
-        errors: [error instanceof Error ? error.message : 'Import failed'],
-        skipped: 0,
-      })
+      // Include any partial results along with the error
+      totalResult.errors.push(error instanceof Error ? error.message : 'Import failed')
+      setResult(totalResult)
     } finally {
       setImporting(false)
     }
