@@ -103,6 +103,7 @@ export interface ReportConfig {
   customStartDate?: string
   customEndDate?: string
   comparison: ComparisonType
+  dualAxis?: boolean // Use left/right Y axes for metrics with different scales
   // Optional breakdown by habit/event
   breakdownBy?: 'habit' | 'event' | null
   // Filter settings (similar to history page)

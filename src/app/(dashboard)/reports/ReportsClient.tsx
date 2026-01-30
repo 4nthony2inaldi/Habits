@@ -570,7 +570,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     }
 
     // Charts with multiple metrics
-    const commonProps = { data: chartData, margin: { top: 10, right: 20, left: 0, bottom: 5 } }
+    const useDualAxis = config.dualAxis && activeMetrics.length >= 2
+    const commonProps = { data: chartData, margin: { top: 10, right: useDualAxis ? 60 : 20, left: 0, bottom: 5 } }
 
     switch (config.chartType) {
       case 'area':
@@ -579,11 +580,17 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <AreaChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
+                stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
+              {useDualAxis && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={50}
+                  stroke={CHART_COLORS[1]} />
+              )}
               <Tooltip contentStyle={tooltipStyle} />
               {activeMetrics.length > 1 && <Legend />}
               {activeMetrics.map((metric, idx) => (
                 <Area key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+                  yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]}
                   fillOpacity={0.3} strokeWidth={2} />
@@ -598,11 +605,17 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <LineChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} angle={-45} textAnchor="end" height={70} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={50} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={50}
+                stroke={useDualAxis ? CHART_COLORS[0] : '#666'} />
+              {useDualAxis && (
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} width={50}
+                  stroke={CHART_COLORS[1]} />
+              )}
               <Tooltip contentStyle={tooltipStyle} />
               {activeMetrics.length > 1 && <Legend />}
               {activeMetrics.map((metric, idx) => (
                 <Line key={metric} type="monotone" dataKey={metric} name={getMetricLabel(metric)}
+                  yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2}
                   dot={{ fill: CHART_COLORS[idx % CHART_COLORS.length], r: 3 }} />
               ))}
@@ -842,6 +855,18 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                     </optgroup>
                   ))}
                 </select>
+              )}
+              {/* Dual axis toggle - only for line/area with 2+ metrics */}
+              {activeMetrics.length >= 2 && (config.chartType === 'line' || config.chartType === 'area') && (
+                <label className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.dualAxis || false}
+                    onChange={(e) => setConfig({ ...config, dualAxis: e.target.checked })}
+                    className="rounded border-gray-300"
+                  />
+                  Dual Y-Axis (different scales)
+                </label>
               )}
             </div>
           </CardContent>
