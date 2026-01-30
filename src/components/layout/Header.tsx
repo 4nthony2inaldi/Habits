@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils/cn'
 import {
   LayoutDashboard,
   PlusCircle,
-  History,
   Trophy,
   Target,
   Settings,
@@ -29,7 +28,6 @@ interface HeaderProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'New Entry', href: '/entry', icon: PlusCircle },
-  { name: 'History', href: '/history', icon: History },
   { name: 'Leaderboards', href: '/leaderboards', icon: Trophy },
   { name: 'Goals', href: '/goals', icon: Target },
   { name: 'Settings', href: '/settings', icon: Settings },
