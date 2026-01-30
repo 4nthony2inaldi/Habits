@@ -649,6 +649,37 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     return Math.round(((currentValue - compValue) / compValue) * 1000) / 10
   }, [currentTotals, comparisonData, config.aggregation])
 
+  // Calculate Pearson correlation coefficient for dual-axis charts with exactly 2 metrics
+  const correlation = useMemo(() => {
+    if (!config.dualAxis || activeMetrics.length !== 2 || chartData.length < 3) return null
+
+    const metric1 = activeMetrics[0]
+    const metric2 = activeMetrics[1]
+    const values1 = chartData.map(d => Number((d as Record<string, unknown>)[metric1]) || 0)
+    const values2 = chartData.map(d => Number((d as Record<string, unknown>)[metric2]) || 0)
+
+    const n = values1.length
+    const mean1 = values1.reduce((a, b) => a + b, 0) / n
+    const mean2 = values2.reduce((a, b) => a + b, 0) / n
+
+    let numerator = 0
+    let denom1 = 0
+    let denom2 = 0
+
+    for (let i = 0; i < n; i++) {
+      const diff1 = values1[i] - mean1
+      const diff2 = values2[i] - mean2
+      numerator += diff1 * diff2
+      denom1 += diff1 * diff1
+      denom2 += diff2 * diff2
+    }
+
+    const denominator = Math.sqrt(denom1 * denom2)
+    if (denominator === 0) return null
+
+    return Math.round((numerator / denominator) * 100) / 100
+  }, [config.dualAxis, activeMetrics, chartData])
+
   const handleSaveReport = () => {
     if (!reportName.trim()) return
     saveReportMutation.mutate({ name: reportName, showOnDashboard, id: editingReportId || undefined })
@@ -1007,8 +1038,19 @@ export function ReportsClient({ profile }: ReportsClientProps) {
             <p className="text-xs text-gray-500">Average per Day</p>
           </CardContent></Card>
           <Card><CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{currentTotals.count}</p>
-            <p className="text-xs text-gray-500">Day Count</p>
+            {correlation !== null ? (
+              <>
+                <p className={`text-2xl font-bold ${correlation > 0 ? 'text-green-600' : correlation < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                  {correlation > 0 ? '+' : ''}{correlation}
+                </p>
+                <p className="text-xs text-gray-500">Correlation</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{currentTotals.count}</p>
+                <p className="text-xs text-gray-500">Day Count</p>
+              </>
+            )}
           </CardContent></Card>
         </div>
 
