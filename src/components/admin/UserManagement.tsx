@@ -150,6 +150,8 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
         body: JSON.stringify({
           email: inviteEmail,
           displayName: inviteDisplayName,
+          // Pass admin's dashboard config so new user has same default layout
+          dashboardConfig: currentUser.custom_metrics,
         }),
       })
 
@@ -178,7 +180,7 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
         home_lat: null,
         home_lng: null,
         custom_habits: [],
-        custom_metrics: [],
+        custom_metrics: currentUser.custom_metrics, // Same dashboard layout as admin
         allow_admin_nudges: true,
         notification_channel: 'email',
         created_at: new Date().toISOString(),

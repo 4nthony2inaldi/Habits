@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { email, displayName } = body
+    const { email, displayName, dashboardConfig } = body
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create profile for new user
+    // Create profile for new user with dashboard config from admin
     const { error: profileError } = await serviceClient
       .from('profiles')
       .insert({
@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
         streak_warnings_enabled: true,
         weekly_digest_enabled: false,
         hidden_fields: [],
+        // Copy the admin's dashboard config so new user has same layout
+        custom_metrics: dashboardConfig || [],
       })
 
     if (profileError) {
