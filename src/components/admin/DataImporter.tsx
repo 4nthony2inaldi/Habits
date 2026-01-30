@@ -104,8 +104,8 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         const value = values[idx]?.trim()
         const isYes = value?.toLowerCase() === 'yes' || value === '1' || value?.toLowerCase() === 'true'
 
-        // Date fields
-        if (header === 'entry_date' || header === 'date') {
+        // Date fields - support various common header names
+        if (header === 'entry_date' || header === 'date' || header === 'timestamp' || header.includes('timestamp')) {
           entry.entry_date = normalizeDate(value)
         }
         // Mood
@@ -646,8 +646,11 @@ function parseCSVLine(line: string): string[] {
 function normalizeDate(value: string): string {
   if (!value) return ''
 
+  // Strip time portion if present (e.g., "1/15/2024 12:30:45" -> "1/15/2024")
+  const dateOnly = value.split(' ')[0]
+
   // Try DD/MM/YYYY or MM/DD/YYYY format first
-  const parts = value.split(/[\/\-]/)
+  const parts = dateOnly.split(/[\/\-]/)
   if (parts.length === 3) {
     const [a, b, c] = parts
 
@@ -675,12 +678,12 @@ function normalizeDate(value: string): string {
   }
 
   // Try to parse as a date string
-  const date = new Date(value)
+  const date = new Date(dateOnly)
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0]
   }
 
-  return value
+  return dateOnly
 }
 
 function mapWorkLocation(value: string): WorkLocation | null {
