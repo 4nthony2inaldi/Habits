@@ -221,10 +221,22 @@ input[type="checkbox"].peer:checked + div {
 /* Grid locked state - allows vertical scrolling on mobile when widgets are locked */
 .grid-locked .react-grid-item {
   touch-action: pan-y !important;
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+}
+.grid-locked .react-grid-item.react-draggable {
+  touch-action: pan-y !important;
+  pointer-events: none !important;
+}
+.grid-locked .react-grid-item.react-draggable > * {
+  pointer-events: auto !important;
 }
 .grid-locked .react-grid-layout {
   touch-action: pan-y !important;
 }
 .grid-locked .react-resizable-handle {
+  display: none !important;
+}
+.grid-locked .widget-drag-handle {
   display: none !important;
 }
