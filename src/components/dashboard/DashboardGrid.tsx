@@ -219,8 +219,8 @@ export function DashboardGrid({
     )
   }
 
-  // When locked, render a simple static grid instead of react-grid-layout
-  // This completely bypasses the library's touch event handling
+  // When locked, render a CSS Grid that matches react-grid-layout positioning
+  // This completely bypasses the library's touch event handling while preserving layout
   if (locked) {
     // Determine which breakpoint to use based on container width
     const breakpoint = containerWidth >= 1200 ? 'lg' : containerWidth >= 996 ? 'md' : 'sm'
@@ -228,26 +228,45 @@ export function DashboardGrid({
     const rowHeight = 60
     const margin = 16
 
-    // Sort widgets by their y position, then x position for consistent ordering
-    const sortedWidgets = [...visibleWidgets].sort((a, b) => {
-      const layoutA = config.gridLayouts[breakpoint][a] || defaultGridLayouts[breakpoint][a]
-      const layoutB = config.gridLayouts[breakpoint][b] || defaultGridLayouts[breakpoint][b]
-      if (layoutA.y !== layoutB.y) return layoutA.y - layoutB.y
-      return layoutA.x - layoutB.x
+    // Calculate the maximum row needed for the grid
+    let maxRow = 0
+    visibleWidgets.forEach((key) => {
+      const layout = config.gridLayouts[breakpoint][key] || defaultGridLayouts[breakpoint][key]
+      const endRow = layout.y + layout.h
+      if (endRow > maxRow) maxRow = endRow
     })
 
+    // Calculate column width based on container width
+    const totalMarginWidth = margin * (cols + 1)
+    const columnWidth = (containerWidth - totalMarginWidth) / cols
+
     return (
-      <div ref={containerRef} className="flex flex-col gap-4">
-        {sortedWidgets.map((key) => {
+      <div
+        ref={containerRef}
+        className="relative"
+        style={{
+          height: maxRow * rowHeight + (maxRow + 1) * margin,
+        }}
+      >
+        {visibleWidgets.map((key) => {
           const layout = config.gridLayouts[breakpoint][key] || defaultGridLayouts[breakpoint][key]
-          // Calculate height based on the layout's h value
+
+          // Calculate position and size to match react-grid-layout
+          const left = margin + layout.x * (columnWidth + margin)
+          const top = margin + layout.y * (rowHeight + margin)
+          const width = layout.w * columnWidth + (layout.w - 1) * margin
           const height = layout.h * rowHeight + (layout.h - 1) * margin
 
           return (
             <div
               key={key}
-              className="bg-white rounded-lg shadow-sm border border-gray-200"
-              style={{ minHeight: height }}
+              className="absolute bg-white rounded-lg shadow-sm border border-gray-200"
+              style={{
+                left,
+                top,
+                width,
+                height,
+              }}
             >
               {renderWidget(key)}
             </div>
