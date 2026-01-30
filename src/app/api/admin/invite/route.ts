@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
 
     const temporaryPassword = generateTemporaryPassword()
 
-    // Create auth user
+    // Create auth user with dashboard config in metadata
+    // The database trigger may use this to set up the profile
     const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
       email,
       password: temporaryPassword,
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
       user_metadata: {
         display_name: displayName,
         needs_password_reset: true,
+        // Include dashboard config so trigger can use it
+        dashboard_config: dashboardConfig || {},
       },
     })
 
