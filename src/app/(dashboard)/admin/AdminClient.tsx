@@ -19,8 +19,13 @@ const tabs = [
 
 type TabId = typeof tabs[number]['id']
 
-export function AdminClient({ currentUser, users }: AdminClientProps) {
+export function AdminClient({ currentUser, users: initialUsers }: AdminClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>('import')
+  const [users, setUsers] = useState<Profile[]>(initialUsers)
+
+  const handleUserAdded = (newUser: Profile) => {
+    setUsers((prev) => [...prev, newUser])
+  }
 
   return (
     <div className="space-y-6">
@@ -62,7 +67,7 @@ export function AdminClient({ currentUser, users }: AdminClientProps) {
           <DataImporter currentUser={currentUser} users={users} />
         )}
         {activeTab === 'users' && (
-          <UserManagement currentUser={currentUser} users={users} />
+          <UserManagement currentUser={currentUser} users={users} onUserAdded={handleUserAdded} />
         )}
       </div>
     </div>

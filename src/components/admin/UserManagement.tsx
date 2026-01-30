@@ -28,6 +28,7 @@ import type { Profile, NotificationChannel } from '@/types/database'
 interface UserManagementProps {
   currentUser: Profile
   users: Profile[]
+  onUserAdded?: (user: Profile) => void
 }
 
 interface UserStats {
@@ -37,7 +38,7 @@ interface UserStats {
   avgMood: number | null
 }
 
-export function UserManagement({ currentUser, users: initialUsers }: UserManagementProps) {
+export function UserManagement({ currentUser, users: initialUsers, onUserAdded }: UserManagementProps) {
   const [users, setUsers] = useState(initialUsers)
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
@@ -186,6 +187,9 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
         created_at: new Date().toISOString(),
       }
       setUsers((prev) => [...prev, newUser])
+
+      // Notify parent so DataImporter also sees the new user
+      onUserAdded?.(newUser)
 
       // Show credentials
       setInviteResult({
