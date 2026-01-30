@@ -220,7 +220,7 @@ export function DashboardGrid({
   }
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className={locked ? 'grid-locked' : ''}>
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
