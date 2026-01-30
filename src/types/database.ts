@@ -85,7 +85,7 @@ export type ReportMetric =
 
 export type ReportAggregation = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'cumulative' | 'percent'
 
-export type ReportDimension = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'habit' | 'event' | 'work_location'
+export type ReportDimension = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'day_of_week' | 'day_of_month' | 'week_of_year' | 'month_of_year' | 'habit' | 'event' | 'work_location'
 
 export type ReportChartType = 'kpi' | 'bar' | 'stacked_bar' | 'grouped_bar' | 'line' | 'area' | 'pie' | 'table'
 

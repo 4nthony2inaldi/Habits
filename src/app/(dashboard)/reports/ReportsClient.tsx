@@ -34,6 +34,9 @@ import {
   endOfQuarter,
   getWeek,
   getQuarter,
+  getDay,
+  getDate,
+  getMonth,
   differenceInDays,
 } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -119,6 +122,10 @@ const dimensionOptions: { value: ReportDimension; label: string }[] = [
   { value: 'month', label: 'By Month' },
   { value: 'quarter', label: 'By Quarter' },
   { value: 'year', label: 'By Year' },
+  { value: 'day_of_week', label: 'By Day of Week' },
+  { value: 'day_of_month', label: 'By Day of Month' },
+  { value: 'week_of_year', label: 'By Week of Year' },
+  { value: 'month_of_year', label: 'By Month of Year' },
   { value: 'habit', label: 'By Habit' },
   { value: 'event', label: 'By Event' },
   { value: 'work_location', label: 'By Work Location' },
@@ -365,6 +372,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     }
   }, [])
 
+  // Day of week names for sorting
+  const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
   // Get dimension key from entry
   const getDimensionKey = useCallback((entry: DailyEntryWithRelations, dimension: ReportDimension): string => {
     const date = parseISO(entry.entry_date)
@@ -379,6 +390,14 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         return `Q${getQuarter(date)} ${format(date, 'yyyy')}`
       case 'year':
         return format(date, 'yyyy')
+      case 'day_of_week':
+        return dayOfWeekNames[getDay(date)]
+      case 'day_of_month':
+        return String(getDate(date))
+      case 'week_of_year':
+        return `Week ${getWeek(date)}`
+      case 'month_of_year':
+        return monthNames[getMonth(date)]
       case 'work_location':
         return entry.work_location || 'Unknown'
       default:
@@ -469,9 +488,21 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       return { name, value: Math.round(value * 100) / 100, sortKey: name }
     })
 
-    // Sort by date/time
+    // Sort by date/time or logical order
     result.sort((a, b) => {
       if (config.dimension === 'work_location') return b.value - a.value
+      if (config.dimension === 'day_of_week') {
+        return dayOfWeekNames.indexOf(a.name) - dayOfWeekNames.indexOf(b.name)
+      }
+      if (config.dimension === 'month_of_year') {
+        return monthNames.indexOf(a.name) - monthNames.indexOf(b.name)
+      }
+      if (config.dimension === 'day_of_month') {
+        return parseInt(a.name) - parseInt(b.name)
+      }
+      if (config.dimension === 'week_of_year') {
+        return parseInt(a.name.replace('Week ', '')) - parseInt(b.name.replace('Week ', ''))
+      }
       return a.sortKey.localeCompare(b.sortKey)
     })
 
