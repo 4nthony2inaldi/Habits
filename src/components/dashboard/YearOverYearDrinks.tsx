@@ -186,10 +186,7 @@ export function YearOverYearDrinks({
                 }
                 return `Day ${day}`
               }}
-              formatter={(value: number, name: string) => [
-                value,
-                name,
-              ]}
+              formatter={(value) => [value ?? 0, '']}
             />
             <Legend
               wrapperStyle={{ fontSize: '11px' }}
