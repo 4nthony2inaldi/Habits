@@ -58,7 +58,7 @@ export function DateRangePicker({
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[320px]">
+          <div className="fixed left-1/2 -translate-x-1/2 top-24 sm:absolute sm:left-0 sm:translate-x-0 sm:top-full sm:mt-2 z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] max-w-[320px] mx-auto">
             <div className="space-y-3">
               <div className="text-sm font-medium text-gray-700">Quick select</div>
               <div className="grid grid-cols-2 gap-2">

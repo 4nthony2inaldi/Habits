@@ -71,7 +71,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   return (
     <div className="space-y-4">
       {/* Compact header with filters */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         {users.length > 1 && currentUser.is_admin && (
           <UserSelector
             users={users}

@@ -361,7 +361,7 @@ export function DashboardCustomizer({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
+        <div className="fixed left-1/2 -translate-x-1/2 top-24 sm:absolute sm:right-0 sm:left-auto sm:translate-x-0 sm:top-full sm:mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Customize Dashboard</h3>
             <button
