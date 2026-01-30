@@ -149,16 +149,22 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
 
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         {/* Stacked bars - fills available space */}
-        <div className="flex-1 flex flex-col justify-evenly">
+        <div className="flex-1 flex flex-col justify-evenly gap-4">
           {displayData.map((itemData) => (
-            <div key={itemData.label} className="space-y-1">
+            <div key={itemData.label} className={cn(
+              'flex flex-col gap-2',
+              displayData.length === 1 && 'flex-1'
+            )}>
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-gray-700">{itemData.label}</span>
                 <span className="text-gray-500 text-xs">{itemData.total} drinks</span>
               </div>
 
-              {/* Stacked bar - always 100% width since we show percentages */}
-              <div className="h-8 rounded-lg overflow-hidden flex w-full">
+              {/* Stacked bar - responsive height when single bar */}
+              <div className={cn(
+                'rounded-lg overflow-hidden flex w-full',
+                displayData.length === 1 ? 'flex-1 min-h-12' : 'h-8'
+              )}>
                 {TYPE_ORDER.map((type) => {
                   const typeData = itemData.byType[type]
                   if (!typeData || typeData.percent === 0) return null
@@ -167,14 +173,15 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
                     <div
                       key={type}
                       className={cn(
-                        'h-full flex items-center justify-center text-white text-[10px] font-medium',
+                        'h-full flex items-center justify-center text-white font-medium',
+                        displayData.length === 1 ? 'text-base' : 'text-[10px]',
                         TYPE_COLORS[type].bg
                       )}
                       style={{ width: `${typeData.percent}%` }}
                       title={`${TYPE_LABELS[type]}: ${typeData.count} (${typeData.percent}%)`}
                     >
-                      {typeData.percent >= 12 && (
-                        <span className="truncate px-0.5">{typeData.percent}%</span>
+                      {typeData.percent >= 10 && (
+                        <span className="truncate px-1">{typeData.percent}%</span>
                       )}
                     </div>
                   )
