@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   User,
   Shield,
@@ -14,10 +16,14 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  UserPlus,
+  Copy,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { Profile } from '@/types/database'
+import type { Profile, NotificationChannel } from '@/types/database'
 
 interface UserManagementProps {
   currentUser: Profile
@@ -38,6 +44,18 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
   const [loadingStats, setLoadingStats] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Invite user state
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteDisplayName, setInviteDisplayName] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteResult, setInviteResult] = useState<{
+    email: string
+    displayName: string
+    temporaryPassword: string
+  } | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
 
   const fetchUserStats = async (userId: string) => {
     if (userStats[userId]) return
@@ -115,6 +133,87 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
     setActionLoading(null)
   }
 
+  const inviteUser = async () => {
+    if (!inviteEmail || !inviteDisplayName) {
+      setMessage({ type: 'error', text: 'Email and display name are required' })
+      return
+    }
+
+    setInviteLoading(true)
+    setMessage(null)
+    setInviteResult(null)
+
+    try {
+      const response = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
+          displayName: inviteDisplayName,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite user')
+      }
+
+      // Add new user to the list
+      const newUser: Profile = {
+        id: data.user.id,
+        email: data.user.email,
+        display_name: data.user.displayName,
+        is_admin: false,
+        share_drinks: true,
+        share_steps: true,
+        leaderboard_anonymous: false,
+        reminder_enabled: false,
+        reminder_time: '21:00',
+        streak_warnings_enabled: true,
+        weekly_digest_enabled: false,
+        weekly_digest_day: 0,
+        hidden_fields: [],
+        home_city: null,
+        home_lat: null,
+        home_lng: null,
+        custom_habits: [],
+        custom_metrics: [],
+        allow_admin_nudges: true,
+        notification_channel: 'email',
+        created_at: new Date().toISOString(),
+      }
+      setUsers((prev) => [...prev, newUser])
+
+      // Show credentials
+      setInviteResult({
+        email: inviteEmail,
+        displayName: inviteDisplayName,
+        temporaryPassword: data.temporaryPassword,
+      })
+      setShowPassword(false)
+
+      // Clear form
+      setInviteEmail('')
+      setInviteDisplayName('')
+
+      setMessage({ type: 'success', text: `Successfully invited ${inviteDisplayName}` })
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to invite user',
+      })
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string, field: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -137,6 +236,113 @@ export function UserManagement({ currentUser, users: initialUsers }: UserManagem
           {message.text}
         </div>
       )}
+
+      {/* Invite User Section */}
+      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <h3 className="font-medium text-gray-900 flex items-center gap-2 mb-4">
+          <UserPlus className="h-5 w-5 text-purple-600" />
+          Invite New User
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-2">
+            <Label htmlFor="inviteEmail">Email</Label>
+            <Input
+              id="inviteEmail"
+              type="email"
+              placeholder="friend@example.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inviteDisplayName">Display Name</Label>
+            <Input
+              id="inviteDisplayName"
+              type="text"
+              placeholder="John Doe"
+              value={inviteDisplayName}
+              onChange={(e) => setInviteDisplayName(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={inviteUser}
+          disabled={inviteLoading || !inviteEmail || !inviteDisplayName}
+          className="w-full sm:w-auto"
+        >
+          {inviteLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <UserPlus className="h-4 w-4 mr-2" />
+          )}
+          Invite User
+        </Button>
+
+        {/* Show credentials after successful invite */}
+        {inviteResult && (
+          <div className="mt-4 p-4 bg-white border border-green-200 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-3">
+              Share these credentials with {inviteResult.displayName}:
+            </h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div>
+                  <span className="text-xs text-gray-500 block">Email</span>
+                  <span className="font-mono text-sm">{inviteResult.email}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(inviteResult.email, 'email')}
+                >
+                  {copiedField === 'email' ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <div className="flex-1">
+                  <span className="text-xs text-gray-500 block">Temporary Password</span>
+                  <span className="font-mono text-sm">
+                    {showPassword ? inviteResult.temporaryPassword : '••••••••••••'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(inviteResult.temporaryPassword, 'password')}
+                  >
+                    {copiedField === 'password' ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">
+              The user should change their password after first login via Settings or using &quot;Forgot Password&quot;.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* User List */}
       <div className="space-y-2">
