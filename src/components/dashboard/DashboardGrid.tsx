@@ -14,6 +14,7 @@ import { AlcoholTracker } from './AlcoholTracker'
 import { AlcoholCalendar } from './AlcoholCalendar'
 import { AlcoholStats } from './AlcoholStats'
 import { AlcoholByType } from './AlcoholByType'
+import { YearOverYearDrinks } from './YearOverYearDrinks'
 import { MovementChart } from './MovementChart'
 import { EventsTracker } from './EventsTracker'
 
@@ -201,6 +202,8 @@ export function DashboardGrid({
         return <AlcoholStats entries={entries} selectedMetrics={config.selectedAlcoholMetrics} title={titles.title} subtitle={titles.subtitle} />
       case 'alcoholByType':
         return <AlcoholByType entries={entries} title={titles.title} subtitle={titles.subtitle} />
+      case 'drinksYearOverYear':
+        return <YearOverYearDrinks entries={allEntries} title={titles.title} subtitle={titles.subtitle} />
       case 'movementChart':
         return <MovementChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'eventsTracker':
