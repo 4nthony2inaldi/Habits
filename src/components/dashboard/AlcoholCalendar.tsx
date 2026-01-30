@@ -26,18 +26,33 @@ function getDrinkColor(drinks: number): string {
   return 'bg-purple-600 text-white'
 }
 
+interface DayData {
+  date: string
+  drinks: number
+  dayOfWeek: number
+  bestPart: string | null
+  notes: string | null
+}
+
 interface MonthData {
   month: string
   monthShort: string
   monthNum: number
   year: number
-  weeks: { days: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] }[]
+  weeks: { days: DayData[] }[]
   monthTotal: number
+}
+
+interface TooltipData {
+  day: DayData
+  x: number
+  y: number
 }
 
 export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: AlcoholCalendarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [columns, setColumns] = useState(4)
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null)
 
   // Determine number of columns based on container width
   useEffect(() => {
@@ -83,8 +98,8 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
 
     let currentMonth = -1
     let currentYear = -1
-    let currentWeeks: { days: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] }[] = []
-    let currentWeek: { date: string; drinks: number; dayOfWeek: number; bestPart: string | null; notes: string | null }[] = []
+    let currentWeeks: { days: DayData[] }[] = []
+    let currentWeek: DayData[] = []
     let monthTotal = 0
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate })
@@ -149,6 +164,22 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
     return months.reverse() // Most recent first
   }, [entries])
 
+  const handleDayHover = (day: DayData, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const containerRect = containerRef.current?.getBoundingClientRect()
+    if (!containerRect) return
+
+    setTooltip({
+      day,
+      x: rect.left - containerRect.left + rect.width / 2,
+      y: rect.top - containerRect.top - 8,
+    })
+  }
+
+  const handleDayLeave = () => {
+    setTooltip(null)
+  }
+
   if (entries.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -198,26 +229,19 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
               ))
             }
 
-            {week.days.map((day) => {
-              const tooltipLines = [format(parseISO(day.date), 'MMM d, yyyy')]
-              if (day.drinks >= 0) tooltipLines.push(`${day.drinks} drinks`)
-              else tooltipLines.push('No entry')
-              if (day.bestPart) tooltipLines.push(`"${day.bestPart}"`)
-              if (day.notes) tooltipLines.push(`Notes: ${day.notes}`)
-
-              return (
-                <div
-                  key={day.date}
-                  className={cn(
-                    'w-6 h-6 rounded text-[9px] flex items-center justify-center font-medium cursor-default',
-                    day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
-                  )}
-                  title={tooltipLines.join('\n')}
-                >
-                  {day.drinks > 0 ? Math.round(day.drinks) : ''}
-                </div>
-              )
-            })}
+            {week.days.map((day) => (
+              <div
+                key={day.date}
+                className={cn(
+                  'w-6 h-6 rounded text-[9px] flex items-center justify-center font-medium cursor-default transition-transform hover:scale-125 hover:z-10',
+                  day.drinks < 0 ? 'bg-gray-50 text-gray-300' : getDrinkColor(day.drinks)
+                )}
+                onMouseEnter={(e) => handleDayHover(day, e)}
+                onMouseLeave={handleDayLeave}
+              >
+                {day.drinks > 0 ? Math.round(day.drinks) : ''}
+              </div>
+            ))}
 
             {/* Pad end of week */}
             {week.days[week.days.length - 1] && week.days[week.days.length - 1].dayOfWeek < 6 &&
@@ -250,10 +274,41 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
       </div>
 
       {/* Responsive grid - fills available space */}
-      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar-hidden">
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar-hidden relative">
         <div className={cn('grid gap-4 auto-rows-min', gridClass)}>
           {calendarData.slice(0, columns * 3).map(renderMonth)}
         </div>
+
+        {/* Tooltip */}
+        {tooltip && (
+          <div
+            className="absolute z-50 pointer-events-none"
+            style={{
+              left: tooltip.x,
+              top: tooltip.y,
+              transform: 'translate(-50%, -100%)',
+            }}
+          >
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
+              <div className="font-medium text-gray-900 mb-1">
+                {format(parseISO(tooltip.day.date), 'MMM d, yyyy')}
+              </div>
+              <div className="text-purple-600 font-medium">
+                {tooltip.day.drinks >= 0 ? `${tooltip.day.drinks} drinks` : 'No entry'}
+              </div>
+              {tooltip.day.bestPart && (
+                <div className="text-gray-600 mt-1 italic">
+                  "{tooltip.day.bestPart}"
+                </div>
+              )}
+              {tooltip.day.notes && (
+                <div className="text-gray-500 mt-1 border-t pt-1">
+                  {tooltip.day.notes}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
