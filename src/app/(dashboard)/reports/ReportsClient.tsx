@@ -827,7 +827,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     switch (config.chartType) {
       case 'area':
         return (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
@@ -860,7 +860,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       case 'line':
         return (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
@@ -892,7 +892,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'bar':
       case 'grouped_bar':
         return (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
@@ -914,7 +914,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       case 'stacked_bar':
         return (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart {...commonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
@@ -927,7 +927,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
       case 'pie':
         return (
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={chartData} dataKey={activeMetrics[0]} nameKey="name" cx="50%" cy="50%" outerRadius={100}
                 label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
@@ -1010,7 +1010,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           </CardContent></Card>
         </div>
 
-        <Card><CardContent className="p-4">{renderChart()}</CardContent></Card>
+        <Card><CardContent className="p-4">
+          <div className="aspect-[4/3] sm:aspect-[16/9] w-full">{renderChart()}</div>
+        </CardContent></Card>
 
         {config.chartType !== 'table' && chartData.length > 0 && (
           <Card>
