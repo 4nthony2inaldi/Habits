@@ -274,7 +274,7 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
       {/* Responsive grid - fills available space */}
       <div ref={containerRef} className="flex-1 min-h-0 overflow-auto scrollbar-hidden relative">
         <div className={cn('grid gap-4 auto-rows-min', gridClass)}>
-          {calendarData.slice(0, columns * 3).map(renderMonth)}
+          {calendarData.map(renderMonth)}
         </div>
 
       </div>
