@@ -68,7 +68,26 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parseCSV = useCallback((text: string): ParsedEntry[] => {
-    const lines = text.trim().split('\n').map(line => line.replace(/\r$/, ''))
+    // First, handle multiline quoted strings by joining them
+    const lines: string[] = []
+    let currentLine = ''
+    let inQuotes = false
+
+    for (const char of text) {
+      if (char === '"') {
+        inQuotes = !inQuotes
+      }
+      if (char === '\n' && !inQuotes) {
+        lines.push(currentLine.replace(/\r$/, ''))
+        currentLine = ''
+      } else if (char !== '\r') {
+        currentLine += char
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine)
+    }
+
     if (lines.length < 2) {
       throw new Error('CSV must have at least a header row and one data row')
     }
@@ -126,7 +145,7 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         else if (header === 'wine' || header === 'glasses_of_wine') {
           entry.wine = parseInt(value, 10) || 0
         }
-        else if (header === 'liquor' || header === 'liquor_based_drinks') {
+        else if (header === 'liquor' || header === 'liquor_based_drinks' || header.includes('liquor')) {
           entry.liquor = parseInt(value, 10) || 0
         }
         else if (header === 'shots') {
@@ -202,7 +221,7 @@ export function DataImporter({ currentUser, users }: DataImporterProps) {
         else if (header.includes('cooked_dinner') && isYes) {
           entry.habits!.push('cooked_dinner')
         }
-        else if (header.includes('journaled') && isYes) {
+        else if ((header.includes('journaled') || header === 'journaled_offline') && isYes) {
           entry.habits!.push('journaled')
         }
         // Events (Yes/No columns)
