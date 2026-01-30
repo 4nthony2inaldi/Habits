@@ -289,7 +289,7 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
             transform: 'translate(-50%, -100%)',
           }}
         >
-          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px] max-w-[280px]">
             <div className="font-medium text-gray-900 mb-1">
               {format(parseISO(tooltip.day.date), 'MMM d, yyyy')}
             </div>
@@ -297,12 +297,12 @@ export function AlcoholCalendar({ entries, title = 'When Drinking', subtitle }: 
               {tooltip.day.drinks >= 0 ? `${tooltip.day.drinks} drinks` : 'No entry'}
             </div>
             {tooltip.day.bestPart && (
-              <div className="text-gray-600 mt-1 italic">
+              <div className="text-gray-600 mt-1 italic break-words">
                 &quot;{tooltip.day.bestPart}&quot;
               </div>
             )}
             {tooltip.day.notes && (
-              <div className="text-gray-500 mt-1 border-t pt-1">
+              <div className="text-gray-500 mt-1 border-t pt-1 break-words">
                 {tooltip.day.notes}
               </div>
             )}
