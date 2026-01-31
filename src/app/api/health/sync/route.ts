@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
+// Raw sleep sample from Apple Health via iOS Shortcuts
+interface SleepSample {
+  'Start Date'?: string
+  'End Date'?: string
+  startDate?: string
+  endDate?: string
+  Value?: string
+  value?: string
+}
+
 interface SyncRequest {
   token: string
   steps?: number
@@ -13,6 +23,62 @@ interface SyncRequest {
   sleep_rem?: number
   sleep_core?: number
   sleep_deep?: number
+  // Raw sleep samples from Apple Health (alternative to individual stages)
+  sleep_samples?: SleepSample[]
+}
+
+// Parse raw sleep samples and calculate duration per stage (in minutes)
+function parseSleepSamples(samples: SleepSample[]): {
+  sleep_in_bed: number
+  sleep_awake: number
+  sleep_rem: number
+  sleep_core: number
+  sleep_deep: number
+} {
+  const result = {
+    sleep_in_bed: 0,
+    sleep_awake: 0,
+    sleep_rem: 0,
+    sleep_core: 0,
+    sleep_deep: 0,
+  }
+
+  for (const sample of samples) {
+    // Handle different property name formats from Shortcuts
+    const startStr = sample['Start Date'] || sample.startDate
+    const endStr = sample['End Date'] || sample.endDate
+    const value = sample.Value || sample.value
+
+    if (!startStr || !endStr || !value) continue
+
+    const startDate = new Date(startStr)
+    const endDate = new Date(endStr)
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue
+
+    // Calculate duration in minutes
+    const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+    if (durationMinutes <= 0) continue
+
+    // Map Apple Health sleep stage values to our fields
+    // Apple Health uses: InBed, Awake, AsleepREM, AsleepCore, AsleepDeep
+    // Shortcuts may show: In Bed, Awake, REM, Core, Deep
+    const normalizedValue = value.toLowerCase().replace(/\s+/g, '')
+
+    if (normalizedValue === 'inbed' || normalizedValue === 'in bed') {
+      result.sleep_in_bed += durationMinutes
+    } else if (normalizedValue === 'awake') {
+      result.sleep_awake += durationMinutes
+    } else if (normalizedValue === 'asleeprem' || normalizedValue === 'rem' || normalizedValue === 'remsleep') {
+      result.sleep_rem += durationMinutes
+    } else if (normalizedValue === 'asleepcore' || normalizedValue === 'core' || normalizedValue === 'coresleep') {
+      result.sleep_core += durationMinutes
+    } else if (normalizedValue === 'asleepdeep' || normalizedValue === 'deep' || normalizedValue === 'deepsleep') {
+      result.sleep_deep += durationMinutes
+    }
+  }
+
+  return result
 }
 
 export async function POST(request: NextRequest) {
@@ -27,6 +93,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Parse raw sleep samples if provided
+    let parsedSleepStages: ReturnType<typeof parseSleepSamples> | null = null
+    if (Array.isArray(body.sleep_samples) && body.sleep_samples.length > 0) {
+      parsedSleepStages = parseSleepSamples(body.sleep_samples)
+    }
+
     // At least one health metric must be provided
     const hasSteps = typeof body.steps === 'number'
     const hasSleep = typeof body.sleep === 'number'
@@ -37,8 +109,9 @@ export async function POST(request: NextRequest) {
     const hasSleepCore = typeof body.sleep_core === 'number'
     const hasSleepDeep = typeof body.sleep_deep === 'number'
     const hasAnySleepStage = hasSleepInBed || hasSleepAwake || hasSleepRem || hasSleepCore || hasSleepDeep
+    const hasParsedSleepStages = parsedSleepStages !== null
 
-    if (!hasSteps && !hasSleep && !hasMiles && !hasAnySleepStage) {
+    if (!hasSteps && !hasSleep && !hasMiles && !hasAnySleepStage && !hasParsedSleepStages) {
       return NextResponse.json(
         { error: 'At least one health metric (steps, sleep, miles, or sleep stages) is required' },
         { status: 400 }
@@ -146,11 +219,21 @@ export async function POST(request: NextRequest) {
     if (hasSteps) updateData.steps = body.steps!
     if (hasSleep) updateData.sleep_hours = body.sleep!
     if (hasMiles) updateData.miles_walked = body.miles!
-    if (hasSleepInBed) updateData.sleep_in_bed_minutes = body.sleep_in_bed!
-    if (hasSleepAwake) updateData.sleep_awake_minutes = body.sleep_awake!
-    if (hasSleepRem) updateData.sleep_rem_minutes = body.sleep_rem!
-    if (hasSleepCore) updateData.sleep_core_minutes = body.sleep_core!
-    if (hasSleepDeep) updateData.sleep_deep_minutes = body.sleep_deep!
+
+    // Use parsed sleep stages if provided, otherwise use individual fields
+    if (parsedSleepStages) {
+      updateData.sleep_in_bed_minutes = parsedSleepStages.sleep_in_bed
+      updateData.sleep_awake_minutes = parsedSleepStages.sleep_awake
+      updateData.sleep_rem_minutes = parsedSleepStages.sleep_rem
+      updateData.sleep_core_minutes = parsedSleepStages.sleep_core
+      updateData.sleep_deep_minutes = parsedSleepStages.sleep_deep
+    } else {
+      if (hasSleepInBed) updateData.sleep_in_bed_minutes = body.sleep_in_bed!
+      if (hasSleepAwake) updateData.sleep_awake_minutes = body.sleep_awake!
+      if (hasSleepRem) updateData.sleep_rem_minutes = body.sleep_rem!
+      if (hasSleepCore) updateData.sleep_core_minutes = body.sleep_core!
+      if (hasSleepDeep) updateData.sleep_deep_minutes = body.sleep_deep!
+    }
 
     const selectFields = 'id, entry_date, steps, sleep_hours, miles_walked, sleep_in_bed_minutes, sleep_awake_minutes, sleep_rem_minutes, sleep_core_minutes, sleep_deep_minutes'
 
