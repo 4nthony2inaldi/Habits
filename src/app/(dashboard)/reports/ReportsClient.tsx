@@ -21,6 +21,7 @@ import {
 } from 'recharts'
 import {
   format,
+  parse,
   parseISO,
   subDays,
   subYears,
@@ -473,6 +474,22 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         sortedSecondaryKeys.sort((a, b) => dayOfWeekNames.indexOf(a) - dayOfWeekNames.indexOf(b))
       } else if (config.secondaryDimension === 'month_of_year') {
         sortedSecondaryKeys.sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b))
+      } else if (config.secondaryDimension === 'month') {
+        sortedSecondaryKeys.sort((a, b) => parse(a, 'MMM yyyy', new Date()).getTime() - parse(b, 'MMM yyyy', new Date()).getTime())
+      } else if (config.secondaryDimension === 'day') {
+        sortedSecondaryKeys.sort((a, b) => parse(a, 'MMM d, yyyy', new Date()).getTime() - parse(b, 'MMM d, yyyy', new Date()).getTime())
+      } else if (config.secondaryDimension === 'week') {
+        sortedSecondaryKeys.sort((a, b) => {
+          const [aWeek, aYear] = a.replace('W', '').split(' ')
+          const [bWeek, bYear] = b.replace('W', '').split(' ')
+          return (parseInt(aYear) * 100 + parseInt(aWeek)) - (parseInt(bYear) * 100 + parseInt(bWeek))
+        })
+      } else if (config.secondaryDimension === 'quarter') {
+        sortedSecondaryKeys.sort((a, b) => {
+          const [aQ, aYear] = a.replace('Q', '').split(' ')
+          const [bQ, bYear] = b.replace('Q', '').split(' ')
+          return (parseInt(aYear) * 10 + parseInt(aQ)) - (parseInt(bYear) * 10 + parseInt(bQ))
+        })
       } else {
         sortedSecondaryKeys.sort()
       }
@@ -492,6 +509,19 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name as string) - monthNames.indexOf(b.name as string)
         if (config.dimension === 'day_of_month') return parseInt(a.name as string) - parseInt(b.name as string)
         if (config.dimension === 'week_of_year') return parseInt((a.name as string).replace('Week ', '')) - parseInt((b.name as string).replace('Week ', ''))
+        // Chronological sorting for absolute time dimensions
+        if (config.dimension === 'month') return parse(a.name as string, 'MMM yyyy', new Date()).getTime() - parse(b.name as string, 'MMM yyyy', new Date()).getTime()
+        if (config.dimension === 'day') return parse(a.name as string, 'MMM d, yyyy', new Date()).getTime() - parse(b.name as string, 'MMM d, yyyy', new Date()).getTime()
+        if (config.dimension === 'week') {
+          const [aWeek, aYear] = (a.name as string).replace('W', '').split(' ')
+          const [bWeek, bYear] = (b.name as string).replace('W', '').split(' ')
+          return (parseInt(aYear) * 100 + parseInt(aWeek)) - (parseInt(bYear) * 100 + parseInt(bWeek))
+        }
+        if (config.dimension === 'quarter') {
+          const [aQ, aYear] = (a.name as string).replace('Q', '').split(' ')
+          const [bQ, bYear] = (b.name as string).replace('Q', '').split(' ')
+          return (parseInt(aYear) * 10 + parseInt(aQ)) - (parseInt(bYear) * 10 + parseInt(bQ))
+        }
         return (a.sortKey as string).localeCompare(b.sortKey as string)
       })
 
@@ -531,6 +561,19 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name as string) - monthNames.indexOf(b.name as string)
       if (config.dimension === 'day_of_month') return parseInt(a.name as string) - parseInt(b.name as string)
       if (config.dimension === 'week_of_year') return parseInt((a.name as string).replace('Week ', '')) - parseInt((b.name as string).replace('Week ', ''))
+      // Chronological sorting for absolute time dimensions
+      if (config.dimension === 'month') return parse(a.name as string, 'MMM yyyy', new Date()).getTime() - parse(b.name as string, 'MMM yyyy', new Date()).getTime()
+      if (config.dimension === 'day') return parse(a.name as string, 'MMM d, yyyy', new Date()).getTime() - parse(b.name as string, 'MMM d, yyyy', new Date()).getTime()
+      if (config.dimension === 'week') {
+        const [aWeek, aYear] = (a.name as string).replace('W', '').split(' ')
+        const [bWeek, bYear] = (b.name as string).replace('W', '').split(' ')
+        return (parseInt(aYear) * 100 + parseInt(aWeek)) - (parseInt(bYear) * 100 + parseInt(bWeek))
+      }
+      if (config.dimension === 'quarter') {
+        const [aQ, aYear] = (a.name as string).replace('Q', '').split(' ')
+        const [bQ, bYear] = (b.name as string).replace('Q', '').split(' ')
+        return (parseInt(aYear) * 10 + parseInt(aQ)) - (parseInt(bYear) * 10 + parseInt(bQ))
+      }
       return (a.sortKey as string).localeCompare(b.sortKey as string)
     })
 
