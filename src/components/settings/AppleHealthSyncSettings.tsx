@@ -159,23 +159,20 @@ export function AppleHealthSyncSettings({
               <p className="text-gray-500"># Get yesterday&apos;s steps</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
-              <p className="pl-4">Start Date: Start of Today - 1 day</p>
-              <p className="pl-4">End Date: Start of Today</p>
+              <p className="pl-4">Start Date: is in the last 1 day</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get sleep duration (last night)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Sleep Analysis</p>
-              <p className="pl-4">Start Date: Start of Today - 1 day</p>
-              <p className="pl-4">End Date: Start of Today</p>
+              <p className="pl-4">Start Date: is in the last 1 day</p>
               <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s walking + running distance</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Walking + Running Distance</p>
-              <p className="pl-4">Start Date: Start of Today - 1 day</p>
-              <p className="pl-4">End Date: Start of Today</p>
+              <p className="pl-4">Start Date: is in the last 1 day</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
 
