@@ -136,6 +136,8 @@ export const dailyEntrySchema = z.object({
   // Other metrics
   coffee: z.number().min(0).max(5).default(0),
   steps: z.number().min(0).nullable(),
+  sleep_hours: z.number().min(0).max(24).nullable(),
+  miles_walked: z.number().min(0).nullable(),
   screen_time: z.number().min(0).nullable(),
   sex: z.number().min(0).max(10).default(0),
 

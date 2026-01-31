@@ -3,7 +3,9 @@ import { createServiceClient } from '@/lib/supabase/server'
 
 interface SyncRequest {
   token: string
-  steps: number
+  steps?: number
+  sleep?: number // Hours of sleep
+  miles?: number // Walking + running distance in miles
   date?: string // YYYY-MM-DD format, defaults to today
 }
 
@@ -19,9 +21,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (typeof body.steps !== 'number' || body.steps < 0) {
+    // At least one health metric must be provided
+    const hasSteps = typeof body.steps === 'number'
+    const hasSleep = typeof body.sleep === 'number'
+    const hasMiles = typeof body.miles === 'number'
+
+    if (!hasSteps && !hasSleep && !hasMiles) {
+      return NextResponse.json(
+        { error: 'At least one health metric (steps, sleep, or miles) is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate each metric if provided
+    if (hasSteps && body.steps! < 0) {
       return NextResponse.json(
         { error: 'Invalid steps value - must be a non-negative number' },
+        { status: 400 }
+      )
+    }
+
+    if (hasSleep && (body.sleep! < 0 || body.sleep! > 24)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep value - must be between 0 and 24 hours' },
+        { status: 400 }
+      )
+    }
+
+    if (hasMiles && body.miles! < 0) {
+      return NextResponse.json(
+        { error: 'Invalid miles value - must be a non-negative number' },
         { status: 400 }
       )
     }
@@ -62,19 +91,25 @@ export async function POST(request: NextRequest) {
     // Check if entry exists for this date
     const { data: existingEntry } = await supabase
       .from('daily_entries')
-      .select('id, steps')
+      .select('id, steps, sleep_hours, miles_walked')
       .eq('user_id', profile.id)
       .eq('entry_date', entryDate)
       .single()
+
+    // Build update object with only provided fields
+    const updateData: Record<string, number> = {}
+    if (hasSteps) updateData.steps = body.steps!
+    if (hasSleep) updateData.sleep_hours = body.sleep!
+    if (hasMiles) updateData.miles_walked = body.miles!
 
     let result
     if (existingEntry) {
       // Update existing entry
       const { data, error } = await supabase
         .from('daily_entries')
-        .update({ steps: body.steps })
+        .update(updateData)
         .eq('id', existingEntry.id)
-        .select('id, entry_date, steps')
+        .select('id, entry_date, steps, sleep_hours, miles_walked')
         .single()
 
       if (error) {
@@ -84,17 +119,25 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
-      result = { ...data, action: 'updated', previous_steps: existingEntry.steps }
+      result = {
+        ...data,
+        action: 'updated',
+        previous: {
+          steps: existingEntry.steps,
+          sleep_hours: existingEntry.sleep_hours,
+          miles_walked: existingEntry.miles_walked,
+        },
+      }
     } else {
-      // Create new entry with just steps
+      // Create new entry with provided health data
       const { data, error } = await supabase
         .from('daily_entries')
         .insert({
           user_id: profile.id,
           entry_date: entryDate,
-          steps: body.steps,
+          ...updateData,
         })
-        .select('id, entry_date, steps')
+        .select('id, entry_date, steps, sleep_hours, miles_walked')
         .single()
 
       if (error) {
@@ -124,41 +167,80 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const token = searchParams.get('token')
-  const steps = searchParams.get('steps')
+  const stepsParam = searchParams.get('steps')
+  const sleepParam = searchParams.get('sleep')
+  const milesParam = searchParams.get('miles')
   const date = searchParams.get('date')
 
-  if (!token || !steps) {
+  if (!token) {
     return NextResponse.json(
-      { error: 'Missing required parameters: token and steps' },
+      { error: 'Missing required parameter: token' },
       { status: 400 }
     )
   }
 
-  // Create a fake request body and call the POST handler logic
-  const fakeBody: SyncRequest = {
+  // At least one health metric must be provided
+  if (!stepsParam && !sleepParam && !milesParam) {
+    return NextResponse.json(
+      { error: 'At least one health metric (steps, sleep, or miles) is required' },
+      { status: 400 }
+    )
+  }
+
+  // Build request body with provided parameters
+  const body: SyncRequest = {
     token,
-    steps: parseInt(steps, 10),
     date: date || undefined,
   }
 
-  // Validate steps
-  if (isNaN(fakeBody.steps) || fakeBody.steps < 0) {
-    return NextResponse.json(
-      { error: 'Invalid steps value - must be a non-negative number' },
-      { status: 400 }
-    )
+  // Parse and validate each metric if provided
+  if (stepsParam) {
+    const steps = parseInt(stepsParam, 10)
+    if (isNaN(steps) || steps < 0) {
+      return NextResponse.json(
+        { error: 'Invalid steps value - must be a non-negative number' },
+        { status: 400 }
+      )
+    }
+    body.steps = steps
   }
+
+  if (sleepParam) {
+    const sleep = parseFloat(sleepParam)
+    if (isNaN(sleep) || sleep < 0 || sleep > 24) {
+      return NextResponse.json(
+        { error: 'Invalid sleep value - must be between 0 and 24 hours' },
+        { status: 400 }
+      )
+    }
+    body.sleep = sleep
+  }
+
+  if (milesParam) {
+    const miles = parseFloat(milesParam)
+    if (isNaN(miles) || miles < 0) {
+      return NextResponse.json(
+        { error: 'Invalid miles value - must be a non-negative number' },
+        { status: 400 }
+      )
+    }
+    body.miles = miles
+  }
+
+  const hasSteps = typeof body.steps === 'number'
+  const hasSleep = typeof body.sleep === 'number'
+  const hasMiles = typeof body.miles === 'number'
 
   // Parse and validate date
   let entryDate: string
-  if (fakeBody.date) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fakeBody.date)) {
+  if (body.date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
       return NextResponse.json(
         { error: 'Invalid date format - use YYYY-MM-DD' },
         { status: 400 }
       )
     }
-    entryDate = fakeBody.date
+    entryDate = body.date
   } else {
     entryDate = new Date().toISOString().split('T')[0]
   }
@@ -170,7 +252,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('health_sync_token', fakeBody.token)
+      .eq('health_sync_token', body.token)
       .single()
 
     if (profileError || !profile) {
@@ -183,18 +265,24 @@ export async function GET(request: NextRequest) {
     // Check if entry exists for this date
     const { data: existingEntry } = await supabase
       .from('daily_entries')
-      .select('id, steps')
+      .select('id, steps, sleep_hours, miles_walked')
       .eq('user_id', profile.id)
       .eq('entry_date', entryDate)
       .single()
+
+    // Build update object with only provided fields
+    const updateData: Record<string, number> = {}
+    if (hasSteps) updateData.steps = body.steps!
+    if (hasSleep) updateData.sleep_hours = body.sleep!
+    if (hasMiles) updateData.miles_walked = body.miles!
 
     let result
     if (existingEntry) {
       const { data, error } = await supabase
         .from('daily_entries')
-        .update({ steps: fakeBody.steps })
+        .update(updateData)
         .eq('id', existingEntry.id)
-        .select('id, entry_date, steps')
+        .select('id, entry_date, steps, sleep_hours, miles_walked')
         .single()
 
       if (error) {
@@ -203,16 +291,24 @@ export async function GET(request: NextRequest) {
           { status: 500 }
         )
       }
-      result = { ...data, action: 'updated', previous_steps: existingEntry.steps }
+      result = {
+        ...data,
+        action: 'updated',
+        previous: {
+          steps: existingEntry.steps,
+          sleep_hours: existingEntry.sleep_hours,
+          miles_walked: existingEntry.miles_walked,
+        },
+      }
     } else {
       const { data, error } = await supabase
         .from('daily_entries')
         .insert({
           user_id: profile.id,
           entry_date: entryDate,
-          steps: fakeBody.steps,
+          ...updateData,
         })
-        .select('id, entry_date, steps')
+        .select('id, entry_date, steps, sleep_hours, miles_walked')
         .single()
 
       if (error) {

@@ -90,7 +90,7 @@ export function AppleHealthSyncSettings({
       {!token ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            Generate a sync token to automatically import your steps from Apple Health
+            Generate a sync token to automatically import your steps, sleep, and miles from Apple Health
             using iOS Shortcuts.
           </p>
           <Button onClick={generateToken} disabled={generating}>
@@ -156,18 +156,38 @@ export function AppleHealthSyncSettings({
               <li>Create a new shortcut with these actions:</li>
             </ol>
             <div className="bg-white rounded p-3 text-xs font-mono space-y-1 text-gray-700">
-              <p className="text-gray-500"># Get today&apos;s steps from Health</p>
+              <p className="text-gray-500"># Get today&apos;s steps</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
               <p className="pl-4">Start Date: Start of Today</p>
               <p className="pl-4">End Date: Now</p>
               <p className="pl-4">Group By: Day</p>
+              <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
+
+              <p className="mt-2 text-gray-500"># Get sleep duration (last night)</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: Sleep Analysis</p>
+              <p className="pl-4">Start Date: Start of Today - 1 day</p>
+              <p className="pl-4">End Date: Start of Today</p>
+              <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
+
+              <p className="mt-2 text-gray-500"># Get walking + running distance</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: Walking + Running Distance</p>
+              <p className="pl-4">Start Date: Start of Today</p>
+              <p className="pl-4">End Date: Now</p>
+              <p className="pl-4">Group By: Day</p>
+              <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
+
               <p className="mt-2 text-gray-500"># Send to your tracker</p>
               <p><strong>Get Contents of URL</strong></p>
               <p className="pl-4 break-all">
-                {window.location.origin}/api/health/sync?token={token}&steps=[Health Samples]
+                {window.location.origin}/api/health/sync?token={token}&amp;steps=[Steps]&amp;sleep=[Sleep]&amp;miles=[Miles]
               </p>
             </div>
+            <p className="text-xs text-blue-700">
+              <strong>Note:</strong> You can sync any combination of these metrics. Sleep is in hours, miles is decimal.
+            </p>
             <ol start={3} className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>Optionally, set up an <strong>Automation</strong> to run this Shortcut daily at bedtime</li>
             </ol>
