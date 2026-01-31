@@ -37,6 +37,8 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   // Profile settings
   const [displayName, setDisplayName] = useState(profile.display_name)
   const [homeCity, setHomeCity] = useState(profile.home_city || '')
+  const [homeLat, setHomeLat] = useState<number | null>(profile.home_lat)
+  const [homeLng, setHomeLng] = useState<number | null>(profile.home_lng)
 
   // Privacy settings
   const [shareDrinks, setShareDrinks] = useState(profile.share_drinks)
@@ -73,6 +75,8 @@ export function SettingsClient({ profile }: SettingsClientProps) {
         .update({
           display_name: displayName,
           home_city: homeCity || null,
+          home_lat: homeLat,
+          home_lng: homeLng,
           share_drinks: shareDrinks,
           share_steps: shareSteps,
           leaderboard_anonymous: anonymous,
@@ -152,7 +156,11 @@ export function SettingsClient({ profile }: SettingsClientProps) {
             <CityAutocomplete
               id="homeCity"
               value={homeCity}
-              onChange={(value) => setHomeCity(value)}
+              onChange={(value, lat, lng) => {
+                setHomeCity(value)
+                setHomeLat(lat ?? null)
+                setHomeLng(lng ?? null)
+              }}
               placeholder="Search for your home city..."
             />
           </div>

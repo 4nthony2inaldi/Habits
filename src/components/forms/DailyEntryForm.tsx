@@ -16,6 +16,7 @@ import { useCreateEntry, useEntryByDate } from '@/lib/hooks/useEntries'
 import { type DailyEntryFormData, workLocationLabels, mealLocationLabels, habitLabels, eventLabels } from '@/types/forms'
 import type { MealLocation } from '@/types/database'
 import { getYesterdayString, formatDateForInput, isBeforeToday } from '@/lib/utils/dates'
+import { calculateDistanceMiles } from '@/lib/utils/calculations'
 import type { Profile, HabitType, EventType } from '@/types/database'
 import { cn } from '@/lib/utils/cn'
 import {
@@ -1034,7 +1035,18 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     render={({ field }) => (
                       <CityAutocomplete
                         value={field.value || ''}
-                        onChange={(value) => field.onChange(value)}
+                        onChange={(value, lat, lng) => {
+                          field.onChange(value)
+                          if (lat && lng && profile.home_lat && profile.home_lng) {
+                            const miles = calculateDistanceMiles(
+                              profile.home_lat,
+                              profile.home_lng,
+                              lat,
+                              lng
+                            )
+                            setValue('miles_wake', miles)
+                          }
+                        }}
                         placeholder="City"
                       />
                     )}
@@ -1053,7 +1065,18 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     render={({ field }) => (
                       <CityAutocomplete
                         value={field.value || ''}
-                        onChange={(value) => field.onChange(value)}
+                        onChange={(value, lat, lng) => {
+                          field.onChange(value)
+                          if (lat && lng && profile.home_lat && profile.home_lng) {
+                            const miles = calculateDistanceMiles(
+                              profile.home_lat,
+                              profile.home_lng,
+                              lat,
+                              lng
+                            )
+                            setValue('miles_noon', miles)
+                          }
+                        }}
                         placeholder="City"
                       />
                     )}
@@ -1072,7 +1095,18 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                     render={({ field }) => (
                       <CityAutocomplete
                         value={field.value || ''}
-                        onChange={(value) => field.onChange(value)}
+                        onChange={(value, lat, lng) => {
+                          field.onChange(value)
+                          if (lat && lng && profile.home_lat && profile.home_lng) {
+                            const miles = calculateDistanceMiles(
+                              profile.home_lat,
+                              profile.home_lng,
+                              lat,
+                              lng
+                            )
+                            setValue('miles_sleep', miles)
+                          }
+                        }}
                         placeholder="City"
                       />
                     )}
