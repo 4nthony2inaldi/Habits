@@ -101,6 +101,7 @@ const metricOptions: { value: ReportMetric; label: string; category: string }[] 
   { value: 'coffee', label: 'Coffee', category: 'Consumption' },
   { value: 'meals_out', label: 'Meals Out', category: 'Consumption' },
   { value: 'miles_traveled', label: 'Miles from Home', category: 'Location' },
+  { value: 'days', label: 'Days', category: 'General' },
   // Weather
   { value: 'weather_temperature_high', label: 'Temperature High (°F)', category: 'Weather' },
   { value: 'weather_temperature_low', label: 'Temperature Low (°F)', category: 'Weather' },
@@ -172,6 +173,9 @@ const dimensionOptions: { value: ReportDimension; label: string; group: string }
   { value: 'habit', label: 'Habit', group: 'Category' },
   { value: 'event', label: 'Event', group: 'Category' },
   { value: 'work_location', label: 'Work Location', group: 'Category' },
+  { value: 'location_wake', label: 'Location (Wake)', group: 'Location' },
+  { value: 'location_noon', label: 'Location (Noon)', group: 'Location' },
+  { value: 'location_sleep', label: 'Location (Sleep)', group: 'Location' },
 ]
 
 const chartTypeOptions: { value: ReportChartType; label: string; icon: typeof BarChart3; supportsMultiMetric: boolean }[] = [
@@ -378,6 +382,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           (entry.dinner_location === 'out' ? 1 : 0)
       case 'miles_traveled':
         return Math.max(entry.miles_wake || 0, entry.miles_noon || 0, entry.miles_sleep || 0)
+      case 'days': return 1
       // Weather metrics
       case 'weather_temperature_high': return entry.weather_temperature_high || 0
       case 'weather_temperature_low': return entry.weather_temperature_low || 0
@@ -403,6 +408,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'week_of_year': return `Week ${getWeek(date)}`
       case 'month_of_year': return monthNames[getMonth(date)]
       case 'work_location': return entry.work_location || 'Unknown'
+      case 'location_wake': return entry.city_wake || 'Unknown'
+      case 'location_noon': return entry.city_noon || 'Unknown'
+      case 'location_sleep': return entry.city_sleep || 'Unknown'
       default: return entry.entry_date
     }
   }, [])
@@ -575,7 +583,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
     // Sort
     result.sort((a, b) => {
-      if (config.dimension === 'work_location') return (b.value as number || 0) - (a.value as number || 0)
+      if (config.dimension === 'work_location' || config.dimension === 'location_wake' || config.dimension === 'location_noon' || config.dimension === 'location_sleep') return (b.value as number || 0) - (a.value as number || 0)
       if (config.dimension === 'day_of_week') return dayOfWeekNames.indexOf(a.name as string) - dayOfWeekNames.indexOf(b.name as string)
       if (config.dimension === 'month_of_year') return monthNames.indexOf(a.name as string) - monthNames.indexOf(b.name as string)
       if (config.dimension === 'day_of_month') return parseInt(a.name as string) - parseInt(b.name as string)

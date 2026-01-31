@@ -82,6 +82,7 @@ export type ReportMetric =
   | 'drinking_days'
   | 'meals_out'
   | 'miles_traveled'
+  | 'days'
   // Individual habits
   | 'habit_sleep_8hrs'
   | 'habit_breakfast'
@@ -128,7 +129,7 @@ export type ReportMetric =
 
 export type ReportAggregation = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'cumulative' | 'percent'
 
-export type ReportDimension = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'day_of_week' | 'day_of_month' | 'week_of_year' | 'month_of_year' | 'habit' | 'event' | 'work_location'
+export type ReportDimension = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'day_of_week' | 'day_of_month' | 'week_of_year' | 'month_of_year' | 'habit' | 'event' | 'work_location' | 'location_wake' | 'location_noon' | 'location_sleep'
 
 export type ReportChartType = 'kpi' | 'bar' | 'stacked_bar' | 'grouped_bar' | 'line' | 'area' | 'pie' | 'table'
 
