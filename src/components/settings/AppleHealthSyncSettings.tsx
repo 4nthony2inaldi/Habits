@@ -171,8 +171,7 @@ export function AppleHealthSyncSettings({
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s steps (full calendar day)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
-              <p className="pl-4">Start Date: is on or after [StartOfYesterday]</p>
-              <p className="pl-4">Start Date: is before [StartOfToday]</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
               <p className="pl-4">Group By: Day</p>
               <p className="pl-4">Limit: OFF (or set to 1)</p>
               <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
@@ -180,15 +179,13 @@ export function AppleHealthSyncSettings({
               <p className="mt-2 text-gray-500"># Get sleep duration (samples from yesterday)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Sleep Analysis</p>
-              <p className="pl-4">Start Date: is on or after [StartOfYesterday]</p>
-              <p className="pl-4">Start Date: is before [StartOfToday]</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
               <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s walking + running distance</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Walking + Running Distance</p>
-              <p className="pl-4">Start Date: is on or after [StartOfYesterday]</p>
-              <p className="pl-4">Start Date: is before [StartOfToday]</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
               <p className="pl-4">Group By: Day</p>
               <p className="pl-4">Limit: OFF (or set to 1)</p>
               <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
@@ -200,7 +197,7 @@ export function AppleHealthSyncSettings({
               </p>
             </div>
             <p className="text-xs text-blue-700">
-              <strong>Important:</strong> Add TWO Start Date filters to create a range: &quot;is on or after [StartOfYesterday]&quot; AND &quot;is before [StartOfToday]&quot;. This captures only yesterday&apos;s full calendar day (midnight to midnight). Do NOT use End Date filters. Sleep is in hours, miles is decimal.
+              <strong>Important:</strong> Use &quot;is between&quot; with [StartOfYesterday] and [StartOfToday] to capture yesterday&apos;s full calendar day (midnight to midnight). Sleep is in hours, miles is decimal.
             </p>
             <ol start={3} className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>Optionally, set up an <strong>Automation</strong> to run this Shortcut daily at bedtime</li>
