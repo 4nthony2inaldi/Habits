@@ -341,7 +341,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
     if (status === null) {
       return (
-        <span className="inline-flex items-center justify-center w-6 h-6 text-gray-300">
+        <span className="inline-flex items-center justify-center w-5 h-5 text-gray-300 text-xs">
           -
         </span>
       )
@@ -350,8 +350,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     // Gold star for 10k+ steps
     if (status === 'gold') {
       return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100">
-          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100">
+          <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
         </span>
       )
     }
@@ -359,16 +359,16 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     // Green check for 7.5k+ steps or true
     if (status === 'green' || status === true) {
       return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
-          <Check className="h-3 w-3 text-green-600" />
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100">
+          <Check className="h-2.5 w-2.5 text-green-600" />
         </span>
       )
     }
 
     // Not completed
     return (
-      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100">
-        <X className="h-3 w-3 text-gray-400" />
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100">
+        <X className="h-2.5 w-2.5 text-gray-400" />
       </span>
     )
   }
@@ -437,28 +437,28 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
   }
 
   return (
-    <div className="h-full flex flex-col p-4">
-      <div className="mb-3">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <ListChecks className="h-5 w-5 text-green-500" />
+    <div className="h-full flex flex-col p-3">
+      <div className="mb-2">
+        <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-green-500" />
           {title}
         </h3>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        {subtitle && <p className="text-[10px] text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
         <table className="w-full h-full table-fixed">
           <thead>
             <tr>
-              <th className="text-left text-xs font-medium text-gray-500 pb-2 w-20">
+              <th className="text-left text-[10px] font-medium text-gray-500 pb-1 w-16">
                 Habit
               </th>
               {dateHeaders.map((header, i) => (
                 <th
                   key={i}
-                  className="text-center text-xs font-medium text-gray-500 pb-2"
+                  className="text-center text-[10px] font-medium text-gray-500 pb-1"
                 >
                   <div>{header.day}</div>
-                  <div className="text-[10px] text-gray-400">{header.date}</div>
+                  <div className="text-[9px] text-gray-400">{header.date}</div>
                 </th>
               ))}
             </tr>
@@ -474,7 +474,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                   style={{ height: `${100 / totalRows}%` }}
                 >
                   <td className="align-middle">
-                    <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+                    <span className="text-[10px] font-medium text-gray-500 whitespace-nowrap">
                       {row.label}
                     </span>
                   </td>
@@ -489,22 +489,22 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                             onMouseEnter={(e) => handleStatusHover(row.indicator, dayData.date, dayData.entry, e)}
                             onMouseLeave={handleStatusLeave}
                           >
-                            <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full', dayData.bg)}>
-                              <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                            <span className={cn('inline-flex items-center justify-center w-4 h-4 rounded-full', dayData.bg)}>
+                              <IconComponent className={cn('h-2.5 w-2.5', dayData.color)} />
                             </span>
                             {dayData.label && (
-                              <span className="text-[9px] font-medium text-gray-500 leading-none">
+                              <span className="text-[8px] font-medium text-gray-500 leading-none">
                                 {dayData.label}
                               </span>
                             )}
                           </div>
                         ) : (
                           <span
-                            className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-pointer', dayData.bg)}
+                            className={cn('inline-flex items-center justify-center w-4 h-4 rounded-full cursor-pointer', dayData.bg)}
                             onMouseEnter={(e) => handleStatusHover(row.indicator, dayData.date, dayData.entry, e)}
                             onMouseLeave={handleStatusLeave}
                           >
-                            <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                            <IconComponent className={cn('h-2.5 w-2.5', dayData.color)} />
                           </span>
                         )}
                       </td>
@@ -514,8 +514,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
               )
             })}
             {/* Separator row between status indicators and habits */}
-            <tr className="h-1">
-              <td colSpan={showDays + 1} className="border-b-2 border-gray-200"></td>
+            <tr className="h-px">
+              <td colSpan={showDays + 1} className="border-b border-gray-200"></td>
             </tr>
             {/* Habit rows */}
             {data.map((row, idx) => {
@@ -529,7 +529,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                 onMouseLeave={handleRowLeave}
               >
                 <td className="align-middle">
-                  <span className="text-sm text-gray-700 whitespace-nowrap">
+                  <span className="text-xs text-gray-700 whitespace-nowrap">
                     {row.label}
                   </span>
                 </td>
