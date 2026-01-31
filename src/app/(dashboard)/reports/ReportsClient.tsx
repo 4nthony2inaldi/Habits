@@ -838,9 +838,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const legendWrapperStyle: React.CSSProperties = { paddingTop: 20 }
 
     // Calculate smart interval to prevent label overlap
-    // Target ~4 labels max on the X-axis (date labels are wide when rotated)
+    // Target ~10 labels max on the X-axis (rotated labels can fit more)
     const dataLength = chartDataToUse.length
-    const targetLabels = 4
+    const targetLabels = 10
     const xAxisInterval = dataLength <= targetLabels ? 0 : Math.ceil(dataLength / targetLabels) - 1
 
     // Custom tick formatter for X-axis labels
