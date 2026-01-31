@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   AreaChart,
@@ -219,6 +219,14 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   const [showOnDashboard, setShowOnDashboard] = useState(false)
   const [editingReportId, setEditingReportId] = useState<string | null>(null)
   const [showComparison, setShowComparison] = useState(false)
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+
+  // Track screen width for responsive chart labels
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Get active metrics (use metrics array or fall back to single metric)
   const activeMetrics = useMemo(() => {
@@ -838,9 +846,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const legendWrapperStyle: React.CSSProperties = { paddingTop: 20 }
 
     // Calculate smart interval to prevent label overlap
-    // Target ~10 labels max on the X-axis (rotated labels can fit more)
+    // Responsive target: fewer labels on mobile, more on desktop
     const dataLength = chartDataToUse.length
-    const targetLabels = 10
+    const targetLabels = screenWidth < 640 ? 5 : screenWidth < 1024 ? 8 : 12
     const xAxisInterval = dataLength <= targetLabels ? 0 : Math.ceil(dataLength / targetLabels) - 1
 
     // Custom tick formatter for X-axis labels
