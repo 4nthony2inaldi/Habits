@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { Check, X, Star, ListChecks } from 'lucide-react'
-import { format, subDays } from 'date-fns'
+import { Check, X, Star, ListChecks, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { format, subDays, parseISO, isWithinInterval } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
@@ -13,6 +13,20 @@ import { shortHabitLabels } from './DashboardCustomizer'
 // For regular habits: true/false/null
 // For was_active: 'gold' (10k+) | 'green' (7.5k+) | false | null
 type DayStatus = boolean | 'gold' | 'green' | null
+
+interface TooltipData {
+  habit: SelectableHabitType
+  label: string
+  x: number
+  y: number
+}
+
+interface PeriodStats {
+  current: number | null
+  prior: number | null
+  currentTracked: number
+  priorTracked: number
+}
 
 interface HabitsGridProps {
   entries: DailyEntryWithRelations[]
@@ -24,6 +38,76 @@ interface HabitsGridProps {
 }
 
 export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+
+  // Helper to check if a habit is completed for a given entry
+  const isHabitCompleted = (entry: DailyEntryWithRelations, habit: SelectableHabitType): boolean => {
+    if (habit === 'no_alcohol') {
+      const totalDrinks = (entry.beers || 0) + (entry.seltzers || 0) +
+                         (entry.wine || 0) + (entry.liquor || 0) + (entry.shots || 0)
+      return totalDrinks === 0
+    }
+    if (habit === 'was_active') {
+      return (entry.steps || 0) >= 7500
+    }
+    if (habit === 'breakfast_at_home') {
+      return entry.breakfast_location === 'home'
+    }
+    if (habit === 'lunch_at_home') {
+      return entry.lunch_location === 'home'
+    }
+    if (habit === 'dinner_at_home') {
+      return entry.dinner_location === 'home'
+    }
+    if (habit === 'breakfast') {
+      const hasOldFormat = entry.healthy_habits.some((h) => h.habit_type === 'breakfast')
+      const hasNewFormat = entry.breakfast_location !== null
+      return hasOldFormat || hasNewFormat
+    }
+    return entry.healthy_habits.some((h) => h.habit_type === habit)
+  }
+
+  // Calculate completion stats for a habit over different periods
+  const calculatePeriodStats = useMemo(() => {
+    return (habit: SelectableHabitType, days: number): PeriodStats => {
+      const endDate = dateRange.end
+      const currentStart = subDays(endDate, days - 1)
+      const priorEnd = subDays(currentStart, 1)
+      const priorStart = subDays(priorEnd, days - 1)
+
+      let currentCompleted = 0
+      let currentTracked = 0
+      let priorCompleted = 0
+      let priorTracked = 0
+
+      entries.forEach((entry) => {
+        const entryDate = parseISO(entry.entry_date)
+
+        // Check if in current period
+        if (isWithinInterval(entryDate, { start: currentStart, end: endDate })) {
+          currentTracked++
+          if (isHabitCompleted(entry, habit)) {
+            currentCompleted++
+          }
+        }
+        // Check if in prior period
+        else if (isWithinInterval(entryDate, { start: priorStart, end: priorEnd })) {
+          priorTracked++
+          if (isHabitCompleted(entry, habit)) {
+            priorCompleted++
+          }
+        }
+      })
+
+      return {
+        current: currentTracked > 0 ? Math.round((currentCompleted / currentTracked) * 100) : null,
+        prior: priorTracked > 0 ? Math.round((priorCompleted / priorTracked) * 100) : null,
+        currentTracked,
+        priorTracked,
+      }
+    }
+  }, [entries, dateRange.end])
+
   const data = useMemo(() => {
     // Get last N days from end of date range (most recent first)
     const dates: string[] = []
@@ -152,6 +236,49 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     )
   }
 
+  const handleRowHover = (row: typeof data[0], event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setTooltip({
+      habit: row.habit,
+      label: row.label,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+    })
+  }
+
+  const handleRowLeave = () => {
+    setTooltip(null)
+  }
+
+  // Helper to render comparison with trend icon
+  const renderComparison = (stats: PeriodStats, label: string) => {
+    const diff = stats.current !== null && stats.prior !== null ? stats.current - stats.prior : null
+    const TrendIcon = diff === null ? Minus : diff > 0 ? TrendingUp : diff < 0 ? TrendingDown : Minus
+    const trendColor = diff === null ? 'text-gray-400' : diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-500' : 'text-gray-400'
+
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-gray-500">{label}:</span>
+        <span className="flex items-center gap-1">
+          <span className="font-medium text-gray-900">
+            {stats.current !== null ? `${stats.current}%` : '—'}
+          </span>
+          {stats.prior !== null && (
+            <>
+              <TrendIcon className={cn('h-3 w-3', trendColor)} />
+              <span className={cn('text-[10px]', trendColor)}>
+                {diff !== null && diff !== 0 ? `${diff > 0 ? '+' : ''}${diff}%` : ''}
+              </span>
+              <span className="text-gray-400 text-[10px]">
+                (was {stats.prior}%)
+              </span>
+            </>
+          )}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex flex-col p-4">
       <div className="mb-3">
@@ -183,8 +310,10 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
             {data.map((row, idx) => (
               <tr
                 key={row.habit}
-                className="border-t border-gray-100"
+                className="border-t border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
                 style={{ height: `${100 / data.length}%` }}
+                onMouseEnter={(e) => handleRowHover(row, e)}
+                onMouseLeave={handleRowLeave}
               >
                 <td className="align-middle">
                   <span className="text-sm text-gray-700 whitespace-nowrap">
@@ -201,6 +330,28 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
           </tbody>
         </table>
       </div>
+
+      {/* Tooltip - fixed positioning to extend beyond widget */}
+      {tooltip && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[180px] max-w-[280px]">
+            <div className="font-medium text-gray-900 mb-2 pb-1 border-b border-gray-100">
+              {tooltip.label}
+            </div>
+            <div className="space-y-1">
+              {renderComparison(calculatePeriodStats(tooltip.habit, 7), 'Last 7d')}
+              {renderComparison(calculatePeriodStats(tooltip.habit, 30), 'Last 30d')}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
