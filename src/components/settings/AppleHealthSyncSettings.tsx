@@ -156,23 +156,28 @@ export function AppleHealthSyncSettings({
               <li>Create a new shortcut with these actions:</li>
             </ol>
             <div className="bg-white rounded p-3 text-xs font-mono space-y-1 text-gray-700">
-              <p className="text-gray-500"># Get yesterday&apos;s steps</p>
+              <p className="text-gray-500"># Calculate yesterday&apos;s date</p>
+              <p><strong>Date</strong></p>
+              <p className="pl-4">Add -1 days to Current Date</p>
+              <p><strong>Set variable</strong> &quot;Yesterday&quot; to Date</p>
+
+              <p className="mt-2 text-gray-500"># Get yesterday&apos;s steps</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
-              <p className="pl-4">Start Date: is in the last 1 day</p>
+              <p className="pl-4">Start Date: is on [Yesterday]</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get sleep duration (last night)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Sleep Analysis</p>
-              <p className="pl-4">Start Date: is in the last 1 day</p>
+              <p className="pl-4">Start Date: is on [Yesterday]</p>
               <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s walking + running distance</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Walking + Running Distance</p>
-              <p className="pl-4">Start Date: is in the last 1 day</p>
+              <p className="pl-4">Start Date: is on [Yesterday]</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
 
