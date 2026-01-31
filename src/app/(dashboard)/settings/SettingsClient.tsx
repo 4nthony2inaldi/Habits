@@ -39,6 +39,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   const [homeCity, setHomeCity] = useState(profile.home_city || '')
   const [homeLat, setHomeLat] = useState<number | null>(profile.home_lat)
   const [homeLng, setHomeLng] = useState<number | null>(profile.home_lng)
+  const [temperatureUnit, setTemperatureUnit] = useState<'fahrenheit' | 'celsius'>(profile.temperature_unit || 'fahrenheit')
 
   // Privacy settings
   const [shareDrinks, setShareDrinks] = useState(profile.share_drinks)
@@ -77,6 +78,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           home_city: homeCity || null,
           home_lat: homeLat,
           home_lng: homeLng,
+          temperature_unit: temperatureUnit,
           share_drinks: shareDrinks,
           share_steps: shareSteps,
           leaderboard_anonymous: anonymous,
@@ -172,6 +174,33 @@ export function SettingsClient({ profile }: SettingsClientProps) {
                 )}
               </p>
             )}
+          </div>
+          <div className="space-y-2">
+            <Label>Temperature Unit</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="temperatureUnit"
+                  value="fahrenheit"
+                  checked={temperatureUnit === 'fahrenheit'}
+                  onChange={() => setTemperatureUnit('fahrenheit')}
+                  className="w-4 h-4 accent-purple-600"
+                />
+                <span className="text-sm">Fahrenheit (°F)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="temperatureUnit"
+                  value="celsius"
+                  checked={temperatureUnit === 'celsius'}
+                  onChange={() => setTemperatureUnit('celsius')}
+                  className="w-4 h-4 accent-purple-600"
+                />
+                <span className="text-sm">Celsius (°C)</span>
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>

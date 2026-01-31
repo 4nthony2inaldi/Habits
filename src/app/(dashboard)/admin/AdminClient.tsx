@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { Upload, Users, Database } from 'lucide-react'
+import { Upload, Users, Database, MapPin } from 'lucide-react'
 import { DataImporter } from '@/components/admin/DataImporter'
 import { UserManagement } from '@/components/admin/UserManagement'
+import { CityFixer } from '@/components/admin/CityFixer'
 import type { Profile } from '@/types/database'
 
 interface AdminClientProps {
@@ -15,6 +16,7 @@ interface AdminClientProps {
 const tabs = [
   { id: 'import', name: 'Import Data', icon: Upload },
   { id: 'users', name: 'User Management', icon: Users },
+  { id: 'cities', name: 'Fix Cities', icon: MapPin },
 ] as const
 
 type TabId = typeof tabs[number]['id']
@@ -68,6 +70,9 @@ export function AdminClient({ currentUser, users: initialUsers }: AdminClientPro
         )}
         {activeTab === 'users' && (
           <UserManagement currentUser={currentUser} users={users} onUserAdded={handleUserAdded} />
+        )}
+        {activeTab === 'cities' && (
+          <CityFixer currentUser={currentUser} users={users} />
         )}
       </div>
     </div>

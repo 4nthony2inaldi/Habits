@@ -184,6 +184,7 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
         custom_metrics: currentUser.custom_metrics, // Same dashboard layout as admin
         allow_admin_nudges: true,
         notification_channel: 'email',
+        temperature_unit: 'fahrenheit',
         created_at: new Date().toISOString(),
       }
       setUsers((prev) => [...prev, newUser])

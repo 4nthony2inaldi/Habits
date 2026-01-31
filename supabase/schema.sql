@@ -31,7 +31,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   weekly_digest_enabled BOOLEAN DEFAULT TRUE,
   weekly_digest_day SMALLINT DEFAULT 0,
   allow_admin_nudges BOOLEAN DEFAULT TRUE,
-  notification_channel TEXT DEFAULT 'email'
+  notification_channel TEXT DEFAULT 'email',
+
+  -- Weather preferences
+  temperature_unit TEXT DEFAULT 'fahrenheit' CHECK (temperature_unit IN ('fahrenheit', 'celsius'))
 );
 
 -- Notification log
@@ -136,11 +139,25 @@ CREATE TABLE IF NOT EXISTS daily_entries (
 
   -- Location tracking
   city_wake TEXT,
+  city_wake_lat DECIMAL,
+  city_wake_lng DECIMAL,
   miles_wake DECIMAL,
   city_noon TEXT,
+  city_noon_lat DECIMAL,
+  city_noon_lng DECIMAL,
   miles_noon DECIMAL,
   city_sleep TEXT,
+  city_sleep_lat DECIMAL,
+  city_sleep_lng DECIMAL,
   miles_sleep DECIMAL,
+
+  -- Weather tracking (based on noon city or home city)
+  weather_temperature_high DECIMAL,
+  weather_temperature_low DECIMAL,
+  weather_conditions TEXT,
+  weather_humidity INTEGER,
+  weather_precipitation DECIMAL,
+  weather_location TEXT,
 
   -- Qualitative
   best_part TEXT,

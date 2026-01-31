@@ -101,6 +101,11 @@ const metricOptions: { value: ReportMetric; label: string; category: string }[] 
   { value: 'coffee', label: 'Coffee', category: 'Consumption' },
   { value: 'meals_out', label: 'Meals Out', category: 'Consumption' },
   { value: 'miles_traveled', label: 'Miles from Home', category: 'Location' },
+  // Weather
+  { value: 'weather_temperature_high', label: 'Temperature High (°F)', category: 'Weather' },
+  { value: 'weather_temperature_low', label: 'Temperature Low (°F)', category: 'Weather' },
+  { value: 'weather_humidity', label: 'Humidity (%)', category: 'Weather' },
+  { value: 'weather_precipitation', label: 'Precipitation (in)', category: 'Weather' },
   // Aggregate counts
   { value: 'healthy_habits_count', label: 'Total Habits Count', category: 'Habits' },
   { value: 'life_events_count', label: 'Total Events Count', category: 'Events' },
@@ -373,6 +378,11 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           (entry.dinner_location === 'out' ? 1 : 0)
       case 'miles_traveled':
         return Math.max(entry.miles_wake || 0, entry.miles_noon || 0, entry.miles_sleep || 0)
+      // Weather metrics
+      case 'weather_temperature_high': return entry.weather_temperature_high || 0
+      case 'weather_temperature_low': return entry.weather_temperature_low || 0
+      case 'weather_humidity': return entry.weather_humidity || 0
+      case 'weather_precipitation': return entry.weather_precipitation || 0
       default: return 0
     }
   }, [])

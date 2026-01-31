@@ -120,6 +120,11 @@ export type ReportMetric =
   | 'event_park'
   | 'event_subway'
   | 'event_bus'
+  // Weather metrics
+  | 'weather_temperature_high'
+  | 'weather_temperature_low'
+  | 'weather_humidity'
+  | 'weather_precipitation'
 
 export type ReportAggregation = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'cumulative' | 'percent'
 
@@ -182,6 +187,7 @@ export interface Database {
           weekly_digest_day: number
           allow_admin_nudges: boolean
           notification_channel: NotificationChannel
+          temperature_unit: 'fahrenheit' | 'celsius'
         }
         Insert: {
           id: string
@@ -205,6 +211,7 @@ export interface Database {
           weekly_digest_day?: number
           allow_admin_nudges?: boolean
           notification_channel?: NotificationChannel
+          temperature_unit?: 'fahrenheit' | 'celsius'
         }
         Update: {
           id?: string
@@ -228,6 +235,7 @@ export interface Database {
           weekly_digest_day?: number
           allow_admin_nudges?: boolean
           notification_channel?: NotificationChannel
+          temperature_unit?: 'fahrenheit' | 'celsius'
         }
       }
       daily_entries: {
@@ -263,11 +271,24 @@ export interface Database {
           lunch_location: MealLocation | null
           dinner_location: MealLocation | null
           city_wake: string | null
+          city_wake_lat: number | null
+          city_wake_lng: number | null
           miles_wake: number | null
           city_noon: string | null
+          city_noon_lat: number | null
+          city_noon_lng: number | null
           miles_noon: number | null
           city_sleep: string | null
+          city_sleep_lat: number | null
+          city_sleep_lng: number | null
           miles_sleep: number | null
+          // Weather tracking
+          weather_temperature_high: number | null
+          weather_temperature_low: number | null
+          weather_conditions: string | null
+          weather_humidity: number | null
+          weather_precipitation: number | null
+          weather_location: string | null
           best_part: string | null
           notes: string | null
           created_at: string
@@ -305,11 +326,24 @@ export interface Database {
           lunch_location?: MealLocation | null
           dinner_location?: MealLocation | null
           city_wake?: string | null
+          city_wake_lat?: number | null
+          city_wake_lng?: number | null
           miles_wake?: number | null
           city_noon?: string | null
+          city_noon_lat?: number | null
+          city_noon_lng?: number | null
           miles_noon?: number | null
           city_sleep?: string | null
+          city_sleep_lat?: number | null
+          city_sleep_lng?: number | null
           miles_sleep?: number | null
+          // Weather tracking
+          weather_temperature_high?: number | null
+          weather_temperature_low?: number | null
+          weather_conditions?: string | null
+          weather_humidity?: number | null
+          weather_precipitation?: number | null
+          weather_location?: string | null
           best_part?: string | null
           notes?: string | null
           created_at?: string
@@ -347,11 +381,24 @@ export interface Database {
           lunch_location?: MealLocation | null
           dinner_location?: MealLocation | null
           city_wake?: string | null
+          city_wake_lat?: number | null
+          city_wake_lng?: number | null
           miles_wake?: number | null
           city_noon?: string | null
+          city_noon_lat?: number | null
+          city_noon_lng?: number | null
           miles_noon?: number | null
           city_sleep?: string | null
+          city_sleep_lat?: number | null
+          city_sleep_lng?: number | null
           miles_sleep?: number | null
+          // Weather tracking
+          weather_temperature_high?: number | null
+          weather_temperature_low?: number | null
+          weather_conditions?: string | null
+          weather_humidity?: number | null
+          weather_precipitation?: number | null
+          weather_location?: string | null
           best_part?: string | null
           notes?: string | null
           created_at?: string

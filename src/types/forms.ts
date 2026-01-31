@@ -146,11 +146,25 @@ export const dailyEntrySchema = z.object({
 
   // Location tracking
   city_wake: z.string().nullable(),
+  city_wake_lat: z.number().nullable().optional(),
+  city_wake_lng: z.number().nullable().optional(),
   miles_wake: z.number().nullable(),
   city_noon: z.string().nullable(),
+  city_noon_lat: z.number().nullable().optional(),
+  city_noon_lng: z.number().nullable().optional(),
   miles_noon: z.number().nullable(),
   city_sleep: z.string().nullable(),
+  city_sleep_lat: z.number().nullable().optional(),
+  city_sleep_lng: z.number().nullable().optional(),
   miles_sleep: z.number().nullable(),
+
+  // Weather data (auto-populated)
+  weather_temperature_high: z.number().nullable().optional(),
+  weather_temperature_low: z.number().nullable().optional(),
+  weather_conditions: z.string().nullable().optional(),
+  weather_humidity: z.number().nullable().optional(),
+  weather_precipitation: z.number().nullable().optional(),
+  weather_location: z.string().nullable().optional(),
 
   // Qualitative
   best_part: z.string().nullable(),

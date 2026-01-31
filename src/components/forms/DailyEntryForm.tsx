@@ -17,6 +17,7 @@ import { type DailyEntryFormData, workLocationLabels, mealLocationLabels, habitL
 import type { MealLocation } from '@/types/database'
 import { getYesterdayString, formatDateForInput, isBeforeToday } from '@/lib/utils/dates'
 import { calculateDistanceMiles } from '@/lib/utils/calculations'
+import { fetchWeather, formatTemperature, type WeatherData } from '@/lib/utils/weather'
 import type { Profile, HabitType, EventType } from '@/types/database'
 import { cn } from '@/lib/utils/cn'
 import {
@@ -32,6 +33,8 @@ import {
   FileText,
   Users,
   Heart,
+  Cloud,
+  Loader2,
 } from 'lucide-react'
 
 interface DailyEntryFormProps {
@@ -77,6 +80,16 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   const [selectedDate, setSelectedDate] = useState(getYesterdayString())
   const [openSection, setOpenSection] = useState<string | null>('mood')
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Weather state
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherLocation, setWeatherLocation] = useState<string | null>(null)
+
+  // City coordinates state (for tracking lat/lng when cities are selected)
+  const [cityWakeCoords, setCityWakeCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [cityNoonCoords, setCityNoonCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [citySleepCoords, setCitySleepCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const { data: existingEntry, isLoading: loadingEntry } = useEntryByDate(
     profile.id,
@@ -233,12 +246,73 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
     }
   }
 
+  // Fetch weather when date changes or coordinates are available
+  // Uses city_noon coordinates, or home city if city_noon is blank
+  useEffect(() => {
+    const fetchWeatherData = async () => {
+      // Determine which location to use for weather
+      let lat: number | null = null
+      let lng: number | null = null
+      let locationName: string | null = null
+
+      // Priority: city_noon coordinates > home city coordinates
+      if (cityNoonCoords) {
+        lat = cityNoonCoords.lat
+        lng = cityNoonCoords.lng
+        locationName = watchedValues.city_noon || 'Noon location'
+      } else if (profile.home_lat && profile.home_lng) {
+        // No city_noon means user was home - use home city for weather
+        lat = profile.home_lat
+        lng = profile.home_lng
+        locationName = profile.home_city || 'Home'
+      }
+
+      if (!lat || !lng || !selectedDate) {
+        setWeather(null)
+        setWeatherLocation(null)
+        return
+      }
+
+      setWeatherLoading(true)
+      try {
+        const weatherData = await fetchWeather(lat, lng, selectedDate)
+        setWeather(weatherData)
+        setWeatherLocation(locationName)
+      } catch (error) {
+        console.error('Failed to fetch weather:', error)
+        setWeather(null)
+      } finally {
+        setWeatherLoading(false)
+      }
+    }
+
+    fetchWeatherData()
+  }, [selectedDate, cityNoonCoords, profile.home_lat, profile.home_lng, profile.home_city, watchedValues.city_noon])
+
   const onSubmit = async (data: DailyEntryFormData) => {
     setSaveError(null)
     try {
+      // Add coordinates to data
+      const enrichedData: DailyEntryFormData = {
+        ...data,
+        // City coordinates
+        city_wake_lat: cityWakeCoords?.lat ?? null,
+        city_wake_lng: cityWakeCoords?.lng ?? null,
+        city_noon_lat: cityNoonCoords?.lat ?? null,
+        city_noon_lng: cityNoonCoords?.lng ?? null,
+        city_sleep_lat: citySleepCoords?.lat ?? null,
+        city_sleep_lng: citySleepCoords?.lng ?? null,
+        // Weather data
+        weather_temperature_high: weather?.temperatureHigh ?? null,
+        weather_temperature_low: weather?.temperatureLow ?? null,
+        weather_conditions: weather?.conditions ?? null,
+        weather_humidity: weather?.humidity ?? null,
+        weather_precipitation: weather?.precipitation ?? null,
+        weather_location: weatherLocation,
+      }
       await createEntry.mutateAsync({
         userId: profile.id,
-        data,
+        data: enrichedData,
       })
       router.push('/dashboard')
     } catch (error) {
@@ -1037,14 +1111,20 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                         value={field.value || ''}
                         onChange={(value, lat, lng) => {
                           field.onChange(value)
-                          if (lat && lng && profile.home_lat && profile.home_lng) {
-                            const miles = calculateDistanceMiles(
-                              profile.home_lat,
-                              profile.home_lng,
-                              lat,
-                              lng
-                            )
-                            setValue('miles_wake', miles, { shouldDirty: true })
+                          // Store coordinates for later
+                          if (lat && lng) {
+                            setCityWakeCoords({ lat, lng })
+                            if (profile.home_lat && profile.home_lng) {
+                              const miles = calculateDistanceMiles(
+                                profile.home_lat,
+                                profile.home_lng,
+                                lat,
+                                lng
+                              )
+                              setValue('miles_wake', miles, { shouldDirty: true })
+                            }
+                          } else {
+                            setCityWakeCoords(null)
                           }
                         }}
                         placeholder="City"
@@ -1067,14 +1147,20 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                         value={field.value || ''}
                         onChange={(value, lat, lng) => {
                           field.onChange(value)
-                          if (lat && lng && profile.home_lat && profile.home_lng) {
-                            const miles = calculateDistanceMiles(
-                              profile.home_lat,
-                              profile.home_lng,
-                              lat,
-                              lng
-                            )
-                            setValue('miles_noon', miles, { shouldDirty: true })
+                          // Store coordinates for weather lookup
+                          if (lat && lng) {
+                            setCityNoonCoords({ lat, lng })
+                            if (profile.home_lat && profile.home_lng) {
+                              const miles = calculateDistanceMiles(
+                                profile.home_lat,
+                                profile.home_lng,
+                                lat,
+                                lng
+                              )
+                              setValue('miles_noon', miles, { shouldDirty: true })
+                            }
+                          } else {
+                            setCityNoonCoords(null)
                           }
                         }}
                         placeholder="City"
@@ -1097,14 +1183,20 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                         value={field.value || ''}
                         onChange={(value, lat, lng) => {
                           field.onChange(value)
-                          if (lat && lng && profile.home_lat && profile.home_lng) {
-                            const miles = calculateDistanceMiles(
-                              profile.home_lat,
-                              profile.home_lng,
-                              lat,
-                              lng
-                            )
-                            setValue('miles_sleep', miles, { shouldDirty: true })
+                          // Store coordinates for later
+                          if (lat && lng) {
+                            setCitySleepCoords({ lat, lng })
+                            if (profile.home_lat && profile.home_lng) {
+                              const miles = calculateDistanceMiles(
+                                profile.home_lat,
+                                profile.home_lng,
+                                lat,
+                                lng
+                              )
+                              setValue('miles_sleep', miles, { shouldDirty: true })
+                            }
+                          } else {
+                            setCitySleepCoords(null)
                           }
                         }}
                         placeholder="City"
@@ -1118,6 +1210,52 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   />
                 </div>
               </div>
+
+              {/* Weather Display */}
+              {(weather || weatherLoading) && (
+                <div className="pt-3 border-t mt-4">
+                  <Label className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                    <Cloud className="h-4 w-4" />
+                    Weather {weatherLocation && <span className="text-gray-400 font-normal">({weatherLocation})</span>}
+                  </Label>
+                  {weatherLoading ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading weather...
+                    </div>
+                  ) : weather ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 text-xs">High</div>
+                        <div className="font-semibold text-lg">
+                          {formatTemperature(weather.temperatureHigh, profile.temperature_unit || 'fahrenheit')}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 text-xs">Low</div>
+                        <div className="font-semibold text-lg">
+                          {formatTemperature(weather.temperatureLow, profile.temperature_unit || 'fahrenheit')}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 text-xs">Conditions</div>
+                        <div className="font-medium">{weather.conditions}</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 text-xs">Precip.</div>
+                        <div className="font-medium">{weather.precipitation}" </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Show message when no home city set and no noon city */}
+              {!weather && !weatherLoading && !cityNoonCoords && !profile.home_lat && showLocationTracking && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Set your home city in Settings to see weather data
+                </p>
+              )}
             </div>
           </div>
         </FormSection>
