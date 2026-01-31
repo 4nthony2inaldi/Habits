@@ -831,7 +831,10 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     const useDualAxis = config.dualAxis && activeMetrics.length >= 2 && !useSecondaryDimension
     const hasComparison = comparisonSeriesKeys.length > 0 && !useSecondaryDimension
     const chartDataToUse = hasComparison ? mergedChartData : chartData
-    const commonProps = { data: chartDataToUse, margin: { top: 15, right: 5, left: 0, bottom: 25 } }
+    const commonProps = { data: chartDataToUse, margin: { top: 15, right: 5, left: 0, bottom: 60 } }
+
+    // Legend styling to position it equidistant between x-axis labels and bottom of container
+    const legendWrapperStyle: React.CSSProperties = { paddingTop: 20 }
 
     // Calculate smart interval to prevent label overlap
     // Target ~4 labels max on the X-axis (date labels are wide when rotated)
@@ -922,7 +925,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   tickFormatter={formatYAxisValue} stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
-              {showLegend && <Legend />}
+              {showLegend && <Legend wrapperStyle={legendWrapperStyle} />}
               {/* Comparison series first (so they appear behind) */}
               {hasComparison && comparisonSeriesKeys.map((key, idx) => (
                 <Area key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
@@ -955,7 +958,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   tickFormatter={formatYAxisValue} stroke={CHART_COLORS[1]} />
               )}
               <Tooltip contentStyle={tooltipStyle} />
-              {showLegend && <Legend />}
+              {showLegend && <Legend wrapperStyle={legendWrapperStyle} />}
               {/* Comparison series first (so they appear behind) */}
               {hasComparison && comparisonSeriesKeys.map((key, idx) => (
                 <Line key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
@@ -982,7 +985,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
               <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
               <Tooltip contentStyle={tooltipStyle} />
-              {showLegend && <Legend />}
+              {showLegend && <Legend wrapperStyle={legendWrapperStyle} />}
               {renderKeys.map((key, idx) => (
                 <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
@@ -1018,7 +1021,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 {chartData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
+              <Legend wrapperStyle={legendWrapperStyle} />
             </PieChart>
           </ResponsiveContainer>
         )
