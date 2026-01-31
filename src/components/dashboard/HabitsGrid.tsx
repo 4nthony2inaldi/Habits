@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { format, subDays, parseISO, isWithinInterval, isWeekend } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
-import { habitLabels } from '@/types/forms'
+import { habitLabels, eventLabels, workLocationLabels } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
 import { shortHabitLabels } from './DashboardCustomizer'
 
@@ -20,9 +20,20 @@ import { shortHabitLabels } from './DashboardCustomizer'
 // For was_active: 'gold' (10k+) | 'green' (7.5k+) | false | null
 type DayStatus = boolean | 'gold' | 'green' | null
 
+// Status indicator types (not counted in habits score)
+type StatusIndicatorType = 'mood' | 'weather' | 'work_location'
+
 interface TooltipData {
   habit: SelectableHabitType
   label: string
+  x: number
+  y: number
+}
+
+interface StatusTooltipData {
+  type: StatusIndicatorType
+  date: string
+  entry: DailyEntryWithRelations | null
   x: number
   y: number
 }
@@ -42,9 +53,6 @@ interface HabitsGridProps {
   title?: string
   subtitle?: string
 }
-
-// Status indicator types (not counted in habits score)
-type StatusIndicatorType = 'mood' | 'weather' | 'work_location'
 
 const statusIndicatorLabels: Record<StatusIndicatorType, string> = {
   mood: 'Mood',
@@ -120,6 +128,7 @@ function getWorkLocationIcon(workLocation: string | null, date: Date) {
 
 export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+  const [statusTooltip, setStatusTooltip] = useState<StatusTooltipData | null>(null)
 
   // Helper to check if a habit is completed for a given entry
   const isHabitCompleted = (entry: DailyEntryWithRelations, habit: SelectableHabitType): boolean => {
@@ -298,20 +307,27 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
 
     return indicators.map((indicator) => {
       const dayData = dates.map((date) => {
-        const entry = entriesByDate.get(date)
+        const entry = entriesByDate.get(date) || null
         const dateObj = parseISO(date)
 
+        let iconData
         if (indicator === 'mood') {
-          return getMoodIcon(entry?.mood_score ?? null)
-        }
-        if (indicator === 'weather') {
-          return getWeatherIcon(
+          iconData = getMoodIcon(entry?.mood_score ?? null)
+        } else if (indicator === 'weather') {
+          iconData = getWeatherIcon(
             entry?.weather_conditions ?? null,
             entry?.weather_temperature_high ?? null
           )
+        } else {
+          // work_location
+          iconData = getWorkLocationIcon(entry?.work_location ?? null, dateObj)
         }
-        // work_location
-        return getWorkLocationIcon(entry?.work_location ?? null, dateObj)
+
+        return {
+          ...iconData,
+          date,
+          entry,
+        }
       })
 
       return {
@@ -369,6 +385,26 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
 
   const handleRowLeave = () => {
     setTooltip(null)
+  }
+
+  const handleStatusHover = (
+    type: StatusIndicatorType,
+    date: string,
+    entry: DailyEntryWithRelations | null,
+    event: React.MouseEvent
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setStatusTooltip({
+      type,
+      date,
+      entry,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+    })
+  }
+
+  const handleStatusLeave = () => {
+    setStatusTooltip(null)
   }
 
   // Helper to render comparison with trend icon
@@ -448,7 +484,11 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                     return (
                       <td key={i} className="text-center align-middle">
                         {isWeather ? (
-                          <div className="inline-flex flex-col items-center justify-center gap-0">
+                          <div
+                            className="inline-flex flex-col items-center justify-center gap-0 cursor-pointer"
+                            onMouseEnter={(e) => handleStatusHover(row.indicator, dayData.date, dayData.entry, e)}
+                            onMouseLeave={handleStatusLeave}
+                          >
                             <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full', dayData.bg)}>
                               <IconComponent className={cn('h-3 w-3', dayData.color)} />
                             </span>
@@ -460,8 +500,9 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                           </div>
                         ) : (
                           <span
-                            className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
-                            title={dayData.label || undefined}
+                            className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-pointer', dayData.bg)}
+                            onMouseEnter={(e) => handleStatusHover(row.indicator, dayData.date, dayData.entry, e)}
+                            onMouseLeave={handleStatusLeave}
                           >
                             <IconComponent className={cn('h-3 w-3', dayData.color)} />
                           </span>
@@ -522,6 +563,112 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
               {renderComparison(calculatePeriodStats(tooltip.habit, 7), 'Last 7d')}
               {renderComparison(calculatePeriodStats(tooltip.habit, 30), 'Last 30d')}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status indicator tooltip */}
+      {statusTooltip && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: statusTooltip.x,
+            top: statusTooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px] max-w-[280px]">
+            <div className="font-medium text-gray-900 mb-1">
+              {format(parseISO(statusTooltip.date), 'MMM d, yyyy')}
+            </div>
+
+            {/* Mood tooltip content */}
+            {statusTooltip.type === 'mood' && (
+              <div className="space-y-1">
+                {statusTooltip.entry?.mood_score !== null && statusTooltip.entry?.mood_score !== undefined ? (
+                  <div className="text-blue-600 font-medium">
+                    Mood: {statusTooltip.entry.mood_score}/10
+                  </div>
+                ) : (
+                  <div className="text-gray-400">No mood recorded</div>
+                )}
+                {statusTooltip.entry?.notes && (
+                  <div className="text-gray-600 mt-1 italic break-words border-t pt-1">
+                    &quot;{statusTooltip.entry.notes}&quot;
+                  </div>
+                )}
+                {statusTooltip.entry?.life_events && statusTooltip.entry.life_events.length > 0 && (
+                  <div className="text-gray-500 mt-1 border-t pt-1">
+                    <div className="font-medium text-gray-700 mb-0.5">Events:</div>
+                    {statusTooltip.entry.life_events.map((event, idx) => (
+                      <div key={idx} className="text-gray-600">
+                        • {eventLabels[event.event_type]}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Weather tooltip content */}
+            {statusTooltip.type === 'weather' && (() => {
+              const entry = statusTooltip.entry
+              const hasWeatherData = entry?.weather_location ||
+                entry?.weather_temperature_high !== null ||
+                entry?.weather_temperature_low !== null
+              return (
+                <div className="space-y-1">
+                  {entry?.weather_location && (
+                    <div className="text-blue-600 font-medium">
+                      {entry.weather_location}
+                    </div>
+                  )}
+                  {(entry?.weather_temperature_high != null || entry?.weather_temperature_low != null) && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      {entry?.weather_temperature_high != null && (
+                        <span>High: {Math.round(entry.weather_temperature_high)}°</span>
+                      )}
+                      {entry?.weather_temperature_low != null && (
+                        <span>Low: {Math.round(entry.weather_temperature_low)}°</span>
+                      )}
+                    </div>
+                  )}
+                  {entry?.weather_conditions && (
+                    <div className="text-gray-600">
+                      {entry.weather_conditions}
+                    </div>
+                  )}
+                  {entry?.weather_precipitation !== null && entry?.weather_precipitation !== undefined && entry.weather_precipitation > 0 && (
+                    <div className="text-gray-600">
+                      Precipitation: {entry.weather_precipitation}&quot;
+                    </div>
+                  )}
+                  {entry?.weather_humidity !== null && entry?.weather_humidity !== undefined && (
+                    <div className="text-gray-600">
+                      Humidity: {entry.weather_humidity}%
+                    </div>
+                  )}
+                  {!hasWeatherData && (
+                    <div className="text-gray-400">No weather data</div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Work location tooltip content */}
+            {statusTooltip.type === 'work_location' && (
+              <div>
+                {statusTooltip.entry?.work_location ? (
+                  <div className="text-purple-600 font-medium">
+                    {workLocationLabels[statusTooltip.entry.work_location]}
+                  </div>
+                ) : (
+                  <div className="text-gray-400">
+                    {isWeekend(parseISO(statusTooltip.date)) ? 'Weekend' : 'No data'}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
