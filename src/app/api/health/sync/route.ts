@@ -4,9 +4,15 @@ import { createServiceClient } from '@/lib/supabase/server'
 interface SyncRequest {
   token: string
   steps?: number
-  sleep?: number // Hours of sleep
+  sleep?: number // Hours of sleep (legacy, kept for backwards compatibility)
   miles?: number // Walking + running distance in miles
   date?: string // YYYY-MM-DD format, defaults to today
+  // Individual sleep stages (in minutes)
+  sleep_in_bed?: number
+  sleep_awake?: number
+  sleep_rem?: number
+  sleep_core?: number
+  sleep_deep?: number
 }
 
 export async function POST(request: NextRequest) {
@@ -25,10 +31,16 @@ export async function POST(request: NextRequest) {
     const hasSteps = typeof body.steps === 'number'
     const hasSleep = typeof body.sleep === 'number'
     const hasMiles = typeof body.miles === 'number'
+    const hasSleepInBed = typeof body.sleep_in_bed === 'number'
+    const hasSleepAwake = typeof body.sleep_awake === 'number'
+    const hasSleepRem = typeof body.sleep_rem === 'number'
+    const hasSleepCore = typeof body.sleep_core === 'number'
+    const hasSleepDeep = typeof body.sleep_deep === 'number'
+    const hasAnySleepStage = hasSleepInBed || hasSleepAwake || hasSleepRem || hasSleepCore || hasSleepDeep
 
-    if (!hasSteps && !hasSleep && !hasMiles) {
+    if (!hasSteps && !hasSleep && !hasMiles && !hasAnySleepStage) {
       return NextResponse.json(
-        { error: 'At least one health metric (steps, sleep, or miles) is required' },
+        { error: 'At least one health metric (steps, sleep, miles, or sleep stages) is required' },
         { status: 400 }
       )
     }
@@ -51,6 +63,39 @@ export async function POST(request: NextRequest) {
     if (hasMiles && body.miles! < 0) {
       return NextResponse.json(
         { error: 'Invalid miles value - must be a non-negative number' },
+        { status: 400 }
+      )
+    }
+
+    // Validate sleep stages (in minutes, max 24 hours = 1440 minutes)
+    const maxSleepMinutes = 1440
+    if (hasSleepInBed && (body.sleep_in_bed! < 0 || body.sleep_in_bed! > maxSleepMinutes)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_in_bed value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    if (hasSleepAwake && (body.sleep_awake! < 0 || body.sleep_awake! > maxSleepMinutes)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_awake value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    if (hasSleepRem && (body.sleep_rem! < 0 || body.sleep_rem! > maxSleepMinutes)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_rem value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    if (hasSleepCore && (body.sleep_core! < 0 || body.sleep_core! > maxSleepMinutes)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_core value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    if (hasSleepDeep && (body.sleep_deep! < 0 || body.sleep_deep! > maxSleepMinutes)) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_deep value - must be between 0 and 1440 minutes' },
         { status: 400 }
       )
     }
@@ -91,7 +136,7 @@ export async function POST(request: NextRequest) {
     // Check if entry exists for this date
     const { data: existingEntry } = await supabase
       .from('daily_entries')
-      .select('id, steps, sleep_hours, miles_walked')
+      .select('id, steps, sleep_hours, miles_walked, sleep_in_bed_minutes, sleep_awake_minutes, sleep_rem_minutes, sleep_core_minutes, sleep_deep_minutes')
       .eq('user_id', profile.id)
       .eq('entry_date', entryDate)
       .single()
@@ -101,6 +146,13 @@ export async function POST(request: NextRequest) {
     if (hasSteps) updateData.steps = body.steps!
     if (hasSleep) updateData.sleep_hours = body.sleep!
     if (hasMiles) updateData.miles_walked = body.miles!
+    if (hasSleepInBed) updateData.sleep_in_bed_minutes = body.sleep_in_bed!
+    if (hasSleepAwake) updateData.sleep_awake_minutes = body.sleep_awake!
+    if (hasSleepRem) updateData.sleep_rem_minutes = body.sleep_rem!
+    if (hasSleepCore) updateData.sleep_core_minutes = body.sleep_core!
+    if (hasSleepDeep) updateData.sleep_deep_minutes = body.sleep_deep!
+
+    const selectFields = 'id, entry_date, steps, sleep_hours, miles_walked, sleep_in_bed_minutes, sleep_awake_minutes, sleep_rem_minutes, sleep_core_minutes, sleep_deep_minutes'
 
     let result
     if (existingEntry) {
@@ -109,7 +161,7 @@ export async function POST(request: NextRequest) {
         .from('daily_entries')
         .update(updateData)
         .eq('id', existingEntry.id)
-        .select('id, entry_date, steps, sleep_hours, miles_walked')
+        .select(selectFields)
         .single()
 
       if (error) {
@@ -126,6 +178,11 @@ export async function POST(request: NextRequest) {
           steps: existingEntry.steps,
           sleep_hours: existingEntry.sleep_hours,
           miles_walked: existingEntry.miles_walked,
+          sleep_in_bed_minutes: existingEntry.sleep_in_bed_minutes,
+          sleep_awake_minutes: existingEntry.sleep_awake_minutes,
+          sleep_rem_minutes: existingEntry.sleep_rem_minutes,
+          sleep_core_minutes: existingEntry.sleep_core_minutes,
+          sleep_deep_minutes: existingEntry.sleep_deep_minutes,
         },
       }
     } else {
@@ -137,7 +194,7 @@ export async function POST(request: NextRequest) {
           entry_date: entryDate,
           ...updateData,
         })
-        .select('id, entry_date, steps, sleep_hours, miles_walked')
+        .select(selectFields)
         .single()
 
       if (error) {
@@ -171,6 +228,12 @@ export async function GET(request: NextRequest) {
   const sleepParam = searchParams.get('sleep')
   const milesParam = searchParams.get('miles')
   const date = searchParams.get('date')
+  // Sleep stage params (in minutes)
+  const sleepInBedParam = searchParams.get('sleep_in_bed')
+  const sleepAwakeParam = searchParams.get('sleep_awake')
+  const sleepRemParam = searchParams.get('sleep_rem')
+  const sleepCoreParam = searchParams.get('sleep_core')
+  const sleepDeepParam = searchParams.get('sleep_deep')
 
   if (!token) {
     return NextResponse.json(
@@ -180,9 +243,10 @@ export async function GET(request: NextRequest) {
   }
 
   // At least one health metric must be provided
-  if (!stepsParam && !sleepParam && !milesParam) {
+  const hasAnySleepStageParam = sleepInBedParam || sleepAwakeParam || sleepRemParam || sleepCoreParam || sleepDeepParam
+  if (!stepsParam && !sleepParam && !milesParam && !hasAnySleepStageParam) {
     return NextResponse.json(
-      { error: 'At least one health metric (steps, sleep, or miles) is required' },
+      { error: 'At least one health metric (steps, sleep, miles, or sleep stages) is required' },
       { status: 400 }
     )
   }
@@ -227,9 +291,67 @@ export async function GET(request: NextRequest) {
     body.miles = miles
   }
 
+  // Parse and validate sleep stage params (in minutes, max 1440)
+  const maxSleepMinutes = 1440
+  if (sleepInBedParam) {
+    const val = parseInt(sleepInBedParam, 10)
+    if (isNaN(val) || val < 0 || val > maxSleepMinutes) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_in_bed value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    body.sleep_in_bed = val
+  }
+  if (sleepAwakeParam) {
+    const val = parseInt(sleepAwakeParam, 10)
+    if (isNaN(val) || val < 0 || val > maxSleepMinutes) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_awake value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    body.sleep_awake = val
+  }
+  if (sleepRemParam) {
+    const val = parseInt(sleepRemParam, 10)
+    if (isNaN(val) || val < 0 || val > maxSleepMinutes) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_rem value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    body.sleep_rem = val
+  }
+  if (sleepCoreParam) {
+    const val = parseInt(sleepCoreParam, 10)
+    if (isNaN(val) || val < 0 || val > maxSleepMinutes) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_core value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    body.sleep_core = val
+  }
+  if (sleepDeepParam) {
+    const val = parseInt(sleepDeepParam, 10)
+    if (isNaN(val) || val < 0 || val > maxSleepMinutes) {
+      return NextResponse.json(
+        { error: 'Invalid sleep_deep value - must be between 0 and 1440 minutes' },
+        { status: 400 }
+      )
+    }
+    body.sleep_deep = val
+  }
+
   const hasSteps = typeof body.steps === 'number'
   const hasSleep = typeof body.sleep === 'number'
   const hasMiles = typeof body.miles === 'number'
+  const hasSleepInBed = typeof body.sleep_in_bed === 'number'
+  const hasSleepAwake = typeof body.sleep_awake === 'number'
+  const hasSleepRem = typeof body.sleep_rem === 'number'
+  const hasSleepCore = typeof body.sleep_core === 'number'
+  const hasSleepDeep = typeof body.sleep_deep === 'number'
 
   // Parse and validate date
   let entryDate: string
@@ -262,10 +384,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const selectFields = 'id, entry_date, steps, sleep_hours, miles_walked, sleep_in_bed_minutes, sleep_awake_minutes, sleep_rem_minutes, sleep_core_minutes, sleep_deep_minutes'
+
     // Check if entry exists for this date
     const { data: existingEntry } = await supabase
       .from('daily_entries')
-      .select('id, steps, sleep_hours, miles_walked')
+      .select(selectFields)
       .eq('user_id', profile.id)
       .eq('entry_date', entryDate)
       .single()
@@ -275,6 +399,11 @@ export async function GET(request: NextRequest) {
     if (hasSteps) updateData.steps = body.steps!
     if (hasSleep) updateData.sleep_hours = body.sleep!
     if (hasMiles) updateData.miles_walked = body.miles!
+    if (hasSleepInBed) updateData.sleep_in_bed_minutes = body.sleep_in_bed!
+    if (hasSleepAwake) updateData.sleep_awake_minutes = body.sleep_awake!
+    if (hasSleepRem) updateData.sleep_rem_minutes = body.sleep_rem!
+    if (hasSleepCore) updateData.sleep_core_minutes = body.sleep_core!
+    if (hasSleepDeep) updateData.sleep_deep_minutes = body.sleep_deep!
 
     let result
     if (existingEntry) {
@@ -282,7 +411,7 @@ export async function GET(request: NextRequest) {
         .from('daily_entries')
         .update(updateData)
         .eq('id', existingEntry.id)
-        .select('id, entry_date, steps, sleep_hours, miles_walked')
+        .select(selectFields)
         .single()
 
       if (error) {
@@ -298,6 +427,11 @@ export async function GET(request: NextRequest) {
           steps: existingEntry.steps,
           sleep_hours: existingEntry.sleep_hours,
           miles_walked: existingEntry.miles_walked,
+          sleep_in_bed_minutes: existingEntry.sleep_in_bed_minutes,
+          sleep_awake_minutes: existingEntry.sleep_awake_minutes,
+          sleep_rem_minutes: existingEntry.sleep_rem_minutes,
+          sleep_core_minutes: existingEntry.sleep_core_minutes,
+          sleep_deep_minutes: existingEntry.sleep_deep_minutes,
         },
       }
     } else {
@@ -308,7 +442,7 @@ export async function GET(request: NextRequest) {
           entry_date: entryDate,
           ...updateData,
         })
-        .select('id, entry_date, steps, sleep_hours, miles_walked')
+        .select(selectFields)
         .single()
 
       if (error) {

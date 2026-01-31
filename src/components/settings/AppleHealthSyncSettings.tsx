@@ -178,11 +178,47 @@ export function AppleHealthSyncSettings({
               <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
               <p><strong>Set variable</strong> &quot;Steps&quot; to Statistics</p>
 
-              <p className="mt-2 text-gray-500"># Get sleep duration (samples from yesterday)</p>
+              <p className="mt-2 text-gray-500"># Get each sleep stage duration (in minutes)</p>
+
+              <p className="mt-1 text-gray-400 text-[10px]">## In Bed time</p>
               <p><strong>Find Health Samples</strong></p>
-              <p className="pl-4">Type: Sleep Analysis</p>
+              <p className="pl-4">Type: In Bed</p>
               <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
-              <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;SleepInBed&quot; to Statistics</p>
+
+              <p className="mt-1 text-gray-400 text-[10px]">## Awake time</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: Awake</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;SleepAwake&quot; to Statistics</p>
+
+              <p className="mt-1 text-gray-400 text-[10px]">## REM sleep</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: REM Sleep</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;SleepRem&quot; to Statistics</p>
+
+              <p className="mt-1 text-gray-400 text-[10px]">## Core (light) sleep</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: Core Sleep</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;SleepCore&quot; to Statistics</p>
+
+              <p className="mt-1 text-gray-400 text-[10px]">## Deep sleep</p>
+              <p><strong>Find Health Samples</strong></p>
+              <p className="pl-4">Type: Deep Sleep</p>
+              <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;SleepDeep&quot; to Statistics</p>
 
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s walking + running distance</p>
               <p><strong>Find Health Samples</strong></p>
@@ -197,11 +233,11 @@ export function AppleHealthSyncSettings({
               <p className="mt-2 text-gray-500"># Send to your tracker</p>
               <p><strong>Get Contents of URL</strong></p>
               <p className="pl-4 break-all">
-                {window.location.origin}/api/health/sync?token={token}&amp;steps=[Steps]&amp;sleep=[Sleep]&amp;miles=[Miles]
+                {window.location.origin}/api/health/sync?token={token}&amp;steps=[Steps]&amp;miles=[Miles]&amp;sleep_in_bed=[SleepInBed]&amp;sleep_awake=[SleepAwake]&amp;sleep_rem=[SleepRem]&amp;sleep_core=[SleepCore]&amp;sleep_deep=[SleepDeep]
               </p>
             </div>
             <p className="text-xs text-blue-700">
-              <strong>Important:</strong> Use &quot;Calculate Statistics&quot; with &quot;Sum&quot; to properly aggregate data from multiple sources (phone + watch). The date filter captures yesterday&apos;s full calendar day (midnight to midnight). Sleep is in hours, miles is decimal.
+              <strong>Important:</strong> Use &quot;Calculate Statistics&quot; with &quot;Sum&quot; to properly aggregate data from multiple sources (phone + watch). The date filter captures yesterday&apos;s full calendar day (midnight to midnight). All sleep values are in minutes (the sum of durations).
             </p>
             <ol start={3} className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>Optionally, set up an <strong>Automation</strong> to run this Shortcut daily at bedtime</li>

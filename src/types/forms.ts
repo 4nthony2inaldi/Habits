@@ -138,6 +138,12 @@ export const dailyEntrySchema = z.object({
   steps: z.number().min(0).nullable(),
   sleep_hours: z.number().min(0).max(24).nullable(),
   miles_walked: z.number().min(0).nullable(),
+  // Individual sleep stages (in minutes, from Apple Health)
+  sleep_in_bed_minutes: z.number().min(0).max(1440).nullable(),
+  sleep_awake_minutes: z.number().min(0).max(1440).nullable(),
+  sleep_rem_minutes: z.number().min(0).max(1440).nullable(),
+  sleep_core_minutes: z.number().min(0).max(1440).nullable(),
+  sleep_deep_minutes: z.number().min(0).max(1440).nullable(),
   screen_time: z.number().min(0).nullable(),
   sex: z.number().min(0).max(10).default(0),
 
