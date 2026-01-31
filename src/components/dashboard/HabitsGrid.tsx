@@ -2,8 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { Check, X, Star, ListChecks, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { format, subDays, parseISO, isWithinInterval } from 'date-fns'
+import {
+  Check, X, Star, ListChecks, TrendingUp, TrendingDown, Minus,
+  // Status indicator icons
+  Smile, Meh, Frown, CircleHelp,
+  Sun, Cloud, CloudRain, CloudSnow, CloudSun, Thermometer,
+  Home, Building2, Briefcase, Calendar, Palmtree
+} from 'lucide-react'
+import { format, subDays, parseISO, isWithinInterval, isWeekend } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
@@ -35,6 +41,81 @@ interface HabitsGridProps {
   dateRange: { start: Date; end: Date }
   title?: string
   subtitle?: string
+}
+
+// Status indicator types (not counted in habits score)
+type StatusIndicatorType = 'mood' | 'weather' | 'work_location'
+
+const statusIndicatorLabels: Record<StatusIndicatorType, string> = {
+  mood: 'Mood',
+  weather: 'Weather',
+  work_location: 'Location',
+}
+
+// Helper to get mood icon based on score (0-10 scale)
+function getMoodIcon(moodScore: number | null) {
+  if (moodScore === null) {
+    return { icon: CircleHelp, color: 'text-gray-300', bg: 'bg-gray-50', label: 'No data' }
+  }
+  if (moodScore >= 7) {
+    return { icon: Smile, color: 'text-green-500', bg: 'bg-green-100', label: `${moodScore}` }
+  }
+  if (moodScore >= 4) {
+    return { icon: Meh, color: 'text-yellow-500', bg: 'bg-yellow-100', label: `${moodScore}` }
+  }
+  return { icon: Frown, color: 'text-red-500', bg: 'bg-red-100', label: `${moodScore}` }
+}
+
+// Helper to get weather icon based on conditions
+function getWeatherIcon(conditions: string | null, tempHigh: number | null) {
+  if (conditions === null && tempHigh === null) {
+    return { icon: Thermometer, color: 'text-gray-300', bg: 'bg-gray-50', label: null }
+  }
+
+  const conditionLower = (conditions || '').toLowerCase()
+  let icon = Sun
+  let color = 'text-yellow-500'
+  let bg = 'bg-yellow-100'
+
+  if (conditionLower.includes('snow') || conditionLower.includes('sleet')) {
+    icon = CloudSnow
+    color = 'text-blue-400'
+    bg = 'bg-blue-100'
+  } else if (conditionLower.includes('rain') || conditionLower.includes('drizzle') || conditionLower.includes('shower')) {
+    icon = CloudRain
+    color = 'text-blue-500'
+    bg = 'bg-blue-100'
+  } else if (conditionLower.includes('cloud') || conditionLower.includes('overcast')) {
+    icon = Cloud
+    color = 'text-gray-500'
+    bg = 'bg-gray-100'
+  } else if (conditionLower.includes('partly') || conditionLower.includes('partial')) {
+    icon = CloudSun
+    color = 'text-yellow-500'
+    bg = 'bg-yellow-100'
+  }
+
+  return { icon, color, bg, label: tempHigh !== null ? `${Math.round(tempHigh)}°` : null }
+}
+
+// Helper to get work location icon with weekend/PTO logic
+function getWorkLocationIcon(workLocation: string | null, date: Date) {
+  const weekend = isWeekend(date)
+
+  if (workLocation === 'home') {
+    return { icon: Home, color: 'text-blue-500', bg: 'bg-blue-100', label: 'WFH' }
+  }
+  if (workLocation === 'office') {
+    return { icon: Building2, color: 'text-purple-500', bg: 'bg-purple-100', label: 'Office' }
+  }
+  if (workLocation === 'field') {
+    return { icon: Briefcase, color: 'text-orange-500', bg: 'bg-orange-100', label: 'Travel' }
+  }
+  if (workLocation === 'off' || weekend) {
+    return { icon: Palmtree, color: 'text-green-500', bg: 'bg-green-100', label: weekend ? 'Weekend' : 'Off' }
+  }
+  // Unknown on weekday = PTO
+  return { icon: Calendar, color: 'text-teal-500', bg: 'bg-teal-100', label: 'PTO' }
 }
 
 export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
@@ -201,6 +282,46 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     return headers
   }, [showDays, dateRange.end])
 
+  // Compute status indicator data for each day (not included in habits score)
+  const statusIndicatorData = useMemo(() => {
+    const dates: string[] = []
+    for (let i = 0; i < showDays; i++) {
+      dates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
+    }
+
+    const entriesByDate = new Map<string, DailyEntryWithRelations>()
+    entries.forEach((entry) => {
+      entriesByDate.set(entry.entry_date, entry)
+    })
+
+    const indicators: StatusIndicatorType[] = ['mood', 'weather', 'work_location']
+
+    return indicators.map((indicator) => {
+      const dayData = dates.map((date) => {
+        const entry = entriesByDate.get(date)
+        const dateObj = parseISO(date)
+
+        if (indicator === 'mood') {
+          return getMoodIcon(entry?.mood_score ?? null)
+        }
+        if (indicator === 'weather') {
+          return getWeatherIcon(
+            entry?.weather_conditions ?? null,
+            entry?.weather_temperature_high ?? null
+          )
+        }
+        // work_location
+        return getWorkLocationIcon(entry?.work_location ?? null, dateObj)
+      })
+
+      return {
+        indicator,
+        label: statusIndicatorLabels[indicator],
+        days: dayData,
+      }
+    })
+  }, [entries, showDays, dateRange.end])
+
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
     if (status === null) {
       return (
@@ -307,6 +428,41 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
             </tr>
           </thead>
           <tbody>
+            {/* Status indicators (mood, weather, work location) - not counted in habits score */}
+            {statusIndicatorData.map((row) => (
+              <tr
+                key={row.indicator}
+                className="border-t border-gray-100 bg-gray-50/50"
+              >
+                <td className="align-middle py-1">
+                  <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+                    {row.label}
+                  </span>
+                </td>
+                {row.days.map((dayData, i) => {
+                  const IconComponent = dayData.icon
+                  return (
+                    <td key={i} className="text-center align-middle py-1">
+                      <div className="inline-flex items-center justify-center gap-0.5">
+                        <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full', dayData.bg)}>
+                          <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                        </span>
+                        {dayData.label && (
+                          <span className="text-[10px] text-gray-600 font-medium">
+                            {dayData.label}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+            {/* Separator row between status indicators and habits */}
+            <tr className="h-1">
+              <td colSpan={showDays + 1} className="border-b-2 border-gray-200"></td>
+            </tr>
+            {/* Habit rows */}
             {data.map((row, idx) => (
               <tr
                 key={row.habit}
