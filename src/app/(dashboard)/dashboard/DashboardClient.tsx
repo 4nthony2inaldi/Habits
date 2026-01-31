@@ -14,6 +14,7 @@ import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/Das
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
 import { Loader2, Lock, Unlock } from 'lucide-react'
+import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 
 interface DashboardClientProps {
   currentUser: Profile
@@ -30,6 +31,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     getWidgetConfig(currentUser)
   )
   const [gridLocked, setGridLocked] = useState(true)
+  const { controlsCollapsed } = useDashboardControls()
 
   const { data: entries, isLoading } = useEntries({
     userId: selectedUserId,
@@ -70,44 +72,46 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
 
   return (
     <div className="space-y-4">
-      {/* Compact header with filters */}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {users.length > 1 && currentUser.is_admin && (
-          <UserSelector
-            users={users}
-            selectedUserId={selectedUserId}
-            onUserChange={setSelectedUserId}
-            className="w-40"
-          />
-        )}
-        <DateRangePicker
-          startDate={dateRange.start}
-          endDate={dateRange.end}
-          onRangeChange={(start, end) => setDateRange({ start, end })}
-        />
-        <DashboardCustomizer
-          profile={currentUser}
-          config={widgetConfig}
-          onConfigChange={setWidgetConfig}
-        />
-        <button
-          onClick={() => setGridLocked(!gridLocked)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
-        >
-          {gridLocked ? (
-            <>
-              <Lock className="h-4 w-4" />
-              <span className="hidden sm:inline">Locked</span>
-            </>
-          ) : (
-            <>
-              <Unlock className="h-4 w-4" />
-              <span className="hidden sm:inline">Unlocked</span>
-            </>
+      {/* Compact header with filters - collapsible */}
+      {!controlsCollapsed && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {users.length > 1 && currentUser.is_admin && (
+            <UserSelector
+              users={users}
+              selectedUserId={selectedUserId}
+              onUserChange={setSelectedUserId}
+              className="w-40"
+            />
           )}
-        </button>
-      </div>
+          <DateRangePicker
+            startDate={dateRange.start}
+            endDate={dateRange.end}
+            onRangeChange={(start, end) => setDateRange({ start, end })}
+          />
+          <DashboardCustomizer
+            profile={currentUser}
+            config={widgetConfig}
+            onConfigChange={setWidgetConfig}
+          />
+          <button
+            onClick={() => setGridLocked(!gridLocked)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
+          >
+            {gridLocked ? (
+              <>
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Locked</span>
+              </>
+            ) : (
+              <>
+                <Unlock className="h-4 w-4" />
+                <span className="hidden sm:inline">Unlocked</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -115,17 +119,19 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <SummaryCards
-            moodAverage={stats.moodStats.average}
-            moodTrend={stats.moodStats.trend}
-            healthScore={stats.healthScore}
-            busyScore={stats.busyScore}
-            totalDays={stats.totalDays}
-            showHappy={widgetConfig.kpiVisibility.happyKpi}
-            showHealthy={widgetConfig.kpiVisibility.healthyKpi}
-            showBusy={widgetConfig.kpiVisibility.busyKpi}
-          />
+          {/* Summary Cards - collapsible */}
+          {!controlsCollapsed && (
+            <SummaryCards
+              moodAverage={stats.moodStats.average}
+              moodTrend={stats.moodStats.trend}
+              healthScore={stats.healthScore}
+              busyScore={stats.busyScore}
+              totalDays={stats.totalDays}
+              showHappy={widgetConfig.kpiVisibility.happyKpi}
+              showHealthy={widgetConfig.kpiVisibility.healthyKpi}
+              showBusy={widgetConfig.kpiVisibility.busyKpi}
+            />
+          )}
 
           {/* Draggable Widget Grid */}
           <DashboardGrid

@@ -18,7 +18,10 @@ import {
   Flame,
   Shield,
   BarChart3,
+  PanelTopClose,
+  PanelTop,
 } from 'lucide-react'
+import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 import type { Profile } from '@/types/database'
 
 interface HeaderProps {
@@ -40,6 +43,8 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { controlsCollapsed, toggleControls } = useDashboardControls()
+  const isDashboard = pathname === '/dashboard'
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -100,6 +105,21 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center space-x-4">
+            {/* Dashboard controls toggle - only on dashboard page */}
+            {isDashboard && (
+              <button
+                onClick={toggleControls}
+                className="hidden sm:flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                title={controlsCollapsed ? 'Show dashboard controls' : 'Hide dashboard controls'}
+              >
+                {controlsCollapsed ? (
+                  <PanelTop className="h-5 w-5" />
+                ) : (
+                  <PanelTopClose className="h-5 w-5" />
+                )}
+              </button>
+            )}
+
             {/* Streak indicator */}
             {streak > 0 && (
               <div className="hidden sm:flex items-center space-x-1 text-orange-600 font-medium">
