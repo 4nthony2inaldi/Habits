@@ -197,13 +197,14 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             <p className="text-[10px] text-indigo-600">Nights Away</p>
             {stats.sleepCities.length > 0 && (
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                  <div className="font-medium mb-1">Places stayed:</div>
-                  {stats.sleepCities.map((c, i) => (
-                    <div key={i} className="text-gray-300">{c.name} ({c.nights})</div>
-                  ))}
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
+                  <div className="font-medium text-gray-900 mb-1">Places stayed</div>
+                  <div className="text-gray-500 border-t pt-1 space-y-0.5">
+                    {stats.sleepCities.map((c, i) => (
+                      <div key={i}>{c.name} ({c.nights})</div>
+                    ))}
+                  </div>
                 </div>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
               </div>
             )}
           </div>
@@ -229,13 +230,14 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             <p className="text-[10px] text-emerald-600">Cities</p>
             {stats.cities.length > 0 && (
               <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                  <div className="font-medium mb-1">Cities visited:</div>
-                  {[...stats.cities].sort((a, b) => b.days - a.days).map((c, i) => (
-                    <div key={i} className="text-gray-300">{c.name} ({c.days} days)</div>
-                  ))}
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
+                  <div className="font-medium text-gray-900 mb-1">Cities visited</div>
+                  <div className="text-gray-500 border-t pt-1 space-y-0.5">
+                    {[...stats.cities].sort((a, b) => b.days - a.days).map((c, i) => (
+                      <div key={i}>{c.name} ({c.days})</div>
+                    ))}
+                  </div>
                 </div>
-                <div className="absolute right-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
               </div>
             )}
           </div>
