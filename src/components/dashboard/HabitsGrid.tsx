@@ -444,14 +444,28 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                   </td>
                   {row.days.map((dayData, i) => {
                     const IconComponent = dayData.icon
+                    const isWeather = row.indicator === 'weather'
                     return (
                       <td key={i} className="text-center align-middle">
-                        <span
-                          className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
-                          title={dayData.label || undefined}
-                        >
-                          <IconComponent className={cn('h-3 w-3', dayData.color)} />
-                        </span>
+                        {isWeather ? (
+                          <div className="inline-flex flex-col items-center justify-center gap-0">
+                            <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full', dayData.bg)}>
+                              <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                            </span>
+                            {dayData.label && (
+                              <span className="text-[9px] font-medium text-gray-500 leading-none">
+                                {dayData.label}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
+                            title={dayData.label || undefined}
+                          >
+                            <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                          </span>
+                        )}
                       </td>
                     )
                   })}
