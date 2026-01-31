@@ -11,6 +11,8 @@ interface NominatimResult {
   lat: string
   lon: string
   type: string
+  class: string
+  importance: number
   address?: {
     city?: string
     town?: string
@@ -93,12 +95,13 @@ export function CityAutocomplete({
     setIsLoading(true)
     try {
       // Using Nominatim API - free geocoding from OpenStreetMap
+      // Search for places (cities, towns, villages) with dedupe to avoid duplicates
       const params = new URLSearchParams({
         q: query,
         format: 'json',
         addressdetails: '1',
-        limit: '5',
-        featuretype: 'city',
+        limit: '8',
+        dedupe: '1',
       })
 
       const response = await fetch(
@@ -114,8 +117,27 @@ export function CityAutocomplete({
       if (!response.ok) throw new Error('Search failed')
 
       const data: NominatimResult[] = await response.json()
-      setSuggestions(data)
-      setIsOpen(data.length > 0)
+
+      // Filter to prioritize populated places (cities, towns, villages, etc.)
+      // class=place or class=boundary with type=administrative are what we want
+      const placeTypes = ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb', 'neighbourhood', 'administrative']
+      const filtered = data
+        .filter(result => {
+          // Include if it's a place class or boundary/administrative
+          const isPlaceClass = result.class === 'place'
+          const isBoundary = result.class === 'boundary' && result.type === 'administrative'
+          const isPlaceType = placeTypes.includes(result.type)
+          const hasPlace = result.address && (result.address.city || result.address.town || result.address.village)
+          return isPlaceClass || isBoundary || isPlaceType || hasPlace
+        })
+        .sort((a, b) => (b.importance || 0) - (a.importance || 0))
+        .slice(0, 5)
+
+      // If no filtered results, show first 5 of any results as fallback
+      const results = filtered.length > 0 ? filtered : data.slice(0, 5)
+
+      setSuggestions(results)
+      setIsOpen(results.length > 0)
       setHighlightedIndex(-1)
     } catch (error) {
       console.error('Geocoding error:', error)
