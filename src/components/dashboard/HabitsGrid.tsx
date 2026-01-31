@@ -429,41 +429,47 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
           </thead>
           <tbody>
             {/* Status indicators (mood, weather, work location) - not counted in habits score */}
-            {statusIndicatorData.map((row) => (
-              <tr
-                key={row.indicator}
-                className="border-t border-gray-100 bg-gray-50/50"
-              >
-                <td className="align-middle py-1">
-                  <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
-                    {row.label}
-                  </span>
-                </td>
-                {row.days.map((dayData, i) => {
-                  const IconComponent = dayData.icon
-                  return (
-                    <td key={i} className="text-center align-middle py-1">
-                      <span
-                        className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
-                        title={dayData.label || undefined}
-                      >
-                        <IconComponent className={cn('h-3 w-3', dayData.color)} />
-                      </span>
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
+            {statusIndicatorData.map((row) => {
+              const totalRows = statusIndicatorData.length + data.length
+              return (
+                <tr
+                  key={row.indicator}
+                  className="border-t border-gray-100 bg-gray-50/50"
+                  style={{ height: `${100 / totalRows}%` }}
+                >
+                  <td className="align-middle">
+                    <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+                      {row.label}
+                    </span>
+                  </td>
+                  {row.days.map((dayData, i) => {
+                    const IconComponent = dayData.icon
+                    return (
+                      <td key={i} className="text-center align-middle">
+                        <span
+                          className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
+                          title={dayData.label || undefined}
+                        >
+                          <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                        </span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
             {/* Separator row between status indicators and habits */}
             <tr className="h-1">
               <td colSpan={showDays + 1} className="border-b-2 border-gray-200"></td>
             </tr>
             {/* Habit rows */}
-            {data.map((row, idx) => (
-              <tr
-                key={row.habit}
-                className="border-t border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                style={{ height: `${100 / data.length}%` }}
+            {data.map((row, idx) => {
+              const totalRows = statusIndicatorData.length + data.length
+              return (
+                <tr
+                  key={row.habit}
+                  className="border-t border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                  style={{ height: `${100 / totalRows}%` }}
                 onMouseEnter={(e) => handleRowHover(row, e)}
                 onMouseLeave={handleRowLeave}
               >
@@ -478,7 +484,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                   </td>
                 ))}
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
