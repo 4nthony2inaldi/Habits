@@ -156,28 +156,35 @@ export function AppleHealthSyncSettings({
               <li>Create a new shortcut with these actions:</li>
             </ol>
             <div className="bg-white rounded p-3 text-xs font-mono space-y-1 text-gray-700">
-              <p className="text-gray-500"># Calculate yesterday&apos;s date</p>
+              <p className="text-gray-500"># Calculate start of today (midnight)</p>
               <p><strong>Date</strong></p>
-              <p className="pl-4">Add -1 days to Current Date</p>
-              <p><strong>Set variable</strong> &quot;Yesterday&quot; to Date</p>
+              <p className="pl-4">Current Date</p>
+              <p><strong>Adjust Date</strong></p>
+              <p className="pl-4">Get Start of Day in [Date]</p>
+              <p><strong>Set variable</strong> &quot;StartOfToday&quot; to Adjusted Date</p>
 
-              <p className="mt-2 text-gray-500"># Get yesterday&apos;s steps</p>
+              <p className="mt-2 text-gray-500"># Calculate start of yesterday (midnight)</p>
+              <p><strong>Adjust Date</strong></p>
+              <p className="pl-4">Subtract 1 day from [StartOfToday]</p>
+              <p><strong>Set variable</strong> &quot;StartOfYesterday&quot; to Adjusted Date</p>
+
+              <p className="mt-2 text-gray-500"># Get yesterday&apos;s steps (full calendar day)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
-              <p className="pl-4">Start Date: is on [Yesterday]</p>
+              <p className="pl-4">Start Date: is between [StartOfYesterday] and [StartOfToday]</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
 
-              <p className="mt-2 text-gray-500"># Get sleep duration (last night)</p>
+              <p className="mt-2 text-gray-500"># Get sleep duration (samples from yesterday)</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Sleep Analysis</p>
-              <p className="pl-4">Start Date: is on [Yesterday]</p>
+              <p className="pl-4">Start Date: is between [StartOfYesterday] and [StartOfToday]</p>
               <p><strong>Set variable</strong> &quot;Sleep&quot; to Health Samples</p>
 
               <p className="mt-2 text-gray-500"># Get yesterday&apos;s walking + running distance</p>
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Walking + Running Distance</p>
-              <p className="pl-4">Start Date: is on [Yesterday]</p>
+              <p className="pl-4">Start Date: is between [StartOfYesterday] and [StartOfToday]</p>
               <p className="pl-4">Group By: Day</p>
               <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
 
@@ -188,7 +195,7 @@ export function AppleHealthSyncSettings({
               </p>
             </div>
             <p className="text-xs text-blue-700">
-              <strong>Note:</strong> You can sync any combination of these metrics. Sleep is in hours, miles is decimal.
+              <strong>Important:</strong> Use &quot;is between&quot; with start of day boundaries to capture the full calendar day. Sleep is in hours, miles is decimal.
             </p>
             <ol start={3} className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>Optionally, set up an <strong>Automation</strong> to run this Shortcut daily at bedtime</li>
