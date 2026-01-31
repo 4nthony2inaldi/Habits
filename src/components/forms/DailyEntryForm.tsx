@@ -1044,7 +1044,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                               lat,
                               lng
                             )
-                            setValue('miles_wake', miles)
+                            setValue('miles_wake', miles, { shouldDirty: true })
                           }
                         }}
                         placeholder="City"
@@ -1074,7 +1074,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                               lat,
                               lng
                             )
-                            setValue('miles_noon', miles)
+                            setValue('miles_noon', miles, { shouldDirty: true })
                           }
                         }}
                         placeholder="City"
@@ -1104,7 +1104,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                               lat,
                               lng
                             )
-                            setValue('miles_sleep', miles)
+                            setValue('miles_sleep', miles, { shouldDirty: true })
                           }
                         }}
                         placeholder="City"
