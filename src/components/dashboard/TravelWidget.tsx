@@ -189,17 +189,23 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       <div className="flex-1 min-h-0 flex flex-col gap-3">
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
-          <div
-            className="text-center p-2 bg-indigo-50 rounded-lg cursor-help"
-            title={stats.sleepCities.length > 0
-              ? `Places stayed:\n${stats.sleepCities.map(c => `${c.name} (${c.nights})`).join('\n')}`
-              : undefined}
-          >
+          <div className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
             <p className="text-lg font-bold text-indigo-700">{stats.nightsAway}</p>
             <p className="text-[10px] text-indigo-600">Nights Away</p>
+            {stats.sleepCities.length > 0 && (
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                  <div className="font-medium mb-1">Places stayed:</div>
+                  {stats.sleepCities.map((c, i) => (
+                    <div key={i} className="text-gray-300">{c.name} ({c.nights})</div>
+                  ))}
+                </div>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
           </div>
           <div className="text-center p-2 bg-cyan-50 rounded-lg">
             <div className="flex items-center justify-center mb-1">
@@ -215,17 +221,23 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             <p className="text-lg font-bold text-amber-700">{stats.trains}</p>
             <p className="text-[10px] text-amber-600">Trains</p>
           </div>
-          <div
-            className="text-center p-2 bg-emerald-50 rounded-lg cursor-help"
-            title={stats.cities.length > 0
-              ? `Cities visited:\n${stats.cities.map(c => `${c.name} (${c.days} days)`).sort((a, b) => a.localeCompare(b)).join('\n')}`
-              : undefined}
-          >
+          <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <MapPin className="h-4 w-4 text-emerald-500" />
             </div>
             <p className="text-lg font-bold text-emerald-700">{stats.uniqueCityCount}</p>
             <p className="text-[10px] text-emerald-600">Cities</p>
+            {stats.cities.length > 0 && (
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                  <div className="font-medium mb-1">Cities visited:</div>
+                  {[...stats.cities].sort((a, b) => b.days - a.days).map((c, i) => (
+                    <div key={i} className="text-gray-300">{c.name} ({c.days} days)</div>
+                  ))}
+                </div>
+                <div className="absolute right-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
           </div>
         </div>
 
