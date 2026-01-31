@@ -78,6 +78,7 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
       // Calculate days since last occurrence
       let daysSince: number | null = null
       let lastDate: string | null = null
+      let avgGap: number | null = null
 
       if (entriesWithEvent.length > 0) {
         const sorted = entriesWithEvent.sort(
@@ -85,6 +86,19 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         )
         lastDate = sorted[0].entry_date
         daysSince = differenceInDays(today, parseISO(lastDate))
+
+        // Calculate average gap between occurrences (need at least 2 occurrences)
+        if (entriesWithEvent.length >= 2) {
+          const sortedDates = entriesWithEvent
+            .map((e) => parseISO(e.entry_date))
+            .sort((a, b) => a.getTime() - b.getTime())
+
+          let totalGap = 0
+          for (let i = 1; i < sortedDates.length; i++) {
+            totalGap += differenceInDays(sortedDates[i], sortedDates[i - 1])
+          }
+          avgGap = Math.round(totalGap / (sortedDates.length - 1))
+        }
       }
 
       // Count occurrences in current period (selected date range)
@@ -108,6 +122,7 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         countPriorPeriod,
         totalCount: entriesWithEvent.length,
         isOverdue: daysSince !== null && daysSince > overdueThreshold,
+        avgGap,
       }
     })
       // When specific events are selected, show all of them (even if never occurred)
@@ -149,11 +164,26 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">
-        {eventData.map((item) => (
+        {eventData.map((item) => {
+          // Build tooltip text
+          const tooltipParts: string[] = []
+          if (item.lastDate) {
+            tooltipParts.push(`Last: ${format(parseISO(item.lastDate), 'MMM d, yyyy')}`)
+          }
+          if (item.avgGap !== null) {
+            tooltipParts.push(`Avg. gap: ${item.avgGap} days`)
+          }
+          if (item.totalCount > 0) {
+            tooltipParts.push(`Total: ${item.totalCount}x`)
+          }
+          const tooltip = tooltipParts.length > 0 ? tooltipParts.join('\n') : undefined
+
+          return (
           <div
             key={item.event}
+            title={tooltip}
             className={cn(
-              'flex items-center px-2 rounded-lg flex-1',
+              'flex items-center px-2 rounded-lg flex-1 cursor-default',
               item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
             )}
             style={{ minHeight: 0 }}
@@ -189,7 +219,8 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
