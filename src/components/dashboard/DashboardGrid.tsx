@@ -214,7 +214,7 @@ export function DashboardGrid({
         // Use allEntries so "days since" is always calculated from all-time data
         return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
       case 'travelWidget':
-        return <TravelWidget entries={allEntries} profile={profile} title={titles.title} subtitle={titles.subtitle} />
+        return <TravelWidget entries={entries} profile={profile} title={titles.title} subtitle={titles.subtitle} />
       default:
         return null
     }
