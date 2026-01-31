@@ -37,7 +37,6 @@ const shortEventLabels: Record<EventType, string> = {
 interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
   dateRange: { start: Date; end: Date }
-  overdueThreshold?: number
   selectedEvents?: EventType[]
   title?: string
   subtitle?: string
@@ -61,7 +60,7 @@ interface TooltipData {
   y: number
 }
 
-export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
+export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
   // Calculate prior period (same duration, shifted back 1 year)
   const { priorPeriod, hasPriorPeriod } = useMemo(() => {
     const priorStart = subYears(dateRange.start, 1)
@@ -131,6 +130,9 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         return isWithinInterval(entryDate, { start: priorPeriod.start, end: priorPeriod.end })
       }).length
 
+      // Overdue if days since exceeds the event's own average gap
+      const isOverdue = daysSince !== null && avgGap !== null && daysSince > avgGap
+
       return {
         event,
         label: shortEventLabels[event] || eventLabels[event],
@@ -139,7 +141,7 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         countCurrentPeriod,
         countPriorPeriod,
         totalCount: entriesWithEvent.length,
-        isOverdue: daysSince !== null && daysSince > overdueThreshold,
+        isOverdue,
         avgGap,
       }
     })
@@ -153,7 +155,7 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         if (b.daysSince === null) return -1
         return a.daysSince - b.daysSince
       })
-  }, [entries, dateRange, priorPeriod, overdueThreshold, selectedEvents])
+  }, [entries, dateRange, priorPeriod, selectedEvents])
 
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
 
