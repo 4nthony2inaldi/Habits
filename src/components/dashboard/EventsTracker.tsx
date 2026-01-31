@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { differenceInDays, parseISO, subYears, isWithinInterval, format } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
@@ -41,6 +41,24 @@ interface EventsTrackerProps {
   selectedEvents?: EventType[]
   title?: string
   subtitle?: string
+}
+
+interface EventItemData {
+  event: EventType
+  label: string
+  daysSince: number | null
+  lastDate: string | null
+  countCurrentPeriod: number
+  countPriorPeriod: number
+  totalCount: number
+  isOverdue: boolean
+  avgGap: number | null
+}
+
+interface TooltipData {
+  item: EventItemData
+  x: number
+  y: number
 }
 
 export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
@@ -137,6 +155,21 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
       })
   }, [entries, dateRange, priorPeriod, overdueThreshold, selectedEvents])
 
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null)
+
+  const handleItemHover = (item: EventItemData, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setTooltip({
+      item,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+    })
+  }
+
+  const handleItemLeave = () => {
+    setTooltip(null)
+  }
+
   if (eventData.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -164,29 +197,16 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">
-        {eventData.map((item) => {
-          // Build tooltip text
-          const tooltipParts: string[] = []
-          if (item.lastDate) {
-            tooltipParts.push(`Last: ${format(parseISO(item.lastDate), 'MMM d, yyyy')}`)
-          }
-          if (item.avgGap !== null) {
-            tooltipParts.push(`Avg. gap: ${item.avgGap} days`)
-          }
-          if (item.totalCount > 0) {
-            tooltipParts.push(`Total: ${item.totalCount}x`)
-          }
-          const tooltip = tooltipParts.length > 0 ? tooltipParts.join('\n') : undefined
-
-          return (
+        {eventData.map((item) => (
           <div
             key={item.event}
-            title={tooltip}
             className={cn(
               'flex items-center px-2 rounded-lg flex-1 cursor-default',
               item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
             )}
             style={{ minHeight: 0 }}
+            onMouseEnter={(e) => handleItemHover(item, e)}
+            onMouseLeave={handleItemLeave}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {item.isOverdue && (
@@ -219,9 +239,46 @@ export function EventsTracker({ entries, dateRange, overdueThreshold = 30, selec
               </div>
             </div>
           </div>
-          )
-        })}
+        ))}
       </div>
+
+      {/* Tooltip - fixed positioning to extend beyond widget */}
+      {tooltip && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px] max-w-[280px]">
+            {tooltip.item.lastDate && (
+              <div className="font-medium text-gray-900 mb-1">
+                {format(parseISO(tooltip.item.lastDate), 'MMM d, yyyy')}
+              </div>
+            )}
+            <div className={cn(
+              'font-medium',
+              tooltip.item.isOverdue ? 'text-orange-600' : 'text-indigo-600'
+            )}>
+              {tooltip.item.daysSince !== null
+                ? `${tooltip.item.daysSince} days ago`
+                : 'Never occurred'}
+            </div>
+            {(tooltip.item.avgGap !== null || tooltip.item.totalCount > 0) && (
+              <div className="text-gray-500 mt-1 border-t pt-1">
+                {tooltip.item.avgGap !== null && (
+                  <div>Avg. gap: {tooltip.item.avgGap} days</div>
+                )}
+                {tooltip.item.totalCount > 0 && (
+                  <div>Total: {tooltip.item.totalCount}x</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
