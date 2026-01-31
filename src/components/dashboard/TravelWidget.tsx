@@ -22,11 +22,17 @@ interface TravelWidgetProps {
   subtitle?: string
 }
 
+interface Trip {
+  startDate: string
+  endDate: string
+}
+
 interface CityData {
   name: string
   lat: number
   lng: number
-  count: number
+  days: number
+  trips: Trip[]
 }
 
 export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
@@ -36,6 +42,41 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
     setMounted(true)
   }, [])
 
+  // Helper function to group consecutive dates into trips
+  const groupDatesIntoTrips = (dates: string[]): Trip[] => {
+    if (dates.length === 0) return []
+
+    // Sort dates chronologically
+    const sortedDates = [...dates].sort()
+    const trips: Trip[] = []
+
+    let tripStart = sortedDates[0]
+    let tripEnd = sortedDates[0]
+
+    for (let i = 1; i < sortedDates.length; i++) {
+      const currentDate = new Date(sortedDates[i])
+      const previousDate = new Date(sortedDates[i - 1])
+
+      // Check if dates are consecutive (within 1 day)
+      const diffInDays = (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24)
+
+      if (diffInDays <= 1) {
+        // Extend current trip
+        tripEnd = sortedDates[i]
+      } else {
+        // Start new trip
+        trips.push({ startDate: tripStart, endDate: tripEnd })
+        tripStart = sortedDates[i]
+        tripEnd = sortedDates[i]
+      }
+    }
+
+    // Add the last trip
+    trips.push({ startDate: tripStart, endDate: tripEnd })
+
+    return trips
+  }
+
   // Calculate travel stats
   const stats = useMemo(() => {
     const homeCity = profile.home_city?.toLowerCase() || ''
@@ -44,7 +85,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
     let nightsAway = 0
     let flights = 0
     let trains = 0
-    const citiesSet = new Map<string, CityData>()
+    // Track unique dates per location coordinate key
+    const cityDatesMap = new Map<string, { name: string; lat: number; lng: number; dates: Set<string> }>()
 
     entries.forEach((entry) => {
       // Count flights and trains from life_events
@@ -58,6 +100,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       }
 
       // Collect unique cities with coordinates (from wake, noon, sleep locations)
+      // Track by date to count unique days, not individual entries
+      const entryDate = entry.entry_date
       const locations = [
         { name: entry.city_wake, lat: entry.city_wake_lat, lng: entry.city_wake_lng },
         { name: entry.city_noon, lat: entry.city_noon_lat, lng: entry.city_noon_lng },
@@ -70,23 +114,35 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
           // Exclude home, unknown, and empty values
           if (normalizedName !== 'home' && normalizedName !== 'unknown' && normalizedName !== homeCity) {
             const key = `${lat.toFixed(2)},${lng.toFixed(2)}` // Group nearby coordinates
-            const existing = citiesSet.get(key)
+            const existing = cityDatesMap.get(key)
             if (existing) {
-              existing.count++
+              existing.dates.add(entryDate)
             } else {
-              citiesSet.set(key, { name, lat, lng, count: 1 })
+              cityDatesMap.set(key, { name, lat, lng, dates: new Set([entryDate]) })
             }
           }
         }
       })
     })
 
+    // Convert to CityData with trips
+    const cities: CityData[] = Array.from(cityDatesMap.values()).map(({ name, lat, lng, dates }) => {
+      const datesArray = Array.from(dates)
+      return {
+        name,
+        lat,
+        lng,
+        days: datesArray.length,
+        trips: groupDatesIntoTrips(datesArray),
+      }
+    })
+
     return {
       nightsAway,
       flights,
       trains,
-      cities: Array.from(citiesSet.values()),
-      uniqueCityCount: citiesSet.size,
+      cities,
+      uniqueCityCount: cities.length,
     }
   }, [entries, profile.home_city])
 
