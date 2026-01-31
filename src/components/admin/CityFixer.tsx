@@ -27,6 +27,13 @@ interface CityEntry {
   current_lng: number | null
 }
 
+interface DistinctCity {
+  city_name: string
+  city_name_lower: string
+  entries: CityEntry[]
+  count: number
+}
+
 interface BackfillProgress {
   total: number
   processed: number
@@ -38,6 +45,7 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
   const supabase = createClient()
   const [selectedUser, setSelectedUser] = useState<string>(currentUser.id)
   const [cityEntries, setCityEntries] = useState<CityEntry[]>([])
+  const [distinctCities, setDistinctCities] = useState<DistinctCity[]>([])
   const [loading, setLoading] = useState(false)
   const [fixing, setFixing] = useState<string | null>(null)
   const [backfillProgress, setBackfillProgress] = useState<BackfillProgress>({
@@ -102,6 +110,28 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
       })
 
       setCityEntries(needsFix)
+
+      // Group by distinct city name (case-insensitive)
+      const cityMap = new Map<string, DistinctCity>()
+      needsFix.forEach((entry) => {
+        const lowerName = entry.city_name.toLowerCase().trim()
+        const existing = cityMap.get(lowerName)
+        if (existing) {
+          existing.entries.push(entry)
+          existing.count++
+        } else {
+          cityMap.set(lowerName, {
+            city_name: entry.city_name,
+            city_name_lower: lowerName,
+            entries: [entry],
+            count: 1,
+          })
+        }
+      })
+
+      // Convert to array and sort by count (most common first)
+      const distinctList = Array.from(cityMap.values()).sort((a, b) => b.count - a.count)
+      setDistinctCities(distinctList)
     } catch (error) {
       console.error('Failed to load city entries:', error)
     } finally {
@@ -113,35 +143,44 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
     loadCityEntries()
   }, [loadCityEntries])
 
-  // Fix a single city entry
-  const fixCity = async (entry: CityEntry, newCity: string, lat: number, lng: number) => {
-    setFixing(entry.id + entry.city_field)
+  // Fix all entries with the same city name
+  const fixDistinctCity = async (distinctCity: DistinctCity, newCity: string, lat: number, lng: number) => {
+    setFixing(distinctCity.city_name_lower)
 
     try {
-      // Build the update object based on which field we're fixing
-      const updateData: Record<string, unknown> = {
-        [entry.city_field]: newCity,
-        [`${entry.city_field}_lat`]: lat,
-        [`${entry.city_field}_lng`]: lng,
+      const user = users.find(u => u.id === selectedUser)
+
+      // Update all entries that have this city name
+      for (const entry of distinctCity.entries) {
+        const updateData: Record<string, unknown> = {
+          [entry.city_field]: newCity,
+          [`${entry.city_field}_lat`]: lat,
+          [`${entry.city_field}_lng`]: lng,
+        }
+
+        // Also update miles from home
+        if (user?.home_lat && user?.home_lng) {
+          const miles = calculateDistanceMiles(user.home_lat, user.home_lng, lat, lng)
+          const milesField = entry.city_field.replace('city_', 'miles_')
+          updateData[milesField] = miles
+        }
+
+        const { error } = await supabase
+          .from('daily_entries')
+          .update(updateData)
+          .eq('id', entry.id)
+
+        if (error) {
+          console.error('Failed to fix entry:', entry.id, error)
+        }
       }
 
-      // If fixing city_noon or city_wake/sleep, also update miles from home
-      const user = users.find(u => u.id === entry.user_id)
-      if (user?.home_lat && user?.home_lng) {
-        const miles = calculateDistanceMiles(user.home_lat, user.home_lng, lat, lng)
-        const milesField = entry.city_field.replace('city_', 'miles_')
-        updateData[milesField] = miles
-      }
-
-      const { error } = await supabase
-        .from('daily_entries')
-        .update(updateData)
-        .eq('id', entry.id)
-
-      if (error) throw error
-
-      // Remove this entry from the list
-      setCityEntries(prev => prev.filter(e => !(e.id === entry.id && e.city_field === entry.city_field)))
+      // Remove this distinct city from the list
+      setDistinctCities(prev => prev.filter(dc => dc.city_name_lower !== distinctCity.city_name_lower))
+      // Also remove the individual entries
+      setCityEntries(prev => prev.filter(e =>
+        e.city_name.toLowerCase().trim() !== distinctCity.city_name_lower
+      ))
     } catch (error) {
       console.error('Failed to fix city:', error)
     } finally {
@@ -366,10 +405,10 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Cities Without Coordinates ({cityEntries.length})
+            Cities Without Coordinates ({distinctCities.length} unique, {cityEntries.length} total)
           </CardTitle>
           <CardDescription>
-            Select the correct city from the dropdown to update coordinates
+            Select the correct city from the dropdown to update all matching entries
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -378,37 +417,34 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading entries...
             </div>
-          ) : cityEntries.length === 0 ? (
+          ) : distinctCities.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
               <Check className="h-8 w-8 mx-auto mb-2 text-green-500" />
               All cities have coordinates!
             </div>
           ) : (
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {cityEntries.map((entry) => (
+              {distinctCities.map((distinctCity) => (
                 <div
-                  key={`${entry.id}-${entry.city_field}`}
+                  key={distinctCity.city_name_lower}
                   className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50"
                 >
-                  <div className="flex-shrink-0 text-sm text-gray-500 w-24">
-                    {entry.entry_date}
-                  </div>
-                  <div className="flex-shrink-0 text-xs text-gray-400 w-16">
-                    {entry.city_field.replace('city_', '')}
+                  <div className="flex-shrink-0 text-sm font-medium text-gray-700 bg-purple-100 px-2 py-1 rounded">
+                    {distinctCity.count}x
                   </div>
                   <div className="flex-1 min-w-0">
                     <CityAutocomplete
-                      value={entry.city_name}
+                      value={distinctCity.city_name}
                       onChange={(value, lat, lng) => {
                         if (lat && lng) {
-                          fixCity(entry, value, lat, lng)
+                          fixDistinctCity(distinctCity, value, lat, lng)
                         }
                       }}
                       placeholder="Select correct city..."
-                      disabled={fixing === entry.id + entry.city_field}
+                      disabled={fixing === distinctCity.city_name_lower}
                     />
                   </div>
-                  {fixing === entry.id + entry.city_field && (
+                  {fixing === distinctCity.city_name_lower && (
                     <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
                   )}
                 </div>
