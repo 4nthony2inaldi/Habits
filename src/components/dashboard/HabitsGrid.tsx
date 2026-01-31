@@ -443,16 +443,12 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                   const IconComponent = dayData.icon
                   return (
                     <td key={i} className="text-center align-middle py-1">
-                      <div className="inline-flex items-center justify-center gap-0.5">
-                        <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full', dayData.bg)}>
-                          <IconComponent className={cn('h-3 w-3', dayData.color)} />
-                        </span>
-                        {dayData.label && (
-                          <span className="text-[10px] text-gray-600 font-medium">
-                            {dayData.label}
-                          </span>
-                        )}
-                      </div>
+                      <span
+                        className={cn('inline-flex items-center justify-center w-5 h-5 rounded-full cursor-default', dayData.bg)}
+                        title={dayData.label || undefined}
+                      >
+                        <IconComponent className={cn('h-3 w-3', dayData.color)} />
+                      </span>
                     </td>
                   )
                 })}
