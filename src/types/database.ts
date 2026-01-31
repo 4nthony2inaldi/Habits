@@ -188,6 +188,7 @@ export interface Database {
           allow_admin_nudges: boolean
           notification_channel: NotificationChannel
           temperature_unit: 'fahrenheit' | 'celsius'
+          health_sync_token: string | null
         }
         Insert: {
           id: string
@@ -212,6 +213,7 @@ export interface Database {
           allow_admin_nudges?: boolean
           notification_channel?: NotificationChannel
           temperature_unit?: 'fahrenheit' | 'celsius'
+          health_sync_token?: string | null
         }
         Update: {
           id?: string
@@ -236,6 +238,7 @@ export interface Database {
           allow_admin_nudges?: boolean
           notification_channel?: NotificationChannel
           temperature_unit?: 'fahrenheit' | 'celsius'
+          health_sync_token?: string | null
         }
       }
       daily_entries: {

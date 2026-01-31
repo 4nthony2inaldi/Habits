@@ -22,8 +22,10 @@ import {
   Loader2,
   Smartphone,
   Lock,
+  Heart,
 } from 'lucide-react'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
+import { AppleHealthSyncSettings } from '@/components/settings/AppleHealthSyncSettings'
 
 interface SettingsClientProps {
   profile: Profile
@@ -326,6 +328,25 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           <PushNotificationSettings
             reminderTime={reminderTime}
             onReminderTimeChange={setReminderTime}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Apple Health Sync */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Heart className="h-5 w-5" />
+            Apple Health Sync
+          </CardTitle>
+          <CardDescription>
+            Automatically import steps from Apple Health via iOS Shortcuts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppleHealthSyncSettings
+            profileId={profile.id}
+            initialToken={profile.health_sync_token}
           />
         </CardContent>
       </Card>

@@ -185,6 +185,7 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
         allow_admin_nudges: true,
         notification_channel: 'email',
         temperature_unit: 'fahrenheit',
+        health_sync_token: null,
         created_at: new Date().toISOString(),
       }
       setUsers((prev) => [...prev, newUser])
