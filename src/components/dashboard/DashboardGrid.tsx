@@ -18,6 +18,7 @@ import { YearOverYearDrinks } from './YearOverYearDrinks'
 import { YearOverYearSteps } from './YearOverYearSteps'
 import { MovementChart } from './MovementChart'
 import { EventsTracker } from './EventsTracker'
+import { TravelWidget } from './TravelWidget'
 
 // Type definitions for react-grid-layout
 interface Layout {
@@ -212,6 +213,8 @@ export function DashboardGrid({
       case 'eventsTracker':
         // Use allEntries so "days since" is always calculated from all-time data
         return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
+      case 'travelWidget':
+        return <TravelWidget entries={allEntries} profile={profile} title={titles.title} subtitle={titles.subtitle} />
       default:
         return null
     }

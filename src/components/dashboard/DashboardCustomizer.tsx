@@ -124,6 +124,7 @@ export interface DashboardWidgetConfig {
   stepsYearOverYear: WidgetSettings
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
+  travelWidget: WidgetSettings
   selectedHabits: SelectableHabitType[]
   selectedEvents: EventType[]
   selectedAlcoholMetrics: AlcoholMetricType[]
@@ -158,6 +159,7 @@ export const defaultWidgetTitles: WidgetTitles = {
   stepsYearOverYear: { title: 'Steps Year over Year' },
   movementChart: { title: 'Movement' },
   eventsTracker: { title: 'Life Events' },
+  travelWidget: { title: 'Travel' },
 }
 
 // Default grid layouts for different breakpoints (12 column grid)
@@ -176,6 +178,7 @@ export const defaultGridLayouts: GridLayouts = {
     stepsYearOverYear: { x: 0, y: 25, w: 12, h: 5 },
     movementChart: { x: 0, y: 30, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
+    travelWidget: { x: 0, y: 36, w: 6, h: 6 },
   },
   md: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
@@ -190,6 +193,7 @@ export const defaultGridLayouts: GridLayouts = {
     stepsYearOverYear: { x: 0, y: 25, w: 12, h: 5 },
     movementChart: { x: 0, y: 30, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
+    travelWidget: { x: 0, y: 36, w: 6, h: 6 },
   },
   sm: {
     moodChart: { x: 0, y: 0, w: 12, h: 4 },
@@ -204,6 +208,7 @@ export const defaultGridLayouts: GridLayouts = {
     stepsYearOverYear: { x: 0, y: 44, w: 12, h: 5 },
     movementChart: { x: 0, y: 49, w: 12, h: 4 },
     eventsTracker: { x: 0, y: 53, w: 12, h: 6 },
+    travelWidget: { x: 0, y: 59, w: 12, h: 6 },
   },
 }
 
@@ -220,6 +225,7 @@ const defaultConfig: DashboardWidgetConfig = {
   stepsYearOverYear: { visible: true },
   movementChart: { visible: true },
   eventsTracker: { visible: true },
+  travelWidget: { visible: true },
   selectedHabits: allHabits,
   selectedEvents: allEvents,
   selectedAlcoholMetrics: allAlcoholMetrics,
@@ -247,6 +253,7 @@ export const widgetLabels: Record<WidgetKey, string> = {
   stepsYearOverYear: 'Steps Year over Year',
   movementChart: 'Movement Chart',
   eventsTracker: 'Events Tracker',
+  travelWidget: 'Travel Map',
 }
 
 interface DashboardCustomizerProps {
