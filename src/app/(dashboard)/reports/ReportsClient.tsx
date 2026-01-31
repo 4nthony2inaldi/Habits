@@ -37,6 +37,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEntries } from '@/lib/hooks/useEntries'
 import { formatDateForInput, getYesterdayString } from '@/lib/utils/dates'
 import { calculateTotalDrinks } from '@/lib/utils/calculations'
+import { formatCompactNumber } from '@/lib/utils/format'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -1084,18 +1085,18 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
         <div className="grid grid-cols-3 gap-4">
           <Card><CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{currentTotals.avg.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCompactNumber(currentTotals.avg)}</p>
             <p className="text-xs text-gray-500">{correlation !== null ? getMetricLabel(activeMetrics[0]) : 'Average per Day'}</p>
           </CardContent></Card>
           <Card><CardContent className="p-4 text-center">
             {correlation !== null ? (
               <>
-                <p className="text-2xl font-bold text-gray-900">{currentTotals.avg2.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCompactNumber(currentTotals.avg2)}</p>
                 <p className="text-xs text-gray-500">{getMetricLabel(activeMetrics[1])}</p>
               </>
             ) : (
               <>
-                <p className="text-2xl font-bold text-gray-900">{currentTotals.total.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCompactNumber(currentTotals.total)}</p>
                 <p className="text-xs text-gray-500">Total</p>
               </>
             )}
