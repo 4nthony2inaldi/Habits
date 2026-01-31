@@ -163,6 +163,15 @@ export function SettingsClient({ profile }: SettingsClientProps) {
               }}
               placeholder="Search for your home city..."
             />
+            {homeCity && (
+              <p className="text-xs text-gray-500">
+                {homeLat && homeLng ? (
+                  <span className="text-green-600">Coordinates saved - distance calculation enabled</span>
+                ) : (
+                  <span className="text-amber-600">No coordinates - select from dropdown to enable distance calculation</span>
+                )}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
