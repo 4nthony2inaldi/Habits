@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CityAutocomplete } from '@/components/ui/city-autocomplete'
 import { cn } from '@/lib/utils/cn'
 import type { Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
@@ -148,11 +149,11 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="homeCity">Home City</Label>
-            <Input
+            <CityAutocomplete
               id="homeCity"
               value={homeCity}
-              onChange={(e) => setHomeCity(e.target.value)}
-              placeholder="For distance calculations"
+              onChange={(value) => setHomeCity(value)}
+              placeholder="Search for your home city..."
             />
           </div>
         </CardContent>

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
+import { CityAutocomplete } from '@/components/ui/city-autocomplete'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormSection } from './FormSection'
 import { useCreateEntry, useEntryByDate } from '@/lib/hooks/useEntries'
@@ -1027,7 +1028,17 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-500">At Wake</Label>
-                  <Input placeholder="City" {...register('city_wake')} />
+                  <Controller
+                    name="city_wake"
+                    control={control}
+                    render={({ field }) => (
+                      <CityAutocomplete
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="City"
+                      />
+                    )}
+                  />
                   <Input
                     type="number"
                     placeholder="Miles from home"
@@ -1036,7 +1047,17 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-500">At Noon</Label>
-                  <Input placeholder="City" {...register('city_noon')} />
+                  <Controller
+                    name="city_noon"
+                    control={control}
+                    render={({ field }) => (
+                      <CityAutocomplete
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="City"
+                      />
+                    )}
+                  />
                   <Input
                     type="number"
                     placeholder="Miles from home"
@@ -1045,7 +1066,17 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-500">At Sleep</Label>
-                  <Input placeholder="City" {...register('city_sleep')} />
+                  <Controller
+                    name="city_sleep"
+                    control={control}
+                    render={({ field }) => (
+                      <CityAutocomplete
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="City"
+                      />
+                    )}
+                  />
                   <Input
                     type="number"
                     placeholder="Miles from home"
