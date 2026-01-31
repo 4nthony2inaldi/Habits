@@ -172,9 +172,11 @@ export function AppleHealthSyncSettings({
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Steps</p>
               <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
-              <p className="pl-4">Group By: Day</p>
-              <p className="pl-4">Limit: OFF (or set to 1)</p>
-              <p><strong>Set variable</strong> &quot;Steps&quot; to Health Samples</p>
+              <p className="pl-4">Group By: <strong>None</strong></p>
+              <p className="pl-4">Limit: OFF</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;Steps&quot; to Statistics</p>
 
               <p className="mt-2 text-gray-500"># Get sleep duration (samples from yesterday)</p>
               <p><strong>Find Health Samples</strong></p>
@@ -186,9 +188,11 @@ export function AppleHealthSyncSettings({
               <p><strong>Find Health Samples</strong></p>
               <p className="pl-4">Type: Walking + Running Distance</p>
               <p className="pl-4">Start Date: <strong>is between</strong> [StartOfYesterday] and [StartOfToday]</p>
-              <p className="pl-4">Group By: Day</p>
-              <p className="pl-4">Limit: OFF (or set to 1)</p>
-              <p><strong>Set variable</strong> &quot;Miles&quot; to Health Samples</p>
+              <p className="pl-4">Group By: <strong>None</strong></p>
+              <p className="pl-4">Limit: OFF</p>
+              <p><strong>Calculate Statistics</strong></p>
+              <p className="pl-4">Calculate <strong>Sum</strong> of Health Samples</p>
+              <p><strong>Set variable</strong> &quot;Miles&quot; to Statistics</p>
 
               <p className="mt-2 text-gray-500"># Send to your tracker</p>
               <p><strong>Get Contents of URL</strong></p>
@@ -197,7 +201,7 @@ export function AppleHealthSyncSettings({
               </p>
             </div>
             <p className="text-xs text-blue-700">
-              <strong>Important:</strong> Use &quot;is between&quot; with [StartOfYesterday] and [StartOfToday] to capture yesterday&apos;s full calendar day (midnight to midnight). Sleep is in hours, miles is decimal.
+              <strong>Important:</strong> Use &quot;Calculate Statistics&quot; with &quot;Sum&quot; to properly aggregate data from multiple sources (phone + watch). The date filter captures yesterday&apos;s full calendar day (midnight to midnight). Sleep is in hours, miles is decimal.
             </p>
             <ol start={3} className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>Optionally, set up an <strong>Automation</strong> to run this Shortcut daily at bedtime</li>
