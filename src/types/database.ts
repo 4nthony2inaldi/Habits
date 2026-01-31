@@ -149,6 +149,7 @@ export interface ReportConfig {
   customEndDate?: string
   comparison: ComparisonType
   dualAxis?: boolean // Use left/right Y axes for metrics with different scales
+  barOrientation?: 'vertical' | 'horizontal' // Bar chart orientation (default: vertical)
   // Optional breakdown by habit/event
   breakdownBy?: 'habit' | 'event' | null
   // Filter settings (similar to history page)

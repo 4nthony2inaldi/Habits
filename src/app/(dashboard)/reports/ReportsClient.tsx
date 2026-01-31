@@ -76,6 +76,7 @@ import {
   AreaChart as AreaChartIcon,
   Layers,
   LayoutGrid,
+  ArrowRightLeft,
 } from 'lucide-react'
 
 interface ReportsClientProps {
@@ -1004,40 +1005,68 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         )
 
       case 'bar':
-      case 'grouped_bar':
+      case 'grouped_bar': {
+        const isHorizontal = config.barOrientation === 'horizontal'
+        const barCommonProps = isHorizontal
+          ? { ...commonProps, layout: 'vertical' as const, margin: { top: 15, right: 20, left: 80, bottom: 20 } }
+          : commonProps
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart {...commonProps}>
+            <BarChart {...barCommonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
+              {isHorizontal ? (
+                <>
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} tickFormatter={formatYAxisValue} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} width={75} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
+                  <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
+                </>
+              )}
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend wrapperStyle={legendWrapperStyle} />}
               {renderKeys.map((key, idx) => (
                 <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
-                  fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[4, 4, 0, 0]} />
+                  fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
               ))}
               {/* Comparison bars */}
               {hasComparison && comparisonSeriesKeys.map((key, idx) => (
                 <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
-                  fill={COMPARISON_COLOR} radius={[4, 4, 0, 0]} />
+                  fill={COMPARISON_COLOR} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
         )
+      }
 
-      case 'stacked_bar':
+      case 'stacked_bar': {
+        const isStackedHorizontal = config.barOrientation === 'horizontal'
+        const stackedBarCommonProps = isStackedHorizontal
+          ? { ...commonProps, layout: 'vertical' as const, margin: { top: 15, right: 20, left: 80, bottom: 20 } }
+          : commonProps
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart {...commonProps}>
+            <BarChart {...stackedBarCommonProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
+              {isStackedHorizontal ? (
+                <>
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} tickFormatter={formatYAxisValue} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} width={75} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
+                  <YAxis tick={{ fontSize: 11 }} tickLine={false} width={45} tickFormatter={formatYAxisValue} />
+                </>
+              )}
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={isStackedHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )
+      }
 
       case 'pie':
         return (
@@ -1202,6 +1231,28 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 </button>
               ))}
             </div>
+            {/* Bar orientation toggle */}
+            {['bar', 'grouped_bar', 'stacked_bar'].includes(config.chartType) && (
+              <div className="mt-3 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setConfig({ ...config, barOrientation: config.barOrientation === 'horizontal' ? 'vertical' : 'horizontal' })}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2 py-1 rounded text-xs border transition-colors',
+                      config.barOrientation === 'horizontal'
+                        ? 'bg-purple-100 border-purple-300 text-purple-700'
+                        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                    )}
+                  >
+                    <ArrowRightLeft className="h-3 w-3" />
+                    Horizontal
+                  </button>
+                  <span className="text-xs text-gray-400">
+                    {config.barOrientation === 'horizontal' ? 'Bars go left-right' : 'Bars go up-down'}
+                  </span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
