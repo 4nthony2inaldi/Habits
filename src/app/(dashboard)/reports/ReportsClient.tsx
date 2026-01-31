@@ -230,6 +230,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   const [editingReportId, setEditingReportId] = useState<string | null>(null)
   const [showComparison, setShowComparison] = useState(false)
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  const [dimensionFilters, setDimensionFilters] = useState<string[]>([]) // Filter by clicking chart elements
 
   // Track screen width for responsive chart labels
   useEffect(() => {
@@ -409,9 +410,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'week_of_year': return `Week ${getWeek(date)}`
       case 'month_of_year': return monthNames[getMonth(date)]
       case 'work_location': return entry.work_location || 'Unknown'
-      case 'location_wake': return entry.city_wake || 'Unknown'
-      case 'location_noon': return entry.city_noon || 'Unknown'
-      case 'location_sleep': return entry.city_sleep || 'Unknown'
+      case 'location_wake': return entry.city_wake || 'Home'
+      case 'location_noon': return entry.city_noon || 'Home'
+      case 'location_sleep': return entry.city_sleep || 'Home'
       default: return entry.entry_date
     }
   }, [])
@@ -637,6 +638,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     return { chartData: result, seriesKeys: activeMetrics as string[] }
   }, [entries, config, selectedHabits, selectedEvents, getDimensionKey, getMetricValue, activeMetrics, useSecondaryDimension])
 
+  // Apply dimension filters (exclude clicked chart elements)
+  const filteredChartData = useMemo(() => {
+    if (dimensionFilters.length === 0) return chartData
+    return chartData.filter((item) => !dimensionFilters.includes(item.name as string))
+  }, [chartData, dimensionFilters])
+
   const comparisonData = useMemo(() => {
     if (!comparisonEntries || comparisonEntries.length === 0 || config.comparison === 'none') return null
     const total = comparisonEntries.reduce((sum, entry) => sum + getMetricValue(entry, activeMetrics[0]), 0)
@@ -690,11 +697,11 @@ export function ReportsClient({ profile }: ReportsClientProps) {
   // Merge comparison data into chart data
   const { mergedChartData, comparisonSeriesKeys } = useMemo(() => {
     if (!comparisonChartData || config.comparison === 'none') {
-      return { mergedChartData: chartData, comparisonSeriesKeys: [] as string[] }
+      return { mergedChartData: filteredChartData, comparisonSeriesKeys: [] as string[] }
     }
 
     const compKeys = activeMetrics.map(m => `${m}_comparison`)
-    const merged = chartData.map((item) => {
+    const merged = filteredChartData.map((item) => {
       const newItem: Record<string, string | number> = { ...item }
       const compData = comparisonChartData[item.name as string]
       activeMetrics.forEach((metric) => {
@@ -704,7 +711,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     })
 
     return { mergedChartData: merged, comparisonSeriesKeys: compKeys }
-  }, [chartData, comparisonChartData, config.comparison, activeMetrics])
+  }, [filteredChartData, comparisonChartData, config.comparison, activeMetrics])
 
   const currentTotals = useMemo(() => {
     if (!entries || entries.length === 0) return { total: 0, avg: 0, count: 0, avg2: 0 }
@@ -730,12 +737,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
 
   // Calculate Pearson correlation coefficient for dual-axis charts with exactly 2 metrics
   const correlation = useMemo(() => {
-    if (!config.dualAxis || activeMetrics.length !== 2 || chartData.length < 3) return null
+    if (!config.dualAxis || activeMetrics.length !== 2 || filteredChartData.length < 3) return null
 
     const metric1 = activeMetrics[0]
     const metric2 = activeMetrics[1]
-    const values1 = chartData.map(d => Number((d as Record<string, unknown>)[metric1]) || 0)
-    const values2 = chartData.map(d => Number((d as Record<string, unknown>)[metric2]) || 0)
+    const values1 = filteredChartData.map(d => Number((d as Record<string, unknown>)[metric1]) || 0)
+    const values2 = filteredChartData.map(d => Number((d as Record<string, unknown>)[metric2]) || 0)
 
     const n = values1.length
     const mean1 = values1.reduce((a, b) => a + b, 0) / n
@@ -757,7 +764,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     if (denominator === 0) return null
 
     return Math.round((numerator / denominator) * 100) / 100
-  }, [config.dualAxis, activeMetrics, chartData])
+  }, [config.dualAxis, activeMetrics, filteredChartData])
 
   const handleSaveReport = () => {
     if (!reportName.trim()) return
@@ -769,7 +776,21 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     setReportName('')
     setEditingReportId(null)
     setShowOnDashboard(false)
+    setDimensionFilters([])
   }
+
+  // Handle clicking on chart elements to filter/exclude data points
+  const handleChartClick = useCallback((name: string) => {
+    setDimensionFilters((prev) => {
+      if (prev.includes(name)) {
+        // Remove filter (re-include this value)
+        return prev.filter((f) => f !== name)
+      } else {
+        // Add filter (exclude this value)
+        return [...prev, name]
+      }
+    })
+  }, [])
 
   const addMetric = (metric: ReportMetric) => {
     if (!activeMetrics.includes(metric)) {
@@ -803,6 +824,16 @@ export function ReportsClient({ profile }: ReportsClientProps) {
     }
     if (chartData.length === 0) {
       return <div className="flex items-center justify-center h-80 text-gray-500">No data available</div>
+    }
+    if (filteredChartData.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-80 text-gray-500">
+          <p>All data points are filtered out</p>
+          <button onClick={() => setDimensionFilters([])} className="mt-2 text-sm text-purple-600 hover:text-purple-700">
+            Clear filters
+          </button>
+        </div>
+      )
     }
 
     // KPI - single metric only
@@ -839,8 +870,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               </tr>
             </thead>
             <tbody>
-              {chartData.map((item, idx) => (
-                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+              {filteredChartData.map((item, idx) => (
+                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleChartClick(item.name as string)}>
                   <td className="p-3">{item.name}</td>
                   {tableKeys.map((key) => (
                     <td key={key} className="p-3 text-right font-medium">
@@ -943,7 +975,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'area':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart {...commonProps}>
+            <AreaChart {...commonProps} onClick={(e) => e?.activeLabel && handleChartClick(e.activeLabel as string)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
               <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={45}
@@ -967,7 +999,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]}
                   fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                  fillOpacity={0.3} strokeWidth={2} />
+                  fillOpacity={0.3} strokeWidth={2} activeDot={{ cursor: 'pointer' }} />
               ))}
             </AreaChart>
           </ResponsiveContainer>
@@ -976,7 +1008,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
       case 'line':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart {...commonProps}>
+            <LineChart {...commonProps} onClick={(e) => e?.activeLabel && handleChartClick(e.activeLabel as string)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={CustomXAxisTick} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={xAxisInterval} />
               <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} width={45}
@@ -998,7 +1030,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 <Line key={key} type="monotone" dataKey={key} name={getSeriesLabel(key)}
                   yAxisId={useDualAxis && idx > 0 ? 'right' : 'left'}
                   stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2}
-                  dot={{ fill: CHART_COLORS[idx % CHART_COLORS.length], r: 3 }} />
+                  dot={{ fill: CHART_COLORS[idx % CHART_COLORS.length], r: 3 }} activeDot={{ cursor: 'pointer', r: 5 }} />
               ))}
             </LineChart>
           </ResponsiveContainer>
@@ -1012,7 +1044,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           : commonProps
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart {...barCommonProps}>
+            <BarChart {...barCommonProps} onClick={(e) => e?.activeLabel && handleChartClick(e.activeLabel as string)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               {isHorizontal ? (
                 <>
@@ -1028,7 +1060,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
               <Tooltip contentStyle={tooltipStyle} />
               {showLegend && <Legend wrapperStyle={legendWrapperStyle} />}
               {renderKeys.map((key, idx) => (
-                <Bar key={key} dataKey={key} name={getSeriesLabel(key)}
+                <Bar key={key} dataKey={key} name={getSeriesLabel(key)} cursor="pointer"
                   fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
               ))}
               {/* Comparison bars */}
@@ -1048,7 +1080,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           : commonProps
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart {...stackedBarCommonProps}>
+            <BarChart {...stackedBarCommonProps} onClick={(e) => e?.activeLabel && handleChartClick(e.activeLabel as string)}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               {isStackedHorizontal ? (
                 <>
@@ -1062,7 +1094,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                 </>
               )}
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" radius={isStackedHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
+              <Bar dataKey={activeMetrics[0]} fill="#8b5cf6" cursor="pointer" radius={isStackedHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )
@@ -1072,9 +1104,12 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={chartData} dataKey={activeMetrics[0]} nameKey="name" cx="50%" cy="50%" outerRadius={100}
+              <Pie data={filteredChartData} dataKey={activeMetrics[0]} nameKey="name" cx="50%" cy="50%" outerRadius={100}
                 label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
-                {chartData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                {filteredChartData.map((item, index) => (
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} cursor="pointer"
+                    onClick={() => handleChartClick(item.name as string)} />
+                ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
               <Legend wrapperStyle={legendWrapperStyle} />
@@ -1177,6 +1212,29 @@ export function ReportsClient({ profile }: ReportsClientProps) {
           <div className="aspect-[5/4] sm:aspect-[2/1] w-full relative">{renderChart()}</div>
         </CardContent></Card>
 
+        {/* Active dimension filters */}
+        {dimensionFilters.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <span className="text-gray-500">Excluded:</span>
+            {dimensionFilters.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => handleChartClick(filter)}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded border border-red-200 hover:bg-red-100 transition-colors"
+              >
+                {filter}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+            <button
+              onClick={() => setDimensionFilters([])}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
         {config.chartType !== 'table' && chartData.length > 0 && (
           <Card>
             <CardContent className="p-4">
@@ -1193,8 +1251,9 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {chartData.slice(0, 10).map((item, idx) => (
-                      <tr key={idx} className="border-b border-gray-100">
+                    {filteredChartData.slice(0, 10).map((item, idx) => (
+                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleChartClick(item.name as string)}>
                         <td className="p-2">{item.name}</td>
                         {(useSecondaryDimension ? seriesKeys : activeMetrics).map((key) => (
                           <td key={key} className="p-2 text-right">
@@ -1203,8 +1262,8 @@ export function ReportsClient({ profile }: ReportsClientProps) {
                         ))}
                       </tr>
                     ))}
-                    {chartData.length > 10 && (
-                      <tr><td colSpan={(useSecondaryDimension ? seriesKeys : activeMetrics).length + 1} className="p-2 text-center text-gray-400 text-xs">+ {chartData.length - 10} more</td></tr>
+                    {filteredChartData.length > 10 && (
+                      <tr><td colSpan={(useSecondaryDimension ? seriesKeys : activeMetrics).length + 1} className="p-2 text-center text-gray-400 text-xs">+ {filteredChartData.length - 10} more</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1340,7 +1399,7 @@ export function ReportsClient({ profile }: ReportsClientProps) {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs font-medium text-gray-500 mb-1">Group By</p>
-            <select value={config.dimension} onChange={(e) => setConfig({ ...config, dimension: e.target.value as ReportDimension, secondaryDimension: null })}
+            <select value={config.dimension} onChange={(e) => { setConfig({ ...config, dimension: e.target.value as ReportDimension, secondaryDimension: null }); setDimensionFilters([]) }}
               className="w-full h-9 px-2 rounded border border-gray-200 text-sm">
               {Object.entries(dimensionOptions.reduce((acc, opt) => {
                 if (!acc[opt.group]) acc[opt.group] = []
