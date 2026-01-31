@@ -51,7 +51,7 @@ interface EventItemData {
   countPriorPeriod: number
   totalCount: number
   isOverdue: boolean
-  avgGap: number | null
+  medianGap: number | null
 }
 
 interface TooltipData {
@@ -95,7 +95,7 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
       // Calculate days since last occurrence
       let daysSince: number | null = null
       let lastDate: string | null = null
-      let avgGap: number | null = null
+      let medianGap: number | null = null
 
       if (entriesWithEvent.length > 0) {
         const sorted = entriesWithEvent.sort(
@@ -104,17 +104,22 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
         lastDate = sorted[0].entry_date
         daysSince = differenceInDays(today, parseISO(lastDate))
 
-        // Calculate average gap between occurrences (need at least 2 occurrences)
+        // Calculate median gap between occurrences (need at least 2 occurrences)
         if (entriesWithEvent.length >= 2) {
           const sortedDates = entriesWithEvent
             .map((e) => parseISO(e.entry_date))
             .sort((a, b) => a.getTime() - b.getTime())
 
-          let totalGap = 0
+          const gaps: number[] = []
           for (let i = 1; i < sortedDates.length; i++) {
-            totalGap += differenceInDays(sortedDates[i], sortedDates[i - 1])
+            gaps.push(differenceInDays(sortedDates[i], sortedDates[i - 1]))
           }
-          avgGap = Math.round(totalGap / (sortedDates.length - 1))
+          gaps.sort((a, b) => a - b)
+
+          const mid = Math.floor(gaps.length / 2)
+          medianGap = gaps.length % 2 === 0
+            ? Math.round((gaps[mid - 1] + gaps[mid]) / 2)
+            : gaps[mid]
         }
       }
 
@@ -131,7 +136,7 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
       }).length
 
       // Overdue if days since exceeds the event's own average gap
-      const isOverdue = daysSince !== null && avgGap !== null && daysSince > avgGap
+      const isOverdue = daysSince !== null && medianGap !== null && daysSince > medianGap
 
       return {
         event,
@@ -142,7 +147,7 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
         countPriorPeriod,
         totalCount: entriesWithEvent.length,
         isOverdue,
-        avgGap,
+        medianGap,
       }
     })
       // When specific events are selected, show all of them (even if never occurred)
@@ -268,10 +273,10 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
                 ? `${tooltip.item.daysSince} days ago`
                 : 'Never occurred'}
             </div>
-            {(tooltip.item.avgGap !== null || tooltip.item.totalCount > 0) && (
+            {(tooltip.item.medianGap !== null || tooltip.item.totalCount > 0) && (
               <div className="text-gray-500 mt-1 border-t pt-1">
-                {tooltip.item.avgGap !== null && (
-                  <div>Avg. gap: {tooltip.item.avgGap} days</div>
+                {tooltip.item.medianGap !== null && (
+                  <div>Typical gap: {tooltip.item.medianGap} days</div>
                 )}
                 {tooltip.item.totalCount > 0 && (
                   <div>Total: {tooltip.item.totalCount}x</div>
