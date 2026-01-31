@@ -87,6 +87,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
     let trains = 0
     // Track unique dates per location coordinate key
     const cityDatesMap = new Map<string, { name: string; lat: number; lng: number; dates: Set<string> }>()
+    // Track sleep cities for tooltip
+    const sleepCitiesMap = new Map<string, number>()
 
     entries.forEach((entry) => {
       // Count flights and trains from life_events
@@ -94,9 +96,13 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       if (entry.life_events?.some((e) => e.event_type === 'train')) trains++
 
       // Check if slept away from home
-      const sleepCity = entry.city_sleep?.toLowerCase() || ''
-      if (sleepCity && sleepCity !== 'home' && sleepCity !== 'unknown' && sleepCity !== homeCity) {
+      const sleepCity = entry.city_sleep || ''
+      const sleepCityLower = sleepCity.toLowerCase()
+      if (sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity) {
         nightsAway++
+        // Track sleep city with original casing
+        const existingCount = sleepCitiesMap.get(sleepCity) || 0
+        sleepCitiesMap.set(sleepCity, existingCount + 1)
       }
 
       // Collect unique cities with coordinates (from wake, noon, sleep locations)
@@ -137,12 +143,18 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       }
     })
 
+    // Convert sleep cities map to sorted array (by nights, descending)
+    const sleepCities = Array.from(sleepCitiesMap.entries())
+      .map(([name, nights]) => ({ name, nights }))
+      .sort((a, b) => b.nights - a.nights)
+
     return {
       nightsAway,
       flights,
       trains,
       cities,
       uniqueCityCount: cities.length,
+      sleepCities,
     }
   }, [entries, profile.home_city])
 
@@ -177,7 +189,12 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       <div className="flex-1 min-h-0 flex flex-col gap-3">
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
-          <div className="text-center p-2 bg-indigo-50 rounded-lg">
+          <div
+            className="text-center p-2 bg-indigo-50 rounded-lg cursor-help"
+            title={stats.sleepCities.length > 0
+              ? `Places stayed:\n${stats.sleepCities.map(c => `${c.name} (${c.nights})`).join('\n')}`
+              : undefined}
+          >
             <div className="flex items-center justify-center mb-1">
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
@@ -198,7 +215,12 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             <p className="text-lg font-bold text-amber-700">{stats.trains}</p>
             <p className="text-[10px] text-amber-600">Trains</p>
           </div>
-          <div className="text-center p-2 bg-emerald-50 rounded-lg">
+          <div
+            className="text-center p-2 bg-emerald-50 rounded-lg cursor-help"
+            title={stats.cities.length > 0
+              ? `Cities visited:\n${stats.cities.map(c => `${c.name} (${c.days} days)`).sort((a, b) => a.localeCompare(b)).join('\n')}`
+              : undefined}
+          >
             <div className="flex items-center justify-center mb-1">
               <MapPin className="h-4 w-4 text-emerald-500" />
             </div>

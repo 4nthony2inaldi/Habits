@@ -77,10 +77,10 @@ export default function TravelMap({ cities }: TravelMapProps) {
         html: `<div style="
           width: ${size}px;
           height: ${size}px;
-          background-color: #0891b2;
-          border: 2px solid white;
+          background-color: rgba(8, 145, 178, 0.55);
+          border: 2px solid rgba(255, 255, 255, 0.8);
           border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           display: flex;
           align-items: center;
           justify-content: center;
