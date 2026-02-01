@@ -276,7 +276,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
           {/* Away */}
-          <div className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-help">
+          <div className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-default">
             <div className="flex items-center justify-center mb-1">
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
@@ -309,7 +309,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
           </div>
 
           {/* Flights */}
-          <div className="relative group text-center p-2 bg-cyan-50 rounded-lg cursor-help">
+          <div className="relative group text-center p-2 bg-cyan-50 rounded-lg cursor-default">
             <div className="flex items-center justify-center mb-1">
               <Plane className="h-4 w-4 text-cyan-500" />
             </div>
@@ -332,7 +332,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
           </div>
 
           {/* Trains */}
-          <div className="relative group text-center p-2 bg-amber-50 rounded-lg cursor-help">
+          <div className="relative group text-center p-2 bg-amber-50 rounded-lg cursor-default">
             <div className="flex items-center justify-center mb-1">
               <Train className="h-4 w-4 text-amber-500" />
             </div>
@@ -355,7 +355,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
           </div>
 
           {/* Cities */}
-          <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-help">
+          <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-default">
             <div className="flex items-center justify-center mb-1">
               <MapPin className="h-4 w-4 text-emerald-500" />
             </div>

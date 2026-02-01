@@ -199,12 +199,13 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
                       <div key={colIdx} className="flex-1 px-1 flex items-center">
                         <div
                           className={cn(
-                            'h-7 rounded-md flex items-center justify-center transition-all',
+                            'h-7 rounded-md flex items-center justify-center transition-all cursor-default',
                             TYPE_COLORS[type].bg
                           )}
                           style={{
                             width: `${Math.max(scaledWidth, percent > 0 ? 8 : 0)}%`,
                           }}
+                          title={`${TYPE_LABELS[type]}: ${percent}%`}
                         >
                           {/* Show percentage inside bar if wide enough */}
                           {isFirstColumn && scaledWidth >= 25 && (
