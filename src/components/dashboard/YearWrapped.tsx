@@ -1509,28 +1509,53 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <line x1="100" y1="20" x2="100" y2="120" className="stroke-white/10" strokeWidth="0.5" strokeDasharray="2,2" />
               <line x1="180" y1="20" x2="180" y2="120" className="stroke-white/10" strokeWidth="0.5" />
 
-              {/* Data points */}
-              {stats.weatherDataPoints.slice(0, 365).map((d, i) => {
-                // Map temp to full width (20-180), assuming 20°F to 100°F range
-                const minTemp = 20, maxTemp = 100
-                const x = 20 + ((Math.max(minTemp, Math.min(maxTemp, d.temp)) - minTemp) / (maxTemp - minTemp)) * 160
-                // Map humidity 20-80% to height (most data falls here)
-                const minHum = 20, maxHum = 80
-                const clampedHum = Math.max(minHum, Math.min(maxHum, d.humidity))
-                const y = 120 - ((clampedHum - minHum) / (maxHum - minHum)) * 100
-                // Color based on nice score
-                const hue = (d.niceScore / 100) * 120
-                const color = `hsl(${hue}, 70%, 55%)`
-                const hasRain = d.precip > 0
-                return (
-                  <g key={i}>
-                    {hasRain && (
-                      <circle cx={x} cy={y} r={5} fill="none" stroke="#60a5fa" strokeWidth="1.5" opacity={0.6} />
-                    )}
-                    <circle cx={x} cy={y} r={2.5} fill={color} opacity={0.9} />
-                  </g>
-                )
-              })}
+              {/* Data points - binned for density */}
+              {(() => {
+                // Bin data into buckets (5°F temp x 5% humidity)
+                const bins: Record<string, { count: number; totalScore: number; hasRain: boolean; x: number; y: number }> = {}
+                const minTemp = 20, maxTemp = 100, minHum = 20, maxHum = 80
+                const tempBinSize = 5, humBinSize = 5
+
+                stats.weatherDataPoints.forEach(d => {
+                  const tempBin = Math.floor((Math.max(minTemp, Math.min(maxTemp, d.temp)) - minTemp) / tempBinSize)
+                  const humBin = Math.floor((Math.max(minHum, Math.min(maxHum, d.humidity)) - minHum) / humBinSize)
+                  const key = `${tempBin},${humBin}`
+
+                  if (!bins[key]) {
+                    const binTempCenter = minTemp + (tempBin + 0.5) * tempBinSize
+                    const binHumCenter = minHum + (humBin + 0.5) * humBinSize
+                    const x = 20 + ((binTempCenter - minTemp) / (maxTemp - minTemp)) * 160
+                    const y = 120 - ((binHumCenter - minHum) / (maxHum - minHum)) * 100
+                    bins[key] = { count: 0, totalScore: 0, hasRain: false, x, y }
+                  }
+                  bins[key].count++
+                  bins[key].totalScore += d.niceScore
+                  if (d.precip > 0) bins[key].hasRain = true
+                })
+
+                const maxCount = Math.max(...Object.values(bins).map(b => b.count))
+
+                return Object.values(bins).map((bin, i) => {
+                  const avgScore = bin.totalScore / bin.count
+                  const hue = (avgScore / 100) * 120
+                  const color = `hsl(${hue}, 70%, 55%)`
+                  // Size: 3-10 based on count
+                  const size = 3 + (bin.count / maxCount) * 7
+                  return (
+                    <g key={i}>
+                      {bin.hasRain && (
+                        <circle cx={bin.x} cy={bin.y} r={size + 3} fill="none" stroke="#60a5fa" strokeWidth="1.5" opacity={0.5} />
+                      )}
+                      <circle cx={bin.x} cy={bin.y} r={size} fill={color} opacity={0.85} />
+                      {bin.count > 5 && (
+                        <text x={bin.x} y={bin.y + 1} className="fill-white text-[6px] font-medium" textAnchor="middle" dominantBaseline="middle">
+                          {bin.count}
+                        </text>
+                      )}
+                    </g>
+                  )
+                })
+              })()}
             </svg>
 
             {/* Bottom legend */}
