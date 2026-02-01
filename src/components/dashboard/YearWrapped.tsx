@@ -1581,6 +1581,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     setExportProgress(0)
 
     const originalSlide = currentSlide
+    const savedImages: string[] = []
 
     try {
       for (let i = 0; i < slides.length; i++) {
@@ -1588,30 +1589,52 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         setCurrentSlide(i)
         setExportProgress(Math.round(((i + 0.5) / slides.length) * 100))
 
-        // Wait for the slide transition to complete
-        await new Promise(resolve => setTimeout(resolve, 600))
+        // Wait for React to re-render and CSS transition to complete
+        await new Promise(resolve => setTimeout(resolve, 800))
+
+        // Double-check ref is still valid
+        if (!slideContainerRef.current) {
+          throw new Error('Slide container lost')
+        }
 
         // Capture the slide
+        console.log(`Capturing slide ${i + 1}/${slides.length}...`)
         const canvas = await html2canvas(slideContainerRef.current, {
-          backgroundColor: null,
-          scale: 2, // Higher quality
+          backgroundColor: '#000000',
+          scale: 2,
           useCORS: true,
-          logging: false,
+          logging: true, // Enable logging for debugging
+          allowTaint: true,
+          width: slideContainerRef.current.offsetWidth,
+          height: slideContainerRef.current.offsetHeight,
         })
 
-        // Convert to image and download
-        const link = document.createElement('a')
-        link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
-        link.href = canvas.toDataURL('image/png')
-        link.click()
+        // Convert to data URL
+        const dataUrl = canvas.toDataURL('image/png')
+        savedImages.push(dataUrl)
+        console.log(`Slide ${i + 1} captured successfully`)
 
         setExportProgress(Math.round(((i + 1) / slides.length) * 100))
-
-        // Small delay between downloads to prevent overwhelming the browser
-        await new Promise(resolve => setTimeout(resolve, 300))
       }
+
+      // Now download all images (doing this after capture to avoid interruption)
+      console.log(`Downloading ${savedImages.length} images...`)
+      for (let i = 0; i < savedImages.length; i++) {
+        const link = document.createElement('a')
+        link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
+        link.href = savedImages[i]
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        // Delay between downloads for mobile browsers
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+
+      console.log('Export complete!')
     } catch (error) {
       console.error('Failed to export slides:', error)
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check the browser console for details.`)
     } finally {
       // Restore the original slide
       setCurrentSlide(originalSlide)
