@@ -168,18 +168,22 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     const drinksByDayOfWeek = [0, 0, 0, 0, 0, 0, 0]
     const dayCountByDayOfWeek = [0, 0, 0, 0, 0, 0, 0]
 
-    // For streaks
+    // For streaks (with city context)
     let currentSoberStreak = 0
     let longestSoberStreak = 0
     let soberStreakStart = ''
     let soberStreakEnd = ''
+    let soberStreakCity: string | null = null
     let tempSoberStart = ''
+    let tempSoberCity: string | null = null
 
     let currentDrinkStreak = 0
     let longestDrinkStreak = 0
     let drinkStreakStart = ''
     let drinkStreakEnd = ''
+    let drinkStreakCity: string | null = null
     let tempDrinkStart = ''
+    let tempDrinkCity: string | null = null
 
     // Helper to get context for a date
     const getDateContext = (entry: DailyEntryWithRelations): string | null => {
@@ -242,12 +246,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         drinkTypes.shots += entry.shots || 0
 
         // Drinking streak
-        if (currentDrinkStreak === 0) tempDrinkStart = entry.entry_date
+        if (currentDrinkStreak === 0) {
+          tempDrinkStart = entry.entry_date
+          tempDrinkCity = getDateContext(entry)
+        }
         currentDrinkStreak++
         if (currentDrinkStreak > longestDrinkStreak) {
           longestDrinkStreak = currentDrinkStreak
           drinkStreakStart = tempDrinkStart
           drinkStreakEnd = entry.entry_date
+          drinkStreakCity = tempDrinkCity
         }
 
         // Reset sober streak
@@ -256,12 +264,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         soberDays++
 
         // Sober streak
-        if (currentSoberStreak === 0) tempSoberStart = entry.entry_date
+        if (currentSoberStreak === 0) {
+          tempSoberStart = entry.entry_date
+          tempSoberCity = getDateContext(entry)
+        }
         currentSoberStreak++
         if (currentSoberStreak > longestSoberStreak) {
           longestSoberStreak = currentSoberStreak
           soberStreakStart = tempSoberStart
           soberStreakEnd = entry.entry_date
+          soberStreakCity = tempSoberCity
         }
 
         // Reset drink streak
@@ -531,9 +543,11 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       longestSoberStreak,
       soberStreakStart,
       soberStreakEnd,
+      soberStreakCity,
       longestDrinkStreak,
       drinkStreakStart,
       drinkStreakEnd,
+      drinkStreakCity,
       booziesDay,
       soberestDay,
       avgDrinksByDay,
@@ -910,6 +924,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               {stats.soberStreakStart && (
                 <p className="text-white/60 text-xs mt-1">
                   {format(parseISO(stats.soberStreakStart), 'MMM d')} - {format(parseISO(stats.soberStreakEnd), 'MMM d')}
+                  {stats.soberStreakCity && ` · ${stats.soberStreakCity}`}
                 </p>
               )}
               {stats.longestSoberStreak >= 30 && (
@@ -923,10 +938,14 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                 {stats.drinkStreakStart && (
                   <p className="text-white/60 text-xs mt-1">
                     {format(parseISO(stats.drinkStreakStart), 'MMM d')} - {format(parseISO(stats.drinkStreakEnd), 'MMM d')}
+                    {stats.drinkStreakCity && ` · ${stats.drinkStreakCity}`}
                   </p>
                 )}
-                {stats.longestDrinkStreak >= 7 && (
+                {stats.longestDrinkStreak >= 7 && !stats.drinkStreakCity && (
                   <p className="text-white/50 text-xs mt-1 italic">Vacation vibes? 🏖️</p>
+                )}
+                {stats.drinkStreakCity && (
+                  <p className="text-white/50 text-xs mt-1 italic">Living it up in {stats.drinkStreakCity}! 🌴</p>
                 )}
               </div>
             )}
