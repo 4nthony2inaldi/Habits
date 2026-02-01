@@ -179,7 +179,7 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
           {data.typeOrder.map((type) => (
             <div key={type} className="flex items-center">
               {/* Row label */}
-              <div className="w-16 flex-shrink-0 text-xs text-gray-600 pr-2 text-right">
+              <div className="w-14 flex-shrink-0 text-xs text-gray-600 pr-2 text-right">
                 {TYPE_LABELS[type]}
               </div>
 
@@ -187,22 +187,21 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
               {columns.map((col, colIdx) => {
                 const percent = col.percentages[type]
                 const isFirstColumn = colIdx === 0
-                const maxHeight = 48 // Max bar height in pixels
 
                 return (
-                  <div key={colIdx} className="flex-1 flex justify-center px-1">
+                  <div key={colIdx} className="flex-1 px-1">
                     <div
                       className={cn(
-                        'w-full max-w-[60px] rounded-md flex items-end justify-center transition-all',
+                        'h-6 rounded-md flex items-center justify-center transition-all',
                         TYPE_COLORS[type].bg
                       )}
                       style={{
-                        height: `${Math.max((percent / 100) * maxHeight, percent > 0 ? 4 : 0)}px`,
+                        width: `${Math.max(percent, percent > 0 ? 8 : 0)}%`,
                       }}
                     >
-                      {/* Show percentage inside bar for first column if tall enough */}
-                      {isFirstColumn && percent >= 10 && (
-                        <span className="text-white text-[10px] font-medium pb-0.5">
+                      {/* Show percentage inside bar for first column if wide enough */}
+                      {isFirstColumn && percent >= 15 && (
+                        <span className="text-white text-[10px] font-medium">
                           {percent}%
                         </span>
                       )}
