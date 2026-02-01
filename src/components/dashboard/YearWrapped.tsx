@@ -1492,100 +1492,89 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             </div>
           </div>
 
-          {/* Bar chart: Temperature bins with humidity bars - Oura style */}
+          {/* Bar chart: Temperature vs Humidity - height=humidity deviation, width=day count */}
           <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3">
             {(() => {
-              // Bin by temperature, track avg humidity deviation from 50%
-              const tempBins: Record<number, { count: number; totalHumDev: number; totalScore: number }> = {}
+              // Bin by temperature AND humidity
+              const binMap: Record<string, { count: number; totalScore: number }> = {}
               const tempBinSize = 5
-
-              // Find temperature range from data
-              let minTemp = Infinity, maxTemp = -Infinity
-              stats.weatherDataPoints.forEach(d => {
-                minTemp = Math.min(minTemp, d.temp)
-                maxTemp = Math.max(maxTemp, d.temp)
-              })
-              minTemp = Math.floor(minTemp / tempBinSize) * tempBinSize
-              maxTemp = Math.ceil(maxTemp / tempBinSize) * tempBinSize
+              const humBinSize = 5
 
               stats.weatherDataPoints.forEach(d => {
                 const tempBin = Math.floor(d.temp / tempBinSize) * tempBinSize
-                if (!tempBins[tempBin]) {
-                  tempBins[tempBin] = { count: 0, totalHumDev: 0, totalScore: 0 }
-                }
-                tempBins[tempBin].count++
-                tempBins[tempBin].totalHumDev += (50 - d.humidity) // positive = dry, negative = humid
-                tempBins[tempBin].totalScore += d.niceScore
+                const humBin = Math.floor(d.humidity / humBinSize) * humBinSize
+                const key = `${tempBin},${humBin}`
+                if (!binMap[key]) binMap[key] = { count: 0, totalScore: 0 }
+                binMap[key].count++
+                binMap[key].totalScore += d.niceScore
               })
 
-              const bins = Object.entries(tempBins).sort((a, b) => Number(a[0]) - Number(b[0]))
-              const maxCount = Math.max(...bins.map(([, b]) => b.count))
-              const barWidth = 160 / bins.length
+              // Convert to array with parsed values
+              const bins = Object.entries(binMap).map(([key, data]) => {
+                const [temp, humidity] = key.split(',').map(Number)
+                return { temp, humidity, count: data.count, avgScore: data.totalScore / data.count }
+              })
+
+              // Find ranges for scaling
+              const minTemp = Math.min(...bins.map(b => b.temp))
+              const maxTemp = Math.max(...bins.map(b => b.temp)) + tempBinSize
+              const maxCount = Math.max(...bins.map(b => b.count))
+              const maxHumDev = Math.max(...bins.map(b => Math.abs(b.humidity + humBinSize / 2 - 50))) + 5
+
+              const chartLeft = 25
+              const chartWidth = 155
               const centerY = 70
-              const maxBarHeight = 50
+              const maxBarHeight = 48
+
+              // Sort by temperature for x-axis labels
+              const temps = [...new Set(bins.map(b => b.temp))].sort((a, b) => a - b)
 
               return (
                 <>
                   <svg viewBox="0 0 200 140" className="w-full h-32">
-                    {/* Center line (50% humidity baseline) */}
-                    <line x1="20" y1={centerY} x2="180" y2={centerY} className="stroke-white/30" strokeWidth="1" />
+                    {/* Center line (50% humidity) */}
+                    <line x1={chartLeft} y1={centerY} x2={chartLeft + chartWidth} y2={centerY} className="stroke-white/30" strokeWidth="1" />
 
                     {/* Y-axis labels */}
-                    <text x="10" y="25" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
-                    <text x="10" y="118" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
+                    <text x="12" y="25" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
+                    <text x="12" y="115" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
 
-                    {/* Bars - height = day count, direction = dry/humid */}
-                    {bins.map(([tempStr, bin], i) => {
-                      const temp = Number(tempStr)
-                      const avgHumDev = bin.totalHumDev / bin.count // positive = dry, negative = humid
-                      const avgScore = bin.totalScore / bin.count
-                      const barHeight = (bin.count / maxCount) * maxBarHeight
-                      const x = 20 + i * barWidth + barWidth * 0.1
-                      const width = barWidth * 0.8
+                    {/* Bars - height=humidity deviation, width=day count */}
+                    {bins.map((bin, i) => {
+                      const humCenter = bin.humidity + humBinSize / 2
+                      const humDev = 50 - humCenter // positive = dry (bar goes up), negative = humid (bar goes down)
+                      const barHeight = (Math.abs(humDev) / maxHumDev) * maxBarHeight
 
-                      // Color based on nice score (green = comfy, red = harsh)
-                      const hue = (avgScore / 100) * 120
+                      // X position based on temperature bin center
+                      const tempCenter = bin.temp + tempBinSize / 2
+                      const x = chartLeft + ((tempCenter - minTemp) / (maxTemp - minTemp)) * chartWidth
+
+                      // Width based on day count (min 2, max 12)
+                      const width = 2 + (bin.count / maxCount) * 10
+
+                      // Color based on comfort score
+                      const hue = (bin.avgScore / 100) * 120
                       const color = `hsl(${hue}, 70%, 50%)`
 
-                      const goesUp = avgHumDev >= 0 // dry days go up
-
                       return (
-                        <g key={temp}>
-                          <rect
-                            x={x}
-                            y={goesUp ? centerY - barHeight : centerY}
-                            width={width}
-                            height={Math.max(barHeight, 2)}
-                            fill={color}
-                            rx="2"
-                          />
-                          {bin.count > 15 && (
-                            <text
-                              x={x + width / 2}
-                              y={goesUp ? centerY - barHeight / 2 + 1 : centerY + barHeight / 2 + 1}
-                              className="fill-white/90 text-[6px] font-medium"
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                            >
-                              {bin.count}
-                            </text>
-                          )}
-                        </g>
+                        <rect
+                          key={i}
+                          x={x - width / 2}
+                          y={humDev > 0 ? centerY - barHeight : centerY}
+                          width={width}
+                          height={Math.max(barHeight, 1)}
+                          fill={color}
+                          rx="1"
+                        />
                       )
                     })}
 
-                    {/* X-axis temp labels - show every other if many bins */}
-                    {bins.filter((_, i) => bins.length <= 10 || i % 2 === 0).map(([tempStr]) => {
-                      const idx = bins.findIndex(b => b[0] === tempStr)
+                    {/* X-axis temp labels */}
+                    {temps.filter((_, i) => temps.length <= 12 || i % 2 === 0).map(temp => {
+                      const x = chartLeft + ((temp + tempBinSize / 2 - minTemp) / (maxTemp - minTemp)) * chartWidth
                       return (
-                        <text
-                          key={tempStr}
-                          x={20 + idx * barWidth + barWidth / 2}
-                          y="132"
-                          className="fill-white/50 text-[7px]"
-                          textAnchor="middle"
-                        >
-                          {tempStr}°
+                        <text key={temp} x={x} y="132" className="fill-white/50 text-[7px]" textAnchor="middle">
+                          {temp}°
                         </text>
                       )
                     })}
