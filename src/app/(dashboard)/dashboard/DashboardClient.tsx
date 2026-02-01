@@ -160,6 +160,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
       {showWrapped && (
         <YearWrapped
           entries={allEntries || []}
+          profile={currentUser}
           onClose={() => setShowWrapped(false)}
         />
       )}
