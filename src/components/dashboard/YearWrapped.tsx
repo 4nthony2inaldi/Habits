@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { format, parseISO, startOfYear, endOfYear, getYear, getDay, differenceInDays } from 'date-fns'
-import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer, Globe2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { DailyEntryWithRelations, HabitType, EventType, Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
@@ -1037,6 +1037,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       gradient: 'bg-gradient-to-br from-slate-800 via-slate-900 to-black',
       content: (
         <div className="text-center">
+          <Globe2 className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">Your year at a glance</p>
           <p className="text-white/50 text-sm mb-4">Each dot is a day · Raised dots = nights away</p>
           <div className="relative w-72 h-72 mx-auto">
