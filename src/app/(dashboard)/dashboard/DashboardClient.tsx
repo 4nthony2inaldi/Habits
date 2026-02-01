@@ -13,8 +13,9 @@ import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
 import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
-import { Loader2, Lock, Unlock } from 'lucide-react'
+import { Loader2, Lock, Unlock, Sparkles } from 'lucide-react'
 import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
+import { YearWrapped } from '@/components/dashboard/YearWrapped'
 
 interface DashboardClientProps {
   currentUser: Profile
@@ -31,6 +32,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     getWidgetConfig(currentUser)
   )
   const [gridLocked, setGridLocked] = useState(true)
+  const [showWrapped, setShowWrapped] = useState(false)
   const { controlsCollapsed } = useDashboardControls()
 
   const { data: entries, isLoading } = useEntries({
@@ -110,6 +112,14 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
               </>
             )}
           </button>
+          <button
+            onClick={() => setShowWrapped(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+            title="View your year wrapped"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Wrapped</span>
+          </button>
         </div>
       )}
 
@@ -144,6 +154,14 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             locked={gridLocked}
           />
         </>
+      )}
+
+      {/* Year Wrapped Modal */}
+      {showWrapped && (
+        <YearWrapped
+          entries={allEntries || []}
+          onClose={() => setShowWrapped(false)}
+        />
       )}
     </div>
   )
