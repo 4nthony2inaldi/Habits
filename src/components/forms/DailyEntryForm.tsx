@@ -367,7 +367,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
     const playedSport = events.includes('played_sport')
 
     // Self care events
-    const selfCareEvents = ['haircut', 'massage', 'facial', 'pedicure', 'manicure', 'other_selfcare', 'doctor', 'dentist']
+    const selfCareEvents = ['haircut', 'massage', 'facial', 'pedicure', 'manicure', 'other_selfcare', 'doctor', 'dentist', 'eye_doctor', 'bloodwork', 'therapy', 'meditation']
       .filter(e => events.includes(e as EventType))
 
     // Entertainment events
@@ -968,6 +968,30 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 label="Dentist"
                 checked={field.value.includes('dentist')}
                 onChange={() => field.onChange(toggleEvent('dentist', field.value as EventType[]))}
+                color="purple"
+              />
+              <PillButton
+                label="Eye Doctor"
+                checked={field.value.includes('eye_doctor')}
+                onChange={() => field.onChange(toggleEvent('eye_doctor', field.value as EventType[]))}
+                color="purple"
+              />
+              <PillButton
+                label="Bloodwork"
+                checked={field.value.includes('bloodwork')}
+                onChange={() => field.onChange(toggleEvent('bloodwork', field.value as EventType[]))}
+                color="purple"
+              />
+              <PillButton
+                label="Therapy"
+                checked={field.value.includes('therapy')}
+                onChange={() => field.onChange(toggleEvent('therapy', field.value as EventType[]))}
+                color="purple"
+              />
+              <PillButton
+                label="Meditation"
+                checked={field.value.includes('meditation')}
+                onChange={() => field.onChange(toggleEvent('meditation', field.value as EventType[]))}
                 color="purple"
               />
               <PillButton
