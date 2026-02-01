@@ -380,17 +380,17 @@ export function YearWrapped({ entries, year, onClose }: YearWrappedProps) {
   }, [nextSlide, prevSlide, onClose])
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div className="fixed inset-0 z-[9999] bg-black isolate">
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
       >
         <X className="h-6 w-6 text-white" />
       </button>
 
       {/* Progress dots */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-1.5">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
         {slides.map((_, idx) => (
           <button
             key={idx}
@@ -413,7 +413,7 @@ export function YearWrapped({ entries, year, onClose }: YearWrappedProps) {
       </div>
 
       {/* Navigation */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-4 z-50">
+      <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-4 z-10">
         <button
           onClick={prevSlide}
           disabled={currentSlide === 0}
