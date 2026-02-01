@@ -119,6 +119,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
+  const [capturedFiles, setCapturedFiles] = useState<File[]>([])
   const slideContainerRef = useRef<HTMLDivElement>(null)
 
   // Filter entries for the target year and previous year
@@ -1770,40 +1771,10 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         files.push(file)
       }
 
-      console.log(`Created ${files.length} files for sharing`)
+      console.log(`Created ${files.length} files`)
 
-      // Check Web Share API support
-      const hasShare = typeof navigator.share === 'function'
-      const hasCanShare = typeof navigator.canShare === 'function'
-      const canShareFiles = hasCanShare && navigator.canShare({ files })
-
-      console.log(`Share support: share=${hasShare}, canShare=${hasCanShare}, canShareFiles=${canShareFiles}`)
-
-      // Try Web Share API first (works on iOS for saving to camera roll)
-      if (hasShare && canShareFiles) {
-        console.log('Using Web Share API...')
-        await navigator.share({
-          files,
-          title: `${targetYear} Year Wrapped`,
-        })
-        alert(`${files.length} slides ready to save! Choose "Save ${files.length} Images" from the share menu.`)
-      } else if (hasShare) {
-        // Can share but not files - offer to share one at a time
-        alert(`Your browser doesn't support sharing multiple files. The images were captured but cannot be saved automatically. Try using a different browser or taking screenshots.`)
-      } else {
-        // Desktop fallback: download files
-        console.log(`Downloading ${savedImages.length} images...`)
-        for (let i = 0; i < savedImages.length; i++) {
-          const link = document.createElement('a')
-          link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
-          link.href = savedImages[i]
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          await new Promise(resolve => setTimeout(resolve, 300))
-        }
-        alert(`${files.length} slides downloaded!`)
-      }
+      // Store files for sharing via button click (required for iOS user gesture)
+      setCapturedFiles(files)
     } catch (error) {
       console.error('Failed to export slides:', error)
       alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check the browser console for details.`)
@@ -1814,6 +1785,44 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       setExportProgress(0)
     }
   }, [currentSlide, isExporting, slides.length, targetYear])
+
+  // Share/download captured files - must be called from direct user gesture
+  const shareOrDownloadFiles = useCallback(async () => {
+    if (capturedFiles.length === 0) return
+
+    try {
+      // Check if we can share files
+      const hasShareApi = typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
+      const canShare = hasShareApi && navigator.canShare({ files: capturedFiles })
+
+      if (canShare) {
+        await navigator.share({
+          files: capturedFiles,
+          title: `${targetYear} Year Wrapped`,
+        })
+      } else {
+        // Desktop fallback: download via data URLs
+        for (const file of capturedFiles) {
+          const url = URL.createObjectURL(file)
+          const link = document.createElement('a')
+          link.download = file.name
+          link.href = url
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share failed:', error)
+        alert(`Share failed: ${(error as Error).message}`)
+      }
+    } finally {
+      setCapturedFiles([])
+    }
+  }, [capturedFiles, targetYear])
 
   // Keyboard navigation
   useEffect(() => {
@@ -1917,6 +1926,33 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs">
         Use arrow keys or tap to navigate
       </p>
+
+      {/* Save images modal - shows after capture completes */}
+      {capturedFiles.length > 0 && (
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-2xl p-6 mx-4 max-w-sm w-full text-center">
+            <div className="text-4xl mb-3">📸</div>
+            <h3 className="text-white text-xl font-bold mb-2">
+              {capturedFiles.length} Slides Captured!
+            </h3>
+            <p className="text-white/70 text-sm mb-6">
+              Tap the button below to save them to your camera roll.
+            </p>
+            <button
+              onClick={shareOrDownloadFiles}
+              className="w-full py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors mb-3"
+            >
+              Save Images
+            </button>
+            <button
+              onClick={() => setCapturedFiles([])}
+              className="w-full py-2 px-6 text-white/60 hover:text-white text-sm transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
