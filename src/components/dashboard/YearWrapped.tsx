@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { format, parseISO, startOfYear, endOfYear, getYear, getDay, differenceInDays } from 'date-fns'
-import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { DailyEntryWithRelations, HabitType, EventType, Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
@@ -503,6 +503,57 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     const bestStepsEntry = [...yearEntries].sort((a, b) => (b.steps || 0) - (a.steps || 0))[0]
     const totalMiles = Math.round(totalSteps / 2000)
 
+    // Weather stats
+    const weatherEntries = yearEntries.filter(e => e.weather_temperature_high !== null)
+    const hottestDay = weatherEntries.length > 0
+      ? [...weatherEntries].sort((a, b) => (b.weather_temperature_high || 0) - (a.weather_temperature_high || 0))[0]
+      : null
+    const coldestDay = weatherEntries.length > 0
+      ? [...weatherEntries].sort((a, b) => (a.weather_temperature_low || 999) - (b.weather_temperature_low || 999))[0]
+      : null
+    const rainyDays = yearEntries.filter(e => (e.weather_precipitation || 0) > 0).length
+    const totalPrecipitation = yearEntries.reduce((sum, e) => sum + (e.weather_precipitation || 0), 0)
+    const rainiestDay = yearEntries.filter(e => e.weather_precipitation !== null && e.weather_precipitation > 0)
+      .sort((a, b) => (b.weather_precipitation || 0) - (a.weather_precipitation || 0))[0] || null
+
+    // Weather conditions breakdown
+    const conditionCounts: Record<string, number> = {}
+    yearEntries.forEach(e => {
+      if (e.weather_conditions) {
+        const condition = e.weather_conditions.toLowerCase()
+        conditionCounts[condition] = (conditionCounts[condition] || 0) + 1
+      }
+    })
+    const topWeatherCondition = Object.entries(conditionCounts).sort((a, b) => b[1] - a[1])[0]
+    const sunnyDays = Object.entries(conditionCounts)
+      .filter(([c]) => c.includes('sun') || c.includes('clear'))
+      .reduce((sum, [, count]) => sum + count, 0)
+    const cloudyDays = Object.entries(conditionCounts)
+      .filter(([c]) => c.includes('cloud') || c.includes('overcast'))
+      .reduce((sum, [, count]) => sum + count, 0)
+
+    // Average temperature
+    const avgTempHigh = weatherEntries.length > 0
+      ? Math.round(weatherEntries.reduce((sum, e) => sum + (e.weather_temperature_high || 0), 0) / weatherEntries.length)
+      : null
+    const avgTempLow = weatherEntries.length > 0
+      ? Math.round(weatherEntries.reduce((sum, e) => sum + (e.weather_temperature_low || 0), 0) / weatherEntries.length)
+      : null
+
+    // Mood-weather correlation
+    const moodOnSunnyDays = yearEntries
+      .filter(e => e.mood_score !== null && e.weather_conditions?.toLowerCase().match(/sun|clear/))
+      .map(e => e.mood_score as number)
+    const avgMoodSunny = moodOnSunnyDays.length > 0
+      ? (moodOnSunnyDays.reduce((a, b) => a + b, 0) / moodOnSunnyDays.length).toFixed(1)
+      : null
+    const moodOnRainyDays = yearEntries
+      .filter(e => e.mood_score !== null && (e.weather_precipitation || 0) > 0)
+      .map(e => e.mood_score as number)
+    const avgMoodRainy = moodOnRainyDays.length > 0
+      ? (moodOnRainyDays.reduce((a, b) => a + b, 0) / moodOnRainyDays.length).toFixed(1)
+      : null
+
     // Best month for habits
     const monthlyHabits: Record<string, number> = {}
     yearEntries.forEach(entry => {
@@ -576,6 +627,20 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       avgMoodSober,
       avgMoodDrinking,
       avgMoodTravel,
+      avgMoodSunny,
+      avgMoodRainy,
+      // Weather stats
+      weatherEntries: weatherEntries.length,
+      hottestDay,
+      coldestDay,
+      rainyDays,
+      totalPrecipitation,
+      rainiestDay,
+      sunnyDays,
+      cloudyDays,
+      topWeatherCondition,
+      avgTempHigh,
+      avgTempLow,
       totalSteps,
       avgSteps,
       totalMiles,
@@ -1239,6 +1304,18 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                 <span className="text-white font-bold">{stats.avgMoodTravel}</span>
               </div>
             )}
+            {stats.avgMoodSunny && (
+              <div className="bg-white/20 rounded-xl px-5 py-3 backdrop-blur flex justify-between items-center">
+                <span className="text-white">On sunny days ☀️</span>
+                <span className="text-white font-bold">{stats.avgMoodSunny}</span>
+              </div>
+            )}
+            {stats.avgMoodRainy && (
+              <div className="bg-white/20 rounded-xl px-5 py-3 backdrop-blur flex justify-between items-center">
+                <span className="text-white">On rainy days 🌧️</span>
+                <span className="text-white font-bold">{stats.avgMoodRainy}</span>
+              </div>
+            )}
           </div>
           {stats.avgMoodExercise && parseFloat(stats.avgMoodExercise) > parseFloat(stats.avgMood) && (
             <p className="text-white/50 text-xs mt-4 italic">The data doesn't lie - exercise = happiness! 🏃</p>
@@ -1249,6 +1326,89 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     },
+    // Weather slide
+    ...(stats.weatherEntries > 0 ? [{
+      gradient: 'bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600',
+      content: (
+        <div className="text-center">
+          <Sun className="h-12 w-12 text-white/80 mb-4 mx-auto" />
+          <p className="text-white/80 text-lg mb-4">Your year in weather</p>
+
+          {/* Sunny vs Rainy */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.sunnyDays}</p>
+              <p className="text-white/70 text-xs">sunny days ☀️</p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.rainyDays}</p>
+              <p className="text-white/70 text-xs">rainy days 🌧️</p>
+            </div>
+          </div>
+
+          {/* Temperature extremes */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-4">
+            {stats.hottestDay && (
+              <div className="bg-red-500/30 rounded-xl px-3 py-2 backdrop-blur">
+                <p className="text-white/60 text-[10px] mb-1">Hottest day 🔥</p>
+                <p className="text-2xl font-bold text-white">{stats.hottestDay.weather_temperature_high}°</p>
+                <p className="text-white/50 text-[9px]">
+                  {format(parseISO(stats.hottestDay.entry_date), 'MMM d')}
+                  {(() => {
+                    const city = stats.hottestDay?.city_sleep?.split(',')[0].trim()
+                    const cityLower = city?.toLowerCase() || ''
+                    return cityLower && cityLower !== 'home' && cityLower !== 'unknown' ? ` · ${city}` : ''
+                  })()}
+                </p>
+              </div>
+            )}
+            {stats.coldestDay && (
+              <div className="bg-blue-500/30 rounded-xl px-3 py-2 backdrop-blur">
+                <p className="text-white/60 text-[10px] mb-1">Coldest day 🥶</p>
+                <p className="text-2xl font-bold text-white">{stats.coldestDay.weather_temperature_low}°</p>
+                <p className="text-white/50 text-[9px]">
+                  {format(parseISO(stats.coldestDay.entry_date), 'MMM d')}
+                  {(() => {
+                    const city = stats.coldestDay?.city_sleep?.split(',')[0].trim()
+                    const cityLower = city?.toLowerCase() || ''
+                    return cityLower && cityLower !== 'home' && cityLower !== 'unknown' ? ` · ${city}` : ''
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Average temps */}
+          {stats.avgTempHigh && stats.avgTempLow && (
+            <div className="bg-white/10 rounded-xl px-4 py-2 backdrop-blur w-full max-w-sm mx-auto mb-3">
+              <div className="flex justify-between items-center">
+                <span className="text-white/70 text-xs">Average temps</span>
+                <span className="text-white text-sm">
+                  <span className="text-blue-200">{stats.avgTempLow}°</span>
+                  {' → '}
+                  <span className="text-red-200">{stats.avgTempHigh}°</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Rainiest day callout */}
+          {stats.rainiestDay && stats.rainiestDay.weather_precipitation && stats.rainiestDay.weather_precipitation > 0.5 && (
+            <p className="text-white/50 text-xs mt-2 italic">
+              Wettest day: {format(parseISO(stats.rainiestDay.entry_date), 'MMM d')} with {stats.rainiestDay.weather_precipitation.toFixed(1)}" of rain 🌊
+            </p>
+          )}
+
+          {/* Fun comparison */}
+          {stats.sunnyDays > stats.rainyDays * 2 && (
+            <p className="text-white/50 text-xs mt-2 italic">You really chased the sunshine! ☀️</p>
+          )}
+          {stats.rainyDays > stats.sunnyDays && (
+            <p className="text-white/50 text-xs mt-2 italic">You embraced the rain this year! 🌧️</p>
+          )}
+        </div>
+      ),
+    }] : []),
     // Events slide
     {
       gradient: 'bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600',
