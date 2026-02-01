@@ -151,6 +151,7 @@ function getContinent(fullName: string): string {
 export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
   const [mounted, setMounted] = useState(false)
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('regions') // Default to regions (states/countries)
+  const [hasAutoAdjusted, setHasAutoAdjusted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -357,6 +358,31 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
       train: calculateStats(trainData),
     }
   }, [allEntries, entries, profile.home_city])
+
+  // Auto-switch to cities view if all travel is within a single country
+  useEffect(() => {
+    if (hasAutoAdjusted || stats.cities.length === 0) return
+
+    // Get unique countries from all cities
+    const countries = new Set<string>()
+    stats.cities.forEach(city => {
+      const { country } = parseLocationParts(city.name)
+      if (country) {
+        countries.add(country.toLowerCase())
+      }
+    })
+
+    // If all travel is within one country, switch to cities view
+    if (countries.size === 1) {
+      setZoomLevel('cities')
+      setHasAutoAdjusted(true)
+    }
+  }, [stats.cities, hasAutoAdjusted])
+
+  // Reset auto-adjust when entries change (e.g., date filter change)
+  useEffect(() => {
+    setHasAutoAdjusted(false)
+  }, [entries.length])
 
   // Group cities by zoom level
   const displayCities = useMemo((): CityData[] => {
