@@ -176,44 +176,54 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
           </div>
         )}
 
-        {/* Grid of bars */}
-        <div className="flex-1 flex flex-col justify-evenly">
-          {data.typeOrder.map((type) => (
-            <div key={type} className="flex items-center">
-              {/* Row label */}
-              <div className="w-14 flex-shrink-0 text-xs text-gray-600 pr-2 text-right">
-                {TYPE_LABELS[type]}
-              </div>
+        {/* Grid of bars - scale so largest bar fills ~90% width */}
+        {(() => {
+          const maxPercent = Math.max(
+            ...columns.flatMap(col => data.typeOrder.map(type => col.percentages[type]))
+          )
+          const scale = maxPercent > 0 ? 90 / maxPercent : 1
 
-              {/* Bars for each column */}
-              {columns.map((col, colIdx) => {
-                const percent = col.percentages[type]
-                const isFirstColumn = colIdx === 0
-
-                return (
-                  <div key={colIdx} className="flex-1 px-1">
-                    <div
-                      className={cn(
-                        'h-7 rounded-md flex items-center justify-center transition-all',
-                        TYPE_COLORS[type].bg
-                      )}
-                      style={{
-                        width: `${Math.max(percent, percent > 0 ? 8 : 0)}%`,
-                      }}
-                    >
-                      {/* Show percentage inside bar for first column if wide enough */}
-                      {isFirstColumn && percent >= 12 && (
-                        <span className="text-white text-xs font-medium">
-                          {percent}%
-                        </span>
-                      )}
-                    </div>
+          return (
+            <div className="flex-1 flex flex-col justify-evenly">
+              {data.typeOrder.map((type) => (
+                <div key={type} className="flex items-center">
+                  {/* Row label */}
+                  <div className="w-14 flex-shrink-0 text-xs text-gray-600 pr-2 text-right">
+                    {TYPE_LABELS[type]}
                   </div>
-                )
-              })}
+
+                  {/* Bars for each column */}
+                  {columns.map((col, colIdx) => {
+                    const percent = col.percentages[type]
+                    const isFirstColumn = colIdx === 0
+                    const scaledWidth = percent * scale
+
+                    return (
+                      <div key={colIdx} className="flex-1 px-1">
+                        <div
+                          className={cn(
+                            'h-7 rounded-md flex items-center justify-center transition-all',
+                            TYPE_COLORS[type].bg
+                          )}
+                          style={{
+                            width: `${Math.max(scaledWidth, percent > 0 ? 8 : 0)}%`,
+                          }}
+                        >
+                          {/* Show percentage inside bar if wide enough */}
+                          {isFirstColumn && scaledWidth >= 25 && (
+                            <span className="text-white text-xs font-medium">
+                              {percent}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
       </div>
     </div>
   )
