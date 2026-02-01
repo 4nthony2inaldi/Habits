@@ -220,9 +220,9 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods - query prev day since that's when bedtime starts
+    // Fetch detailed sleep periods - query target date (day = wake-up date in Oura)
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${prevDateStr}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${date}&end_date=${date}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
