@@ -1524,17 +1524,31 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                 // Color based on nice score: green (nice) to red (not nice)
                 const hue = (d.niceScore / 100) * 120 // 0=red, 120=green
                 const color = `hsl(${hue}, 70%, 50%)`
-                // Size based on precipitation
-                const size = d.precip > 0 ? 2 + Math.min(d.precip, 1) * 2 : 2.5
+                const hasRain = d.precip > 0
+                const cx = Math.max(20, Math.min(195, x))
+                const cy = Math.max(5, Math.min(100, y))
                 return (
-                  <circle
-                    key={i}
-                    cx={Math.max(20, Math.min(195, x))}
-                    cy={Math.max(5, Math.min(100, y))}
-                    r={size}
-                    fill={color}
-                    opacity={0.7}
-                  />
+                  <g key={i}>
+                    {/* Blue ring for rainy days */}
+                    {hasRain && (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="none"
+                        stroke="#60a5fa"
+                        strokeWidth="1"
+                        opacity={0.8}
+                      />
+                    )}
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={2.5}
+                      fill={color}
+                      opacity={0.8}
+                    />
+                  </g>
                 )
               })}
 
@@ -1542,15 +1556,15 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <rect x="78" y="50" width="58" height="50" className="fill-emerald-400/10 stroke-emerald-400/30" strokeWidth="0.5" strokeDasharray="2,2" rx="2" />
               <text x="107" y="46" className="fill-emerald-300/50 text-[4px]" textAnchor="middle">sweet spot</text>
             </svg>
-            <div className="flex justify-center gap-3 mt-1">
+            <div className="flex justify-center gap-2 mt-1 flex-wrap">
               <span className="text-[8px] text-white/50 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-500"></span> uncomfortable
+                <span className="w-2 h-2 rounded-full bg-red-500"></span> hot/cold
               </span>
               <span className="text-[8px] text-white/50 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-yellow-500"></span> ok
+                <span className="w-2 h-2 rounded-full bg-green-500"></span> comfy
               </span>
               <span className="text-[8px] text-white/50 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span> nice
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-blue-400 bg-transparent"></span> rain
               </span>
             </div>
           </div>
