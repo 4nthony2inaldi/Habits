@@ -1492,7 +1492,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             </div>
           </div>
 
-          {/* Bar chart: Temperature vs Humidity - height=humidity deviation, width=day count */}
+          {/* Bar chart: Temperature vs Humidity - height=humidity, width=day count */}
           <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3">
             {(() => {
               // Bin by temperature AND humidity
@@ -1519,12 +1519,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               const minTemp = Math.min(...bins.map(b => b.temp))
               const maxTemp = Math.max(...bins.map(b => b.temp)) + tempBinSize
               const maxCount = Math.max(...bins.map(b => b.count))
-              const maxHumDev = Math.max(...bins.map(b => Math.abs(b.humidity + humBinSize / 2 - 50))) + 5
+
+              // Find actual humidity range in data
+              const minHum = Math.min(...bins.map(b => b.humidity))
+              const maxHum = Math.max(...bins.map(b => b.humidity)) + humBinSize
+              const humMid = (minHum + maxHum) / 2
 
               const chartLeft = 25
               const chartWidth = 155
               const centerY = 70
-              const maxBarHeight = 48
+              const maxBarHeight = 45
 
               // Sort by temperature for x-axis labels
               const temps = [...new Set(bins.map(b => b.temp))].sort((a, b) => a - b)
@@ -1532,25 +1536,28 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               return (
                 <>
                   <svg viewBox="0 0 200 140" className="w-full h-32">
-                    {/* Center line (50% humidity) */}
+                    {/* Center line */}
                     <line x1={chartLeft} y1={centerY} x2={chartLeft + chartWidth} y2={centerY} className="stroke-white/30" strokeWidth="1" />
 
-                    {/* Y-axis labels */}
-                    <text x="12" y="25" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
-                    <text x="12" y="115" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
+                    {/* Y-axis labels showing actual humidity range */}
+                    <text x="12" y="25" className="fill-white/50 text-[8px]" textAnchor="middle">{minHum}%</text>
+                    <text x="12" y={centerY + 3} className="fill-white/40 text-[7px]" textAnchor="middle">{Math.round(humMid)}%</text>
+                    <text x="12" y="118" className="fill-white/50 text-[8px]" textAnchor="middle">{maxHum}%</text>
 
-                    {/* Bars - height=humidity deviation, width=day count */}
+                    {/* Bars - height=humidity position in range, width=day count */}
                     {bins.map((bin, i) => {
                       const humCenter = bin.humidity + humBinSize / 2
-                      const humDev = 50 - humCenter // positive = dry (bar goes up), negative = humid (bar goes down)
-                      const barHeight = (Math.abs(humDev) / maxHumDev) * maxBarHeight
+                      // Map humidity to position: low humidity at top, high at bottom
+                      const humNorm = (humCenter - minHum) / (maxHum - minHum) // 0 = dry, 1 = humid
+                      const y = 22 + humNorm * (118 - 22) // Top to bottom
+                      const barHeight = 4 + (bin.count / maxCount) * 8
 
                       // X position based on temperature bin center
                       const tempCenter = bin.temp + tempBinSize / 2
                       const x = chartLeft + ((tempCenter - minTemp) / (maxTemp - minTemp)) * chartWidth
 
-                      // Width based on day count (min 2, max 12)
-                      const width = 2 + (bin.count / maxCount) * 10
+                      // Width based on day count (min 3, max 14)
+                      const width = 3 + (bin.count / maxCount) * 11
 
                       // Color based on comfort score
                       const hue = (bin.avgScore / 100) * 120
@@ -1560,11 +1567,11 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                         <rect
                           key={i}
                           x={x - width / 2}
-                          y={humDev > 0 ? centerY - barHeight : centerY}
+                          y={y - barHeight / 2}
                           width={width}
-                          height={Math.max(barHeight, 1)}
+                          height={barHeight}
                           fill={color}
-                          rx="1"
+                          rx="2"
                         />
                       )
                     })}
