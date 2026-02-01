@@ -1761,21 +1761,44 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         setExportProgress(Math.round(((i + 1) / slides.length) * 100))
       }
 
-      // Now download all images (doing this after capture to avoid interruption)
-      console.log(`Downloading ${savedImages.length} images...`)
+      // Convert data URLs to File objects
+      const files: File[] = []
       for (let i = 0; i < savedImages.length; i++) {
-        const link = document.createElement('a')
-        link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
-        link.href = savedImages[i]
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-
-        // Delay between downloads for mobile browsers
-        await new Promise(resolve => setTimeout(resolve, 500))
+        const response = await fetch(savedImages[i])
+        const blob = await response.blob()
+        const file = new File([blob], `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`, { type: 'image/png' })
+        files.push(file)
       }
 
-      console.log('Export complete!')
+      // Try Web Share API first (works on iOS for saving to camera roll)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+        console.log('Using Web Share API...')
+        try {
+          await navigator.share({
+            files,
+            title: `${targetYear} Year Wrapped`,
+          })
+          console.log('Shared successfully!')
+        } catch (shareError) {
+          // User cancelled or share failed - that's ok
+          if ((shareError as Error).name !== 'AbortError') {
+            console.log('Share cancelled or failed, trying download...')
+          }
+        }
+      } else {
+        // Fallback: download files (works on desktop)
+        console.log(`Downloading ${savedImages.length} images...`)
+        for (let i = 0; i < savedImages.length; i++) {
+          const link = document.createElement('a')
+          link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
+          link.href = savedImages[i]
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+        console.log('Export complete!')
+      }
     } catch (error) {
       console.error('Failed to export slides:', error)
       alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}. Check the browser console for details.`)
