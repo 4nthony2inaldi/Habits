@@ -182,22 +182,23 @@ export function YearOverYearSteps({
       <div className="flex-1 min-h-0 relative">
         {/* Daily Average KPI Overlay - shown only in cumulative mode */}
         {cumulative && years.length > 0 && yearlyAverages.size > 0 && (
-          <div className="absolute top-8 left-12 z-10 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-gray-100">
-            <div className="text-xs text-gray-500 mb-1">Daily Avg</div>
-            <div className="text-lg font-bold text-green-600">
+          <div className="absolute top-6 left-14 z-10">
+            <div className="text-xs text-gray-400">Daily Avg.</div>
+            <div className="text-2xl font-bold text-green-600">
               {(yearlyAverages.get(years[0]) || 0).toLocaleString()}
             </div>
-            {years.slice(1).map((year, idx) => {
+            {years.slice(1).map((year) => {
               const currentAvg = yearlyAverages.get(years[0]) || 0
               const compareAvg = yearlyAverages.get(year) || 0
               const diff = currentAvg - compareAvg
               const isPositive = diff >= 0
+              const shortYear = String(year).slice(-2)
               return (
-                <div key={year} className="text-[10px] text-gray-500">
+                <div key={year} className="text-xs text-gray-400">
                   <span className={isPositive ? 'text-green-600' : 'text-red-500'}>
                     {isPositive ? '+' : ''}{diff.toLocaleString()}
                   </span>
-                  {' vs '}{year}
+                  {` vs '${shortYear}`}
                 </div>
               )
             })}
