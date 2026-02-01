@@ -184,6 +184,15 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     // Track biggest drinking day
     let biggestDrinkingDay = { date: '', drinks: 0 }
 
+    // Track binge drinking days (5+ drinks)
+    let bingeDrinkingDays = 0
+    const bingeDaysList: { date: string; drinks: number }[] = []
+
+    // Track weekly drinks for heavy drinking week analysis
+    const weeklyDrinks: Record<string, { drinks: number; startDate: string; endDate: string }> = {}
+    let heavyDrinkingWeeks = 0
+    let biggestDrinkingWeek = { weekKey: '', drinks: 0, startDate: '', endDate: '' }
+
     yearEntries.forEach(entry => {
       const dayDrinks = (entry.beers || 0) + (entry.wine || 0) + (entry.liquor || 0) +
                         (entry.seltzers || 0) + (entry.shots || 0)
@@ -196,6 +205,25 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       if (dayDrinks > biggestDrinkingDay.drinks) {
         biggestDrinkingDay = { date: entry.entry_date, drinks: dayDrinks }
       }
+
+      // Track binge drinking days (5+ drinks)
+      if (dayDrinks >= 5) {
+        bingeDrinkingDays++
+        bingeDaysList.push({ date: entry.entry_date, drinks: dayDrinks })
+      }
+
+      // Track weekly drinks (using ISO week format)
+      const entryDate = parseISO(entry.entry_date)
+      const weekStart = new Date(entryDate)
+      weekStart.setDate(entryDate.getDate() - entryDate.getDay()) // Start of week (Sunday)
+      const weekKey = format(weekStart, 'yyyy-MM-dd')
+
+      if (!weeklyDrinks[weekKey]) {
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekStart.getDate() + 6)
+        weeklyDrinks[weekKey] = { drinks: 0, startDate: weekKey, endDate: format(weekEnd, 'yyyy-MM-dd') }
+      }
+      weeklyDrinks[weekKey].drinks += dayDrinks
 
       if (dayDrinks > 0) {
         daysWithDrinks++
@@ -242,6 +270,25 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     )
     const booziesDay = avgDrinksByDay.indexOf(Math.max(...avgDrinksByDay))
     const soberestDay = avgDrinksByDay.indexOf(Math.min(...avgDrinksByDay))
+
+    // Calculate heavy drinking weeks (14+ drinks/week) and find biggest week
+    Object.entries(weeklyDrinks).forEach(([weekKey, weekData]) => {
+      if (weekData.drinks >= 14) {
+        heavyDrinkingWeeks++
+      }
+      if (weekData.drinks > biggestDrinkingWeek.drinks) {
+        biggestDrinkingWeek = {
+          weekKey,
+          drinks: weekData.drinks,
+          startDate: weekData.startDate,
+          endDate: weekData.endDate
+        }
+      }
+    })
+
+    // Calculate average drinks per week
+    const totalWeeks = Object.keys(weeklyDrinks).length
+    const avgDrinksPerWeek = totalWeeks > 0 ? Math.round((totalDrinks / totalWeeks) * 10) / 10 : 0
 
     // Events stats
     const eventCounts: Record<string, number> = {}
@@ -447,6 +494,13 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       favoriteDrink,
       avgDrinksPerDrinkingDay,
       biggestDrinkingDay,
+      bingeDrinkingDays,
+      bingeDaysList,
+      heavyDrinkingWeeks,
+      biggestDrinkingWeek,
+      avgDrinksPerWeek,
+      totalWeeks,
+      drinkTypes,
       longestSoberStreak,
       soberStreakStart,
       soberStreakEnd,
@@ -666,6 +720,99 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.biggestDrinkingDay.drinks >= 6 && (
             <p className="text-white/50 text-xs mt-2 italic">
               {format(parseISO(stats.biggestDrinkingDay.date), 'MMMM d')}: {stats.biggestDrinkingDay.drinks} drinks. What happened? 🎉
+            </p>
+          )}
+        </div>
+      ),
+    },
+    // Detailed drink breakdown slide
+    {
+      gradient: 'bg-gradient-to-br from-violet-700 via-purple-700 to-fuchsia-700',
+      content: (
+        <div className="text-center">
+          <Wine className="h-10 w-10 text-white/80 mb-3 mx-auto" />
+          <p className="text-white/80 text-lg mb-4">The breakdown</p>
+
+          {/* Drink type breakdown */}
+          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur w-full max-w-sm mx-auto mb-4">
+            <div className="grid grid-cols-5 gap-1 text-center">
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drinkTypes.beers}</p>
+                <p className="text-white/60 text-[9px]">beers</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drinkTypes.wine}</p>
+                <p className="text-white/60 text-[9px]">wine</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drinkTypes.liquor}</p>
+                <p className="text-white/60 text-[9px]">cocktails</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drinkTypes.seltzers}</p>
+                <p className="text-white/60 text-[9px]">seltzers</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drinkTypes.shots}</p>
+                <p className="text-white/60 text-[9px]">shots</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Binge and heavy drinking stats */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.bingeDrinkingDays}</p>
+              <p className="text-white/70 text-xs">binge days (5+)</p>
+              <p className="text-white/50 text-[10px]">
+                {stats.totalEntries > 0 ? Math.round((stats.bingeDrinkingDays / stats.totalEntries) * 100) : 0}% of days
+              </p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.heavyDrinkingWeeks}</p>
+              <p className="text-white/70 text-xs">heavy weeks (14+)</p>
+              <p className="text-white/50 text-[10px]">
+                {stats.totalWeeks > 0 ? Math.round((stats.heavyDrinkingWeeks / stats.totalWeeks) * 100) : 0}% of weeks
+              </p>
+            </div>
+          </div>
+
+          {/* Peak consumption */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-3">
+            <div className="bg-white/15 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-white/60 text-[10px] mb-1">Most in a day</p>
+              <p className="text-2xl font-bold text-white">{stats.biggestDrinkingDay.drinks}</p>
+              {stats.biggestDrinkingDay.date && (
+                <p className="text-white/50 text-[9px]">{format(parseISO(stats.biggestDrinkingDay.date), 'MMM d')}</p>
+              )}
+            </div>
+            <div className="bg-white/15 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-white/60 text-[10px] mb-1">Most in a week</p>
+              <p className="text-2xl font-bold text-white">{stats.biggestDrinkingWeek.drinks}</p>
+              {stats.biggestDrinkingWeek.startDate && (
+                <p className="text-white/50 text-[9px]">
+                  {format(parseISO(stats.biggestDrinkingWeek.startDate), 'MMM d')} - {format(parseISO(stats.biggestDrinkingWeek.endDate), 'MMM d')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Weekly average with threshold indicator */}
+          <div className="bg-white/10 rounded-xl px-4 py-2 backdrop-blur w-full max-w-sm mx-auto">
+            <div className="flex justify-between items-center">
+              <span className="text-white/70 text-xs">Avg drinks/week</span>
+              <span className={`font-bold ${stats.avgDrinksPerWeek >= 14 ? 'text-red-300' : stats.avgDrinksPerWeek >= 7 ? 'text-yellow-300' : 'text-green-300'}`}>
+                {stats.avgDrinksPerWeek}
+              </span>
+            </div>
+            {stats.avgDrinksPerWeek >= 14 && (
+              <p className="text-red-300/70 text-[10px] mt-1">Above "heavy drinking" threshold (14/wk)</p>
+            )}
+          </div>
+
+          {stats.bingeDrinkingDays > 10 && (
+            <p className="text-white/50 text-xs mt-3 italic">
+              {stats.bingeDrinkingDays > 30 ? "That's a lot of big nights! 🥳" : "Some memorable nights in there! 🌙"}
             </p>
           )}
         </div>
