@@ -102,22 +102,42 @@ function getNightsAwayComparison(nightsAway: number, totalDays: number): string 
   return `Home sweet home was your vibe this year 🏡`
 }
 
+// Helper to format year-over-year change
+function formatYoYChange(current: number, previous: number | undefined, unit: string = ''): string | null {
+  if (previous === undefined || previous === 0) return null
+  const diff = current - previous
+  const percentChange = Math.round((diff / previous) * 100)
+  if (Math.abs(percentChange) < 5) return null // Ignore tiny changes
+  const direction = diff > 0 ? '↑' : '↓'
+  const absPercent = Math.abs(percentChange)
+  return `${direction} ${absPercent}% vs last year`
+}
+
 export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProps) {
   const targetYear = year || getYear(new Date()) - 1
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  // Filter entries for the target year
-  const yearEntries = useMemo(() => {
+  // Filter entries for the target year and previous year
+  const { yearEntries, prevYearEntries } = useMemo(() => {
     const yearStart = startOfYear(new Date(targetYear, 0, 1))
     const yearEnd = endOfYear(new Date(targetYear, 0, 1))
-    return entries.filter(entry => {
-      const date = parseISO(entry.entry_date)
-      return date >= yearStart && date <= yearEnd
-    }).sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+    const prevYearStart = startOfYear(new Date(targetYear - 1, 0, 1))
+    const prevYearEnd = endOfYear(new Date(targetYear - 1, 0, 1))
+
+    return {
+      yearEntries: entries.filter(entry => {
+        const date = parseISO(entry.entry_date)
+        return date >= yearStart && date <= yearEnd
+      }).sort((a, b) => a.entry_date.localeCompare(b.entry_date)),
+      prevYearEntries: entries.filter(entry => {
+        const date = parseISO(entry.entry_date)
+        return date >= prevYearStart && date <= prevYearEnd
+      }).sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+    }
   }, [entries, targetYear])
 
-  // Calculate all stats
-  const stats = useMemo(() => {
+  // Calculate stats for a given set of entries
+  const calculateStats = useCallback((yearEntries: DailyEntryWithRelations[]) => {
     const totalEntries = yearEntries.length
     if (totalEntries === 0) {
       return null
@@ -471,7 +491,30 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       isConsistent,
       isMoodTracker,
     }
-  }, [yearEntries, profile])
+  }, [profile])
+
+  // Calculate stats for current and previous year
+  const stats = useMemo(() => calculateStats(yearEntries), [yearEntries, calculateStats])
+  const prevStats = useMemo(() => calculateStats(prevYearEntries), [prevYearEntries, calculateStats])
+
+  // Year-over-year comparisons
+  const yoy = useMemo(() => {
+    if (!stats || !prevStats) return null
+    return {
+      steps: formatYoYChange(stats.totalSteps, prevStats.totalSteps),
+      habits: formatYoYChange(stats.totalHabitsCompleted, prevStats.totalHabitsCompleted),
+      drinks: formatYoYChange(stats.totalDrinks, prevStats.totalDrinks),
+      soberDays: formatYoYChange(stats.soberDays, prevStats.soberDays),
+      nightsAway: formatYoYChange(stats.nightsAway, prevStats.nightsAway),
+      avgMood: stats.avgMood !== 'N/A' && prevStats.avgMood !== 'N/A'
+        ? formatYoYChange(parseFloat(stats.avgMood), parseFloat(prevStats.avgMood))
+        : null,
+      stepsRaw: prevStats.totalSteps > 0 ? stats.totalSteps - prevStats.totalSteps : null,
+      habitsRaw: prevStats.totalHabitsCompleted > 0 ? stats.totalHabitsCompleted - prevStats.totalHabitsCompleted : null,
+      drinksRaw: prevStats.totalDrinks > 0 ? stats.totalDrinks - prevStats.totalDrinks : null,
+      nightsAwayRaw: prevStats.nightsAway > 0 ? stats.nightsAway - prevStats.nightsAway : null,
+    }
+  }, [stats, prevStats])
 
   if (!stats) {
     return (
@@ -489,42 +532,47 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     {
       gradient: 'bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400',
       content: (
-        <>
-          <Sparkles className="h-16 w-16 text-white mb-6 animate-pulse" />
+        <div className="text-center">
+          <Sparkles className="h-16 w-16 text-white mb-6 animate-pulse mx-auto" />
           <h1 className="text-5xl font-bold text-white mb-4">Your {targetYear}</h1>
           <p className="text-xl text-white/80">Wrapped</p>
-          <div className="mt-8 bg-white/20 rounded-2xl px-6 py-4 backdrop-blur">
+          <div className="mt-8 bg-white/20 rounded-2xl px-6 py-4 backdrop-blur mx-auto">
             <p className="text-4xl font-bold text-white">{stats.totalEntries}</p>
             <p className="text-white/70">days of your life, tracked</p>
           </div>
           <p className="text-white/50 text-sm mt-6">Tap to explore your year...</p>
-        </>
+        </div>
       ),
     },
     // Steps slide with fun comparisons
     {
       gradient: 'bg-gradient-to-br from-lime-500 via-green-500 to-emerald-600',
       content: (
-        <>
-          <Footprints className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Footprints className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">You took</p>
           <p className="text-5xl font-bold text-white mb-1">
             <AnimatedNumber value={stats.totalSteps} />
           </p>
           <p className="text-xl text-white/90 mb-2">steps</p>
-          <p className="text-3xl font-bold text-white/80 mb-4">
+          <p className="text-3xl font-bold text-white/80 mb-2">
             ({stats.totalMiles.toLocaleString()} miles)
           </p>
-          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur text-center mb-4 max-w-sm">
+          {yoy?.steps && (
+            <p className={cn('text-sm mb-4', yoy.stepsRaw && yoy.stepsRaw > 0 ? 'text-green-200' : 'text-red-200')}>
+              {yoy.steps}
+            </p>
+          )}
+          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur mb-4 max-w-sm mx-auto">
             <p className="text-white/90 text-lg">{getStepsComparison(stats.totalSteps)}</p>
           </div>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+          <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.avgSteps.toLocaleString()}</p>
               <p className="text-white/70 text-xs">daily average</p>
             </div>
             {stats.bestStepsEntry && stats.bestStepsEntry.steps && (
-              <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+              <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
                 <p className="text-2xl font-bold text-white">{stats.bestStepsEntry.steps.toLocaleString()}</p>
                 <p className="text-white/70 text-xs">best day</p>
               </div>
@@ -535,25 +583,30 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               {format(parseISO(stats.bestStepsEntry.entry_date), 'MMMM d')} - what were you training for?! 🏃
             </p>
           )}
-        </>
+        </div>
       ),
     },
     // Habits slide
     {
       gradient: 'bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600',
       content: (
-        <>
-          <Target className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Target className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">You crushed</p>
           <p className="text-7xl font-bold text-white mb-2">
             <AnimatedNumber value={stats.totalHabitsCompleted} />
           </p>
           <p className="text-2xl text-white/90 mb-2">healthy habits</p>
-          <p className="text-white/60 mb-6">
+          {yoy?.habits && (
+            <p className={cn('text-sm mb-4', yoy.habitsRaw && yoy.habitsRaw > 0 ? 'text-green-200' : 'text-red-200')}>
+              {yoy.habits}
+            </p>
+          )}
+          <p className="text-white/60 mb-4">
             That's {stats.habitConsistency} habits per day on average
           </p>
           {stats.topHabits.length > 0 && (
-            <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs mb-4">
+            <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs mx-auto mb-4">
               <p className="text-white/70 text-sm mb-2">Your go-to habits</p>
               {stats.topHabits.map(([habit, count], i) => (
                 <div key={habit} className="flex justify-between items-center py-1">
@@ -570,31 +623,36 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <span className="text-white font-medium">{stats.bestHabitMonth[0]}</span> was your most disciplined month 💪
             </p>
           )}
-        </>
+        </div>
       ),
     },
     // Alcohol slide with fun comparisons
     {
       gradient: 'bg-gradient-to-br from-purple-700 via-violet-600 to-indigo-700',
       content: (
-        <>
-          <Wine className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Wine className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">You enjoyed</p>
           <p className="text-7xl font-bold text-white mb-2">
             <AnimatedNumber value={stats.totalDrinks} />
           </p>
           <p className="text-2xl text-white/90 mb-2">drinks</p>
+          {yoy?.drinks && (
+            <p className={cn('text-sm mb-2', yoy.drinksRaw && yoy.drinksRaw < 0 ? 'text-green-200' : 'text-yellow-200')}>
+              {yoy.drinks}
+            </p>
+          )}
           <p className="text-white/60 text-lg mb-4">{getDrinkComparison(stats.totalDrinks)}</p>
-          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mb-4">
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.percentSober}%</p>
               <p className="text-white/70 text-[10px]">sober days</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.daysWithDrinks}</p>
               <p className="text-white/70 text-[10px]">drinking days</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.avgDrinksPerDrinkingDay}</p>
               <p className="text-white/70 text-[10px]">per session</p>
             </div>
@@ -610,17 +668,17 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               {format(parseISO(stats.biggestDrinkingDay.date), 'MMMM d')}: {stats.biggestDrinkingDay.drinks} drinks. What happened? 🎉
             </p>
           )}
-        </>
+        </div>
       ),
     },
     // Drinking patterns slide
     {
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600',
       content: (
-        <>
-          <Calendar className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Calendar className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-6">Your drinking rhythm</p>
-          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-sm mb-4">
+          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-sm mx-auto mb-4">
             <div className="grid grid-cols-7 gap-1 mb-2">
               {DAY_NAMES_SHORT.map((day, i) => (
                 <div key={day} className="text-center">
@@ -652,17 +710,17 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.isSocialDrinker && (
             <p className="text-white/50 text-xs mt-2 italic">Classic weekend warrior vibes 🥂</p>
           )}
-        </>
+        </div>
       ),
     },
     // Streaks slide
     {
       gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
       content: (
-        <>
-          <Zap className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Zap className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-6">Your longest streaks</p>
-          <div className="space-y-4 w-full max-w-xs">
+          <div className="space-y-4 w-full max-w-xs mx-auto">
             <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur">
               <p className="text-white/70 text-sm">Longest sober streak</p>
               <p className="text-4xl font-bold text-white">{stats.longestSoberStreak} days</p>
@@ -690,31 +748,36 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               </div>
             )}
           </div>
-        </>
+        </div>
       ),
     },
     // Travel slide with comparisons
     {
       gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
       content: (
-        <>
-          <Plane className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Plane className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">You spent</p>
           <p className="text-7xl font-bold text-white mb-2">
             <AnimatedNumber value={stats.nightsAway} />
           </p>
           <p className="text-2xl text-white/90 mb-2">nights away from home</p>
+          {yoy?.nightsAway && (
+            <p className={cn('text-sm mb-2', yoy.nightsAwayRaw && yoy.nightsAwayRaw > 0 ? 'text-cyan-200' : 'text-white/60')}>
+              {yoy.nightsAway}
+            </p>
+          )}
           <p className="text-white/60 text-lg mb-4">{getNightsAwayComparison(stats.nightsAway, stats.totalEntries)}</p>
-          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mb-4">
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.flights}</p>
               <p className="text-white/70 text-[10px]">flights</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.trains}</p>
               <p className="text-white/70 text-[10px]">trains</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
               <p className="text-xl font-bold text-white">{stats.citiesVisited}</p>
               <p className="text-white/70 text-[10px]">cities</p>
             </div>
@@ -725,20 +788,20 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <span className="text-white/50"> across {stats.longestTripItinerary.length} cities →</span>
             </p>
           )}
-        </>
+        </div>
       ),
     },
     // Longest Trip Journey slide
     ...(stats.longestTrip > 3 && stats.longestTripItinerary.length > 1 ? [{
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600',
       content: (
-        <>
-          <MapPin className="h-10 w-10 text-white/80 mb-3" />
+        <div className="text-center">
+          <MapPin className="h-10 w-10 text-white/80 mb-3 mx-auto" />
           <p className="text-white/80 text-lg mb-1">Your epic {stats.longestTrip}-night journey</p>
           <p className="text-white/50 text-sm mb-4">
             {format(parseISO(stats.longestTripStart), 'MMM d')} - {format(parseISO(stats.longestTripEnd), 'MMM d')}
           </p>
-          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur w-full max-w-sm max-h-[50vh] overflow-y-auto">
+          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur w-full max-w-sm mx-auto max-h-[50vh] overflow-y-auto">
             <div className="relative">
               {stats.longestTripItinerary.map((stop, i) => (
                 <div key={i} className="flex items-start gap-3 relative">
@@ -773,15 +836,15 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           <p className="text-white/50 text-xs mt-3 italic">
             {stats.longestTripItinerary.length} cities in {stats.longestTrip} nights - what an adventure! ✨
           </p>
-        </>
+        </div>
       ),
     }] : []),
     // Furthest from home slide
     {
       gradient: 'bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700',
       content: (
-        <>
-          <MapPin className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <MapPin className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           {stats.furthestCity.distance > 0 ? (
             <>
               <p className="text-white/80 text-lg mb-2">Your furthest adventure</p>
@@ -789,7 +852,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <p className="text-3xl text-white/80 mb-4">
                 {stats.furthestCity.distance.toLocaleString()} miles from home
               </p>
-              <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur text-center max-w-sm">
+              <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur max-w-sm mx-auto">
                 {stats.furthestCity.distance >= 5000 && (
                   <p className="text-white/90">That's like flying coast to coast... twice! ✈️</p>
                 )}
@@ -808,7 +871,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             <>
               <p className="text-white/80 text-lg mb-6">Where you slept</p>
               {stats.topCities.length > 0 ? (
-                <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs mb-4">
+                <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs mx-auto mb-4">
                   <p className="text-white/70 text-sm mb-2">Your favorite cities</p>
                   {stats.topCities.map(([city, count]) => (
                     <div key={city} className="flex justify-between items-center py-1">
@@ -822,17 +885,17 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               )}
             </>
           )}
-        </>
+        </div>
       ),
     },
     // Cities & home streak slide
     {
       gradient: 'bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-600',
       content: (
-        <>
-          <Moon className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Moon className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-6">Home vs Away</p>
-          <div className="space-y-4 w-full max-w-xs">
+          <div className="space-y-4 w-full max-w-xs mx-auto">
             {stats.longestHomeStreak > 0 && (
               <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur">
                 <p className="text-white/70 text-sm">Longest homebody streak</p>
@@ -865,24 +928,29 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.isExplorer && (
             <p className="text-white/50 text-xs mt-4 italic">You've got wanderlust in your DNA 🧬</p>
           )}
-        </>
+        </div>
       ),
     },
     // Mood slide
     {
       gradient: 'bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500',
       content: (
-        <>
-          <Heart className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Heart className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">Your average mood</p>
           <p className="text-7xl font-bold text-white mb-2">{stats.avgMood}</p>
-          <p className="text-xl text-white/90 mb-4">out of 10</p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xs mb-4">
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+          <p className="text-xl text-white/90 mb-2">out of 10</p>
+          {yoy?.avgMood && (
+            <p className={cn('text-sm mb-4', yoy.avgMood.includes('↑') ? 'text-green-200' : 'text-red-200')}>
+              {yoy.avgMood}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.happyDays}</p>
               <p className="text-white/70 text-xs">great days (7+)</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.sadDays}</p>
               <p className="text-white/70 text-xs">tough days (3-)</p>
             </div>
@@ -895,17 +963,17 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {parseFloat(stats.avgMood) >= 7 && (
             <p className="text-white/50 text-xs mt-2 italic">Living your best life! ✨</p>
           )}
-        </>
+        </div>
       ),
     },
     // Mood correlations slide
     {
       gradient: 'bg-gradient-to-br from-rose-500 via-pink-500 to-purple-600',
       content: (
-        <>
-          <Heart className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Heart className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-6">What made you happiest?</p>
-          <div className="space-y-3 w-full max-w-xs">
+          <div className="space-y-3 w-full max-w-xs mx-auto">
             {stats.avgMoodExercise && (
               <div className="bg-white/20 rounded-xl px-5 py-3 backdrop-blur flex justify-between items-center">
                 <span className="text-white">When you exercised</span>
@@ -937,24 +1005,24 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.avgMoodTravel && parseFloat(stats.avgMoodTravel) > parseFloat(stats.avgMood) && (
             <p className="text-white/50 text-xs mt-4 italic">Travel is your happy place! ✈️</p>
           )}
-        </>
+        </div>
       ),
     },
     // Events slide
     {
       gradient: 'bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600',
       content: (
-        <>
-          <Sparkles className="h-12 w-12 text-white/80 mb-4" />
+        <div className="text-center">
+          <Sparkles className="h-12 w-12 text-white/80 mb-4 mx-auto" />
           <p className="text-white/80 text-lg mb-2">You logged</p>
           <p className="text-7xl font-bold text-white mb-2">
             <AnimatedNumber value={stats.totalEvents} />
           </p>
           <p className="text-2xl text-white/90 mb-6">life events</p>
           {stats.topEvents.length > 0 && (
-            <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs">
+            <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur w-full max-w-xs mx-auto">
               <p className="text-white/70 text-sm mb-2">What kept you busy</p>
-              {stats.topEvents.map(([event, count], i) => (
+              {stats.topEvents.map(([event, count]) => (
                 <div key={event} className="flex justify-between items-center py-1">
                   <span className="text-white text-sm">
                     {eventLabels[event as EventType] || event}
@@ -967,34 +1035,34 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.totalEvents > 100 && (
             <p className="text-white/50 text-xs mt-4 italic">You were one busy bee! 🐝</p>
           )}
-        </>
+        </div>
       ),
     },
     // Outro slide
     {
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500',
       content: (
-        <>
+        <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-6">That's a wrap on {targetYear}!</h1>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xs mb-6">
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+          <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto mb-6">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.totalEntries}</p>
               <p className="text-white/70 text-xs">days tracked</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.totalMiles.toLocaleString()}</p>
               <p className="text-white/70 text-xs">miles walked</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.nightsAway}</p>
               <p className="text-white/70 text-xs">nights away</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur text-center">
+            <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.totalHabitsCompleted}</p>
               <p className="text-white/70 text-xs">habits done</p>
             </div>
           </div>
-          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur text-center mb-4 max-w-sm">
+          <div className="bg-white/20 rounded-2xl px-6 py-4 backdrop-blur mb-4 max-w-sm mx-auto">
             <p className="text-white/90">
               {stats.isHealthNut && stats.isExplorer && "You balanced wellness and wanderlust perfectly! 🌟"}
               {stats.isHealthNut && !stats.isExplorer && "Your dedication to health was inspiring! 💪"}
@@ -1003,7 +1071,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             </p>
           </div>
           <p className="text-white/80 text-lg">See you in {targetYear + 1}! 🎉</p>
-        </>
+        </div>
       ),
     },
   ]
