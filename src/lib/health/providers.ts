@@ -240,16 +240,39 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
     const sleepPeriodsData = await sleepPeriodsResponse.json()
     const activityData = await activityResponse.json()
 
+    // Debug logging
+    console.log('Oura API responses:', {
+      date,
+      sleepDataCount: sleepData.data?.length ?? 0,
+      sleepPeriodsCount: sleepPeriodsData.data?.length ?? 0,
+      activityDataCount: activityData.data?.length ?? 0,
+      activityData: activityData.data?.[0],
+    })
+
     const dailySleep: OuraDailySleep | undefined = sleepData.data?.[0]
     const dailyActivity: OuraDailyActivity | undefined = activityData.data?.[0]
 
     // Find the sleep period that ended on the target date (main overnight sleep)
     // Sleep periods have bedtime_end which is the wake-up time
     const sleepPeriods: OuraSleepPeriod[] = sleepPeriodsData.data || []
+
+    // Log all sleep periods for debugging
+    console.log('Sleep periods:', sleepPeriods.map(sp => ({
+      day: sp.day,
+      bedtime_end: sp.bedtime_end,
+      total_sleep_sec: sp.total_sleep_duration,
+      total_sleep_hrs: Math.round(sp.total_sleep_duration / 3600 * 100) / 100,
+    })))
+
     const sleepPeriod: OuraSleepPeriod | undefined = sleepPeriods.find((sp) => {
       const endDate = new Date(sp.bedtime_end).toISOString().split('T')[0]
       return endDate === date
     }) || sleepPeriods[sleepPeriods.length - 1] // Fallback to most recent if no exact match
+
+    console.log('Selected sleep period:', sleepPeriod ? {
+      day: sleepPeriod.day,
+      total_sleep_hrs: Math.round(sleepPeriod.total_sleep_duration / 3600 * 100) / 100,
+    } : null)
 
     // Extract sleep times from the longest sleep period
     let sleepStart: string | null = null
