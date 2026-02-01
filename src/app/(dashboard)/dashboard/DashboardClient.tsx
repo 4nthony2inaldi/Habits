@@ -16,7 +16,7 @@ import type { Profile } from '@/types/database'
 import { Loader2, Lock, Unlock, Sparkles } from 'lucide-react'
 import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 import { YearWrapped, WrappedPeriod } from '@/components/dashboard/YearWrapped'
-import { getYear, getMonth, getQuarter, subMonths, subQuarters } from 'date-fns'
+import { getYear, getMonth, getQuarter, subMonths, subQuarters, parseISO } from 'date-fns'
 
 interface WrappedConfig {
   show: boolean
@@ -43,6 +43,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [gridLocked, setGridLocked] = useState(true)
   const [showWrappedPicker, setShowWrappedPicker] = useState(false)
   const [wrappedConfig, setWrappedConfig] = useState<WrappedConfig>({ show: false, period: 'year' })
+  const [pickerPeriodType, setPickerPeriodType] = useState<WrappedPeriod>('year')
   const { controlsCollapsed } = useDashboardControls()
 
   // Helper to launch wrapped with specific config
@@ -173,51 +174,100 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
       )}
 
       {/* Wrapped Period Picker Modal */}
-      {showWrappedPicker && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-sm w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-500" />
-              View Wrapped
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-              Choose a time period to review:
-            </p>
-            <div className="space-y-2">
+      {showWrappedPicker && (() => {
+        // Generate available periods from entries
+        const entryDates = (allEntries || []).map(e => parseISO(e.entry_date))
+        const years = [...new Set(entryDates.map(d => getYear(d)))].sort((a, b) => b - a)
+        const quarters = [...new Set(entryDates.map(d => `${getYear(d)}-Q${getQuarter(d)}`))]
+          .sort((a, b) => b.localeCompare(a))
+          .slice(0, 12) // Last 12 quarters
+        const months = [...new Set(entryDates.map(d => `${getYear(d)}-${String(getMonth(d)).padStart(2, '0')}`))]
+          .sort((a, b) => b.localeCompare(a))
+          .slice(0, 18) // Last 18 months
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-sm w-full p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                View Wrapped
+              </h2>
+
+              {/* Period type tabs */}
+              <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                {(['year', 'quarter', 'month'] as WrappedPeriod[]).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setPickerPeriodType(type)}
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                      pickerPeriodType === type
+                        ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {type === 'year' ? '📅 Year' : type === 'quarter' ? '📊 Quarter' : '📆 Month'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Period options */}
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {pickerPeriodType === 'year' && years.map((yr) => (
+                  <button
+                    key={yr}
+                    onClick={() => launchWrapped('year', yr)}
+                    className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all"
+                  >
+                    {yr} Year in Review
+                  </button>
+                ))}
+
+                {pickerPeriodType === 'quarter' && quarters.map((q) => {
+                  const [yr, qNum] = q.split('-Q')
+                  return (
+                    <button
+                      key={q}
+                      onClick={() => launchWrapped('quarter', parseInt(yr), undefined, parseInt(qNum))}
+                      className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all"
+                    >
+                      Q{qNum} {yr}
+                    </button>
+                  )
+                })}
+
+                {pickerPeriodType === 'month' && months.map((m) => {
+                  const [yr, mon] = m.split('-').map(Number)
+                  const date = new Date(yr, mon, 1)
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => launchWrapped('month', yr, mon)}
+                      className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-all"
+                    >
+                      {new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(date)}
+                    </button>
+                  )
+                })}
+
+                {((pickerPeriodType === 'year' && years.length === 0) ||
+                  (pickerPeriodType === 'quarter' && quarters.length === 0) ||
+                  (pickerPeriodType === 'month' && months.length === 0)) && (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                    No data available for this period type
+                  </p>
+                )}
+              </div>
+
               <button
-                onClick={() => launchWrapped('year', getYear(new Date()) - 1)}
-                className="w-full p-3 text-left rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+                onClick={() => setShowWrappedPicker(false)}
+                className="w-full mt-4 p-2 text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
               >
-                📅 {getYear(new Date()) - 1} Year in Review
-              </button>
-              <button
-                onClick={() => {
-                  const lastQuarter = subQuarters(new Date(), 1)
-                  launchWrapped('quarter', getYear(lastQuarter), undefined, getQuarter(lastQuarter))
-                }}
-                className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
-              >
-                📊 Q{getQuarter(subQuarters(new Date(), 1))} {getYear(subQuarters(new Date(), 1))} Quarterly Review
-              </button>
-              <button
-                onClick={() => {
-                  const lastMonth = subMonths(new Date(), 1)
-                  launchWrapped('month', getYear(lastMonth), getMonth(lastMonth))
-                }}
-                className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
-              >
-                📆 {new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(subMonths(new Date(), 1))} Monthly Review
+                Cancel
               </button>
             </div>
-            <button
-              onClick={() => setShowWrappedPicker(false)}
-              className="w-full mt-4 p-2 text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Wrapped Modal */}
       {wrappedConfig.show && (
