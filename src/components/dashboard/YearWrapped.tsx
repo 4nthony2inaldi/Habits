@@ -1770,23 +1770,28 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         files.push(file)
       }
 
+      console.log(`Created ${files.length} files for sharing`)
+
+      // Check Web Share API support
+      const hasShare = typeof navigator.share === 'function'
+      const hasCanShare = typeof navigator.canShare === 'function'
+      const canShareFiles = hasCanShare && navigator.canShare({ files })
+
+      console.log(`Share support: share=${hasShare}, canShare=${hasCanShare}, canShareFiles=${canShareFiles}`)
+
       // Try Web Share API first (works on iOS for saving to camera roll)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      if (hasShare && canShareFiles) {
         console.log('Using Web Share API...')
-        try {
-          await navigator.share({
-            files,
-            title: `${targetYear} Year Wrapped`,
-          })
-          console.log('Shared successfully!')
-        } catch (shareError) {
-          // User cancelled or share failed - that's ok
-          if ((shareError as Error).name !== 'AbortError') {
-            console.log('Share cancelled or failed, trying download...')
-          }
-        }
+        await navigator.share({
+          files,
+          title: `${targetYear} Year Wrapped`,
+        })
+        alert(`${files.length} slides ready to save! Choose "Save ${files.length} Images" from the share menu.`)
+      } else if (hasShare) {
+        // Can share but not files - offer to share one at a time
+        alert(`Your browser doesn't support sharing multiple files. The images were captured but cannot be saved automatically. Try using a different browser or taking screenshots.`)
       } else {
-        // Fallback: download files (works on desktop)
+        // Desktop fallback: download files
         console.log(`Downloading ${savedImages.length} images...`)
         for (let i = 0; i < savedImages.length; i++) {
           const link = document.createElement('a')
@@ -1797,7 +1802,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           document.body.removeChild(link)
           await new Promise(resolve => setTimeout(resolve, 300))
         }
-        console.log('Export complete!')
+        alert(`${files.length} slides downloaded!`)
       }
     } catch (error) {
       console.error('Failed to export slides:', error)
