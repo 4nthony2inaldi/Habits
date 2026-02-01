@@ -271,7 +271,7 @@ export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings
 
         {/* Events this week - mini bar chart */}
         <div className="mt-3 flex flex-col items-center w-full">
-          <div className="text-[10px] text-gray-500 mb-1">
+          <div className="text-[10px] text-gray-500 mb-2">
             events this week: <span className="font-medium text-gray-700">{currentWeekEvents}</span>
           </div>
           <svg width={sparklineWidth} height={eventsBarHeight} className="overflow-visible">
