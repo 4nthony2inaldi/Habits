@@ -1493,84 +1493,58 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           </div>
 
           {/* Scatter plot: Temperature vs Humidity, colored by nice score */}
-          <div className="bg-white/10 rounded-xl p-2 backdrop-blur w-full max-w-sm mx-auto mb-3">
-            {(() => {
-              // Calculate humidity range from data (with padding)
-              const humidities = stats.weatherDataPoints.map(d => d.humidity)
-              const minHumidity = Math.max(0, Math.floor((Math.min(...humidities) - 5) / 10) * 10)
-              const maxHumidity = Math.min(100, Math.ceil((Math.max(...humidities) + 5) / 10) * 10)
-              const humidityRange = maxHumidity - minHumidity
+          <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3 relative">
+            {/* Corner axis labels - Oura style */}
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">Humid</div>
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">Dry</div>
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/50">Cold</div>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/50">Hot</div>
 
-              // Find example dots for inline legend
-              const sortedByScore = [...stats.weatherDataPoints].sort((a, b) => a.niceScore - b.niceScore)
-              const worstExample = sortedByScore[0]
-              const bestExample = sortedByScore[sortedByScore.length - 1]
-              const rainyExample = stats.weatherDataPoints.find(d => d.precip > 0)
+            <svg viewBox="0 0 200 140" className="w-full h-36">
+              {/* Subtle grid lines */}
+              <line x1="20" y1="120" x2="180" y2="120" className="stroke-white/10" strokeWidth="0.5" />
+              <line x1="20" y1="70" x2="180" y2="70" className="stroke-white/10" strokeWidth="0.5" strokeDasharray="2,2" />
+              <line x1="20" y1="20" x2="180" y2="20" className="stroke-white/10" strokeWidth="0.5" />
+              <line x1="20" y1="20" x2="20" y2="120" className="stroke-white/10" strokeWidth="0.5" />
+              <line x1="100" y1="20" x2="100" y2="120" className="stroke-white/10" strokeWidth="0.5" strokeDasharray="2,2" />
+              <line x1="180" y1="20" x2="180" y2="120" className="stroke-white/10" strokeWidth="0.5" />
 
-              return (
-                <svg viewBox="0 0 200 100" className="w-full h-32">
-                  {/* Grid lines */}
-                  <line x1="24" y1="90" x2="195" y2="90" className="stroke-white/20" strokeWidth="0.5" />
-                  <line x1="24" y1="5" x2="24" y2="90" className="stroke-white/20" strokeWidth="0.5" />
+              {/* Data points */}
+              {stats.weatherDataPoints.slice(0, 365).map((d, i) => {
+                // Map temp to full width (20-180), assuming 20°F to 100°F range
+                const minTemp = 20, maxTemp = 100
+                const x = 20 + ((Math.max(minTemp, Math.min(maxTemp, d.temp)) - minTemp) / (maxTemp - minTemp)) * 160
+                // Map humidity 20-80% to height (most data falls here)
+                const minHum = 20, maxHum = 80
+                const clampedHum = Math.max(minHum, Math.min(maxHum, d.humidity))
+                const y = 120 - ((clampedHum - minHum) / (maxHum - minHum)) * 100
+                // Color based on nice score
+                const hue = (d.niceScore / 100) * 120
+                const color = `hsl(${hue}, 70%, 55%)`
+                const hasRain = d.precip > 0
+                return (
+                  <g key={i}>
+                    {hasRain && (
+                      <circle cx={x} cy={y} r={5} fill="none" stroke="#60a5fa" strokeWidth="1.5" opacity={0.6} />
+                    )}
+                    <circle cx={x} cy={y} r={2.5} fill={color} opacity={0.9} />
+                  </g>
+                )
+              })}
+            </svg>
 
-                  {/* Temp markers on X axis */}
-                  <text x="24" y="98" className="fill-white/40 text-[5px]" textAnchor="middle">20°</text>
-                  <text x="81" y="98" className="fill-white/40 text-[5px]" textAnchor="middle">50°</text>
-                  <text x="138" y="98" className="fill-white/40 text-[5px]" textAnchor="middle">80°</text>
-                  <text x="195" y="98" className="fill-white/40 text-[5px]" textAnchor="middle">110°</text>
-
-                  {/* Humidity markers on Y axis */}
-                  <text x="20" y="92" className="fill-white/40 text-[5px]" textAnchor="end">{minHumidity}%</text>
-                  <text x="20" y="50" className="fill-white/40 text-[5px]" textAnchor="end">{Math.round((minHumidity + maxHumidity) / 2)}%</text>
-                  <text x="20" y="8" className="fill-white/40 text-[5px]" textAnchor="end">{maxHumidity}%</text>
-
-                  {/* Data points */}
-                  {stats.weatherDataPoints.slice(0, 365).map((d, i) => {
-                    // Map temp 20-110 to x 24-195
-                    const x = 24 + ((d.temp - 20) / 90) * 171
-                    // Map humidity to y 90-5 (inverted), using dynamic range
-                    const y = 90 - ((d.humidity - minHumidity) / humidityRange) * 85
-                    // Color based on nice score
-                    const hue = (d.niceScore / 100) * 120
-                    const color = `hsl(${hue}, 70%, 50%)`
-                    const hasRain = d.precip > 0
-                    const cx = Math.max(24, Math.min(195, x))
-                    const cy = Math.max(5, Math.min(90, y))
-                    return (
-                      <g key={i}>
-                        {hasRain && (
-                          <circle cx={cx} cy={cy} r={4} fill="none" stroke="#60a5fa" strokeWidth="1" opacity={0.8} />
-                        )}
-                        <circle cx={cx} cy={cy} r={2} fill={color} opacity={0.85} />
-                      </g>
-                    )
-                  })}
-
-                  {/* Inline legend labels pointing to example dots */}
-                  {bestExample && (() => {
-                    const x = 24 + ((bestExample.temp - 20) / 90) * 171
-                    const y = 90 - ((bestExample.humidity - minHumidity) / humidityRange) * 85
-                    return (
-                      <text x={Math.min(x + 6, 180)} y={Math.max(y - 2, 12)} className="fill-emerald-300 text-[5px]">← comfy</text>
-                    )
-                  })()}
-                  {worstExample && (() => {
-                    const x = 24 + ((worstExample.temp - 20) / 90) * 171
-                    const y = 90 - ((worstExample.humidity - minHumidity) / humidityRange) * 85
-                    return (
-                      <text x={Math.max(x - 22, 26)} y={y + 3} className="fill-red-300 text-[5px]">harsh →</text>
-                    )
-                  })()}
-                  {rainyExample && (() => {
-                    const x = 24 + ((rainyExample.temp - 20) / 90) * 171
-                    const y = 90 - ((rainyExample.humidity - minHumidity) / humidityRange) * 85
-                    return (
-                      <text x={Math.min(x + 8, 175)} y={y + 1} className="fill-blue-300 text-[5px]">◯ rain</text>
-                    )
-                  })()}
-                </svg>
-              )
-            })()}
+            {/* Bottom legend */}
+            <div className="flex justify-center gap-4 mt-1">
+              <span className="text-[9px] text-white/40 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span> comfy
+              </span>
+              <span className="text-[9px] text-white/40 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span> harsh
+              </span>
+              <span className="text-[9px] text-white/40 flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full border border-blue-400"></span> rain
+              </span>
+            </div>
           </div>
 
           {/* Best/Worst and Temp extremes */}
