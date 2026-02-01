@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { format, parseISO, startOfYear, endOfYear, getYear, getDay, differenceInDays } from 'date-fns'
-import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer, Globe2 } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer, Globe2, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { DailyEntryWithRelations, HabitType, EventType, Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
+import html2canvas from 'html2canvas'
 
 interface YearWrappedProps {
   entries: DailyEntryWithRelations[]
@@ -116,6 +117,9 @@ function formatYoYChange(current: number, previous: number | undefined, unit: st
 export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProps) {
   const targetYear = year || getYear(new Date()) - 1
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const slideContainerRef = useRef<HTMLDivElement>(null)
 
   // Filter entries for the target year and previous year
   const { yearEntries, prevYearEntries } = useMemo(() => {
@@ -1569,6 +1573,53 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     }
   }, [currentSlide])
 
+  // Export all slides as images
+  const exportSlides = useCallback(async () => {
+    if (!slideContainerRef.current || isExporting) return
+
+    setIsExporting(true)
+    setExportProgress(0)
+
+    const originalSlide = currentSlide
+
+    try {
+      for (let i = 0; i < slides.length; i++) {
+        // Switch to the slide
+        setCurrentSlide(i)
+        setExportProgress(Math.round(((i + 0.5) / slides.length) * 100))
+
+        // Wait for the slide transition to complete
+        await new Promise(resolve => setTimeout(resolve, 600))
+
+        // Capture the slide
+        const canvas = await html2canvas(slideContainerRef.current, {
+          backgroundColor: null,
+          scale: 2, // Higher quality
+          useCORS: true,
+          logging: false,
+        })
+
+        // Convert to image and download
+        const link = document.createElement('a')
+        link.download = `wrapped-${targetYear}-slide-${String(i + 1).padStart(2, '0')}.png`
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+
+        setExportProgress(Math.round(((i + 1) / slides.length) * 100))
+
+        // Small delay between downloads to prevent overwhelming the browser
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+    } catch (error) {
+      console.error('Failed to export slides:', error)
+    } finally {
+      // Restore the original slide
+      setCurrentSlide(originalSlide)
+      setIsExporting(false)
+      setExportProgress(0)
+    }
+  }, [currentSlide, isExporting, slides.length, targetYear])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1589,13 +1640,36 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black isolate">
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-      >
-        <X className="h-6 w-6 text-white" />
-      </button>
+      {/* Top buttons */}
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        {/* Export button */}
+        <button
+          onClick={exportSlides}
+          disabled={isExporting}
+          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
+          title="Export all slides as images"
+        >
+          {isExporting ? (
+            <Loader2 className="h-6 w-6 text-white animate-spin" />
+          ) : (
+            <Download className="h-6 w-6 text-white" />
+          )}
+        </button>
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+        >
+          <X className="h-6 w-6 text-white" />
+        </button>
+      </div>
+
+      {/* Export progress indicator */}
+      {isExporting && (
+        <div className="absolute top-16 right-4 z-10 bg-white/20 rounded-lg px-3 py-2 backdrop-blur">
+          <p className="text-white text-sm">Exporting... {exportProgress}%</p>
+        </div>
+      )}
 
       {/* Progress dots */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
@@ -1612,7 +1686,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       </div>
 
       {/* Slides */}
-      <div className="relative h-full w-full overflow-hidden">
+      <div ref={slideContainerRef} className="relative h-full w-full overflow-hidden">
         {slides.map((slide, idx) => (
           <Slide key={idx} gradient={slide.gradient} active={idx === currentSlide}>
             {slide.content}
