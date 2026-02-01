@@ -91,8 +91,16 @@ export function HealthConnectionsSettings() {
       if (response.ok) {
         // Refresh connections to get updated sync status
         await fetchConnections()
-        // Show success feedback
-        alert(`Successfully synced ${provider === 'oura' ? 'Oura' : 'Whoop'} data for ${data.date}`)
+        // Show success feedback with synced data details
+        const syncedData = data.data
+        const details = []
+        if (syncedData?.steps !== null) details.push(`${syncedData.steps.toLocaleString()} steps`)
+        if (syncedData?.sleepHours !== null) details.push(`${syncedData.sleepHours.toFixed(1)}h sleep`)
+        if (syncedData?.sleepScore !== null) details.push(`score: ${syncedData.sleepScore}`)
+        if (syncedData?.hrv !== null) details.push(`HRV: ${syncedData.hrv}`)
+
+        const detailsStr = details.length > 0 ? `\n${details.join(', ')}` : '\nNo data available'
+        alert(`Successfully synced ${provider === 'oura' ? 'Oura' : 'Whoop'} data for ${data.date}${detailsStr}`)
       } else {
         alert(data.error || 'Sync failed')
       }
