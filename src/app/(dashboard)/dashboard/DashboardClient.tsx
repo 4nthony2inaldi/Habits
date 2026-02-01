@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { subDays, startOfYear } from 'date-fns'
 import { useEntries } from '@/lib/hooks/useEntries'
 import { useStats } from '@/lib/hooks/useStats'
@@ -44,7 +45,14 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [showWrappedPicker, setShowWrappedPicker] = useState(false)
   const [wrappedConfig, setWrappedConfig] = useState<WrappedConfig>({ show: false, period: 'year' })
   const [pickerPeriodType, setPickerPeriodType] = useState<WrappedPeriod>('year')
+  const [mobilePortalContainer, setMobilePortalContainer] = useState<HTMLElement | null>(null)
   const { controlsCollapsed } = useDashboardControls()
+
+  // Find the mobile portal container in the header
+  useEffect(() => {
+    const container = document.getElementById('mobile-dashboard-controls')
+    setMobilePortalContainer(container)
+  }, [])
 
   // Helper to launch wrapped with specific config
   const launchWrapped = (period: WrappedPeriod, year?: number, month?: number, quarter?: number) => {
@@ -89,56 +97,69 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     [widgetConfig, currentUser.id]
   )
 
+  // Dashboard controls element - rendered in header on mobile, inline on desktop
+  const dashboardControls = !controlsCollapsed && (
+    <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+      {users.length > 1 && currentUser.is_admin && (
+        <UserSelector
+          users={users}
+          selectedUserId={selectedUserId}
+          onUserChange={setSelectedUserId}
+          className="w-24 sm:w-28"
+        />
+      )}
+      <DateRangePicker
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+        onRangeChange={(start, end) => setDateRange({ start, end })}
+      />
+      <DashboardCustomizer
+        profile={currentUser}
+        config={widgetConfig}
+        onConfigChange={setWidgetConfig}
+      />
+      <button
+        onClick={() => setGridLocked(!gridLocked)}
+        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
+      >
+        {gridLocked ? (
+          <>
+            <Lock className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1.5">Locked</span>
+          </>
+        ) : (
+          <>
+            <Unlock className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1.5">Unlocked</span>
+          </>
+        )}
+      </button>
+      <button
+        onClick={() => setShowWrappedPicker(true)}
+        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+        title="View your wrapped"
+      >
+        <Sparkles className="h-4 w-4" />
+        <span className="hidden sm:inline ml-1.5">Wrapped</span>
+      </button>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
-      {/* Compact header with filters - collapsible, single row */}
-      {!controlsCollapsed && (
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-          {users.length > 1 && currentUser.is_admin && (
-            <UserSelector
-              users={users}
-              selectedUserId={selectedUserId}
-              onUserChange={setSelectedUserId}
-              className="w-24 sm:w-28"
-            />
-          )}
-          <DateRangePicker
-            startDate={dateRange.start}
-            endDate={dateRange.end}
-            onRangeChange={(start, end) => setDateRange({ start, end })}
-          />
-          <DashboardCustomizer
-            profile={currentUser}
-            config={widgetConfig}
-            onConfigChange={setWidgetConfig}
-          />
-          <button
-            onClick={() => setGridLocked(!gridLocked)}
-            className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
-          >
-            {gridLocked ? (
-              <>
-                <Lock className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1.5">Locked</span>
-              </>
-            ) : (
-              <>
-                <Unlock className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1.5">Unlocked</span>
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => setShowWrappedPicker(true)}
-            className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
-            title="View your wrapped"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1.5">Wrapped</span>
-          </button>
-        </div>
+      {/* Mobile: render controls in header via portal */}
+      {mobilePortalContainer && dashboardControls && createPortal(
+        <div className="py-2 px-4 border-t border-gray-100">
+          {dashboardControls}
+        </div>,
+        mobilePortalContainer
       )}
+
+      {/* Desktop: render controls inline (hidden on mobile since they're in header) */}
+      <div className="hidden md:block">
+        {dashboardControls}
+      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">

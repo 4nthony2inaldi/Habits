@@ -152,6 +152,11 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
             </button>
           </div>
         </div>
+
+        {/* Mobile dashboard controls slot - portal target */}
+        {isDashboard && (
+          <div id="mobile-dashboard-controls" className="md:hidden" />
+        )}
       </div>
 
       {/* Mobile menu */}
