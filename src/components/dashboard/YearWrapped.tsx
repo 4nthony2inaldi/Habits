@@ -520,7 +520,56 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     const rainiestDay = yearEntries.filter(e => e.weather_precipitation !== null && e.weather_precipitation > 0)
       .sort((a, b) => (b.weather_precipitation || 0) - (a.weather_precipitation || 0))[0] || null
 
-    // Weather conditions breakdown
+    // Calculate "nice day" score for each day with weather data
+    // Nice day = comfortable temp (65-78°F ideal), low humidity (<60%), no rain
+    const calculateNiceDayScore = (temp: number, humidity: number | null, precip: number | null): number => {
+      // Temperature score: 100 at 70°F, drops off on either side
+      const idealTemp = 72
+      const tempDiff = Math.abs(temp - idealTemp)
+      const tempScore = Math.max(0, 100 - tempDiff * 3) // Loses 3 points per degree from ideal
+
+      // Humidity score: 100 at 40%, drops above 60%
+      const humidityScore = humidity !== null
+        ? humidity <= 50 ? 100 : Math.max(0, 100 - (humidity - 50) * 2.5)
+        : 70 // Default if no humidity data
+
+      // Precipitation penalty: Any rain significantly hurts the score
+      const precipPenalty = precip && precip > 0 ? Math.min(50, precip * 30) : 0
+
+      // Combined score (weighted)
+      const rawScore = (tempScore * 0.5) + (humidityScore * 0.3) + (30 - precipPenalty * 0.6)
+      return Math.max(0, Math.min(100, rawScore))
+    }
+
+    // Build weather data points for scatter plot
+    const weatherDataPoints = weatherEntries
+      .filter(e => e.weather_temperature_high !== null)
+      .map(e => {
+        const temp = e.weather_temperature_high || 0
+        const humidity = e.weather_humidity
+        const precip = e.weather_precipitation
+        const niceScore = calculateNiceDayScore(temp, humidity, precip)
+        return {
+          date: e.entry_date,
+          temp,
+          humidity: humidity || 50, // Default for display
+          precip: precip || 0,
+          niceScore,
+          city: e.city_sleep?.split(',')[0].trim() || '',
+        }
+      })
+
+    // Count nice days (score >= 70) and perfect weather days (score >= 85)
+    const niceDays = weatherDataPoints.filter(d => d.niceScore >= 70).length
+    const perfectWeatherDays = weatherDataPoints.filter(d => d.niceScore >= 85).length
+    const bestWeatherDay = weatherDataPoints.length > 0
+      ? [...weatherDataPoints].sort((a, b) => b.niceScore - a.niceScore)[0]
+      : null
+    const worstWeatherDay = weatherDataPoints.length > 0
+      ? [...weatherDataPoints].sort((a, b) => a.niceScore - b.niceScore)[0]
+      : null
+
+    // Weather conditions breakdown (keep for reference)
     const conditionCounts: Record<string, number> = {}
     yearEntries.forEach(e => {
       if (e.weather_conditions) {
@@ -544,18 +593,26 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       ? Math.round(weatherEntries.reduce((sum, e) => sum + (e.weather_temperature_low || 0), 0) / weatherEntries.length)
       : null
 
-    // Mood-weather correlation
-    const moodOnSunnyDays = yearEntries
-      .filter(e => e.mood_score !== null && e.weather_conditions?.toLowerCase().match(/sun|clear/))
+    // Mood-weather correlation (using nice days instead of just sunny)
+    const moodOnNiceDays = yearEntries
+      .filter(e => {
+        if (e.mood_score === null || e.weather_temperature_high === null) return false
+        const score = calculateNiceDayScore(e.weather_temperature_high, e.weather_humidity, e.weather_precipitation)
+        return score >= 70
+      })
       .map(e => e.mood_score as number)
-    const avgMoodSunny = moodOnSunnyDays.length > 0
-      ? (moodOnSunnyDays.reduce((a, b) => a + b, 0) / moodOnSunnyDays.length).toFixed(1)
+    const avgMoodNice = moodOnNiceDays.length > 0
+      ? (moodOnNiceDays.reduce((a, b) => a + b, 0) / moodOnNiceDays.length).toFixed(1)
       : null
-    const moodOnRainyDays = yearEntries
-      .filter(e => e.mood_score !== null && (e.weather_precipitation || 0) > 0)
+    const moodOnBadWeatherDays = yearEntries
+      .filter(e => {
+        if (e.mood_score === null || e.weather_temperature_high === null) return false
+        const score = calculateNiceDayScore(e.weather_temperature_high, e.weather_humidity, e.weather_precipitation)
+        return score < 50
+      })
       .map(e => e.mood_score as number)
-    const avgMoodRainy = moodOnRainyDays.length > 0
-      ? (moodOnRainyDays.reduce((a, b) => a + b, 0) / moodOnRainyDays.length).toFixed(1)
+    const avgMoodBadWeather = moodOnBadWeatherDays.length > 0
+      ? (moodOnBadWeatherDays.reduce((a, b) => a + b, 0) / moodOnBadWeatherDays.length).toFixed(1)
       : null
 
     // Best month for habits
@@ -644,10 +701,15 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       avgMoodSober,
       avgMoodDrinking,
       avgMoodTravel,
-      avgMoodSunny,
-      avgMoodRainy,
+      avgMoodNice,
+      avgMoodBadWeather,
       // Weather stats
       weatherEntries: weatherEntries.length,
+      weatherDataPoints,
+      niceDays,
+      perfectWeatherDays,
+      bestWeatherDay,
+      worstWeatherDay,
       hottestDay,
       coldestDay,
       rainyDays,
@@ -1388,16 +1450,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                 <span className="text-white font-bold">{stats.avgMoodTravel}</span>
               </div>
             )}
-            {stats.avgMoodSunny && (
+            {stats.avgMoodNice && (
               <div className="bg-white/20 rounded-xl px-5 py-3 backdrop-blur flex justify-between items-center">
-                <span className="text-white">On sunny days ☀️</span>
-                <span className="text-white font-bold">{stats.avgMoodSunny}</span>
+                <span className="text-white">On nice weather days ☀️</span>
+                <span className="text-white font-bold">{stats.avgMoodNice}</span>
               </div>
             )}
-            {stats.avgMoodRainy && (
+            {stats.avgMoodBadWeather && (
               <div className="bg-white/20 rounded-xl px-5 py-3 backdrop-blur flex justify-between items-center">
-                <span className="text-white">On rainy days 🌧️</span>
-                <span className="text-white font-bold">{stats.avgMoodRainy}</span>
+                <span className="text-white">On bad weather days 🌧️</span>
+                <span className="text-white font-bold">{stats.avgMoodBadWeather}</span>
               </div>
             )}
           </div>
@@ -1410,85 +1472,127 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     },
-    // Weather slide
+    // Weather slide with scatter plot
     ...(stats.weatherEntries > 0 ? [{
       gradient: 'bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600',
       content: (
         <div className="text-center">
-          <Sun className="h-12 w-12 text-white/80 mb-4 mx-auto" />
-          <p className="text-white/80 text-lg mb-4">Your year in weather</p>
+          <Thermometer className="h-10 w-10 text-white/80 mb-3 mx-auto" />
+          <p className="text-white/80 text-lg mb-2">Your year in weather</p>
 
-          {/* Sunny vs Rainy */}
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-4">
-            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
-              <p className="text-3xl font-bold text-white">{stats.sunnyDays}</p>
-              <p className="text-white/70 text-xs">sunny days ☀️</p>
+          {/* Nice days headline */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-3">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.niceDays}</p>
+              <p className="text-white/70 text-[10px]">nice days</p>
             </div>
-            <div className="bg-white/20 rounded-xl px-3 py-3 backdrop-blur">
-              <p className="text-3xl font-bold text-white">{stats.rainyDays}</p>
-              <p className="text-white/70 text-xs">rainy days 🌧️</p>
+            <div className="bg-emerald-500/30 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-3xl font-bold text-white">{stats.perfectWeatherDays}</p>
+              <p className="text-white/70 text-[10px]">perfect days ✨</p>
             </div>
           </div>
 
-          {/* Temperature extremes */}
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto mb-4">
+          {/* Scatter plot: Temperature vs Humidity, colored by nice score */}
+          <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3">
+            <p className="text-white/60 text-[10px] mb-2">Temperature × Humidity (color = comfort)</p>
+            <svg viewBox="0 0 200 120" className="w-full h-24">
+              {/* Axis labels */}
+              <text x="100" y="118" className="fill-white/40 text-[6px]" textAnchor="middle">Temperature (°F)</text>
+              <text x="6" y="60" className="fill-white/40 text-[6px]" textAnchor="middle" transform="rotate(-90, 6, 60)">Humidity %</text>
+
+              {/* Grid lines */}
+              <line x1="20" y1="100" x2="195" y2="100" className="stroke-white/20" strokeWidth="0.5" />
+              <line x1="20" y1="5" x2="20" y2="100" className="stroke-white/20" strokeWidth="0.5" />
+
+              {/* Temp markers */}
+              <text x="20" y="108" className="fill-white/30 text-[5px]" textAnchor="middle">20°</text>
+              <text x="78" y="108" className="fill-white/30 text-[5px]" textAnchor="middle">50°</text>
+              <text x="136" y="108" className="fill-white/30 text-[5px]" textAnchor="middle">80°</text>
+              <text x="195" y="108" className="fill-white/30 text-[5px]" textAnchor="middle">110°</text>
+
+              {/* Humidity markers */}
+              <text x="16" y="100" className="fill-white/30 text-[5px]" textAnchor="end">0</text>
+              <text x="16" y="52" className="fill-white/30 text-[5px]" textAnchor="end">50</text>
+              <text x="16" y="8" className="fill-white/30 text-[5px]" textAnchor="end">100</text>
+
+              {/* Data points */}
+              {stats.weatherDataPoints.slice(0, 365).map((d, i) => {
+                // Map temp 20-110 to x 20-195
+                const x = 20 + ((d.temp - 20) / 90) * 175
+                // Map humidity 0-100 to y 100-5 (inverted)
+                const y = 100 - (d.humidity / 100) * 95
+                // Color based on nice score: green (nice) to red (not nice)
+                const hue = (d.niceScore / 100) * 120 // 0=red, 120=green
+                const color = `hsl(${hue}, 70%, 50%)`
+                // Size based on precipitation
+                const size = d.precip > 0 ? 2 + Math.min(d.precip, 1) * 2 : 2.5
+                return (
+                  <circle
+                    key={i}
+                    cx={Math.max(20, Math.min(195, x))}
+                    cy={Math.max(5, Math.min(100, y))}
+                    r={size}
+                    fill={color}
+                    opacity={0.7}
+                  />
+                )
+              })}
+
+              {/* Comfort zone indicator */}
+              <rect x="78" y="50" width="58" height="50" className="fill-emerald-400/10 stroke-emerald-400/30" strokeWidth="0.5" strokeDasharray="2,2" rx="2" />
+              <text x="107" y="46" className="fill-emerald-300/50 text-[4px]" textAnchor="middle">sweet spot</text>
+            </svg>
+            <div className="flex justify-center gap-3 mt-1">
+              <span className="text-[8px] text-white/50 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span> uncomfortable
+              </span>
+              <span className="text-[8px] text-white/50 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-yellow-500"></span> ok
+              </span>
+              <span className="text-[8px] text-white/50 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span> nice
+              </span>
+            </div>
+          </div>
+
+          {/* Best/Worst and Temp extremes */}
+          <div className="grid grid-cols-2 gap-2 w-full max-w-sm mx-auto">
+            {stats.bestWeatherDay && (
+              <div className="bg-emerald-500/20 rounded-lg px-2 py-1.5 backdrop-blur">
+                <p className="text-white/60 text-[9px]">Best day ☀️</p>
+                <p className="text-white text-sm font-semibold">{stats.bestWeatherDay.temp}° / {Math.round(stats.bestWeatherDay.humidity)}%</p>
+                <p className="text-white/40 text-[8px]">{format(parseISO(stats.bestWeatherDay.date), 'MMM d')}</p>
+              </div>
+            )}
+            {stats.worstWeatherDay && (
+              <div className="bg-red-500/20 rounded-lg px-2 py-1.5 backdrop-blur">
+                <p className="text-white/60 text-[9px]">Roughest day 🌧️</p>
+                <p className="text-white text-sm font-semibold">{stats.worstWeatherDay.temp}° / {Math.round(stats.worstWeatherDay.humidity)}%</p>
+                <p className="text-white/40 text-[8px]">{format(parseISO(stats.worstWeatherDay.date), 'MMM d')}</p>
+              </div>
+            )}
             {stats.hottestDay && (
-              <div className="bg-red-500/30 rounded-xl px-3 py-2 backdrop-blur">
-                <p className="text-white/60 text-[10px] mb-1">Hottest day 🔥</p>
-                <p className="text-2xl font-bold text-white">{stats.hottestDay.weather_temperature_high}°</p>
-                <p className="text-white/50 text-[9px]">
-                  {format(parseISO(stats.hottestDay.entry_date), 'MMM d')}
-                  {(() => {
-                    const city = stats.hottestDay?.city_sleep?.split(',')[0].trim()
-                    const cityLower = city?.toLowerCase() || ''
-                    return cityLower && cityLower !== 'home' && cityLower !== 'unknown' ? ` · ${city}` : ''
-                  })()}
-                </p>
+              <div className="bg-orange-500/20 rounded-lg px-2 py-1.5 backdrop-blur">
+                <p className="text-white/60 text-[9px]">Hottest 🔥</p>
+                <p className="text-white text-sm font-semibold">{stats.hottestDay.weather_temperature_high}°</p>
+                <p className="text-white/40 text-[8px]">{format(parseISO(stats.hottestDay.entry_date), 'MMM d')}</p>
               </div>
             )}
             {stats.coldestDay && (
-              <div className="bg-blue-500/30 rounded-xl px-3 py-2 backdrop-blur">
-                <p className="text-white/60 text-[10px] mb-1">Coldest day 🥶</p>
-                <p className="text-2xl font-bold text-white">{stats.coldestDay.weather_temperature_low}°</p>
-                <p className="text-white/50 text-[9px]">
-                  {format(parseISO(stats.coldestDay.entry_date), 'MMM d')}
-                  {(() => {
-                    const city = stats.coldestDay?.city_sleep?.split(',')[0].trim()
-                    const cityLower = city?.toLowerCase() || ''
-                    return cityLower && cityLower !== 'home' && cityLower !== 'unknown' ? ` · ${city}` : ''
-                  })()}
-                </p>
+              <div className="bg-blue-500/20 rounded-lg px-2 py-1.5 backdrop-blur">
+                <p className="text-white/60 text-[9px]">Coldest 🥶</p>
+                <p className="text-white text-sm font-semibold">{stats.coldestDay.weather_temperature_low}°</p>
+                <p className="text-white/40 text-[8px]">{format(parseISO(stats.coldestDay.entry_date), 'MMM d')}</p>
               </div>
             )}
           </div>
 
-          {/* Average temps */}
-          {stats.avgTempHigh && stats.avgTempLow && (
-            <div className="bg-white/10 rounded-xl px-4 py-2 backdrop-blur w-full max-w-sm mx-auto mb-3">
-              <div className="flex justify-between items-center">
-                <span className="text-white/70 text-xs">Average temps</span>
-                <span className="text-white text-sm">
-                  <span className="text-blue-200">{stats.avgTempLow}°</span>
-                  {' → '}
-                  <span className="text-red-200">{stats.avgTempHigh}°</span>
-                </span>
-              </div>
-            </div>
+          {/* Fun insight */}
+          {stats.perfectWeatherDays >= 30 && (
+            <p className="text-white/50 text-xs mt-3 italic">You had a whole month of perfect weather! 🌈</p>
           )}
-
-          {/* Rainiest day callout */}
-          {stats.rainiestDay && stats.rainiestDay.weather_precipitation && stats.rainiestDay.weather_precipitation > 0.5 && (
-            <p className="text-white/50 text-xs mt-2 italic">
-              Wettest day: {format(parseISO(stats.rainiestDay.entry_date), 'MMM d')} with {stats.rainiestDay.weather_precipitation.toFixed(1)}" of rain 🌊
-            </p>
-          )}
-
-          {/* Fun comparison */}
-          {stats.sunnyDays > stats.rainyDays * 2 && (
-            <p className="text-white/50 text-xs mt-2 italic">You really chased the sunshine! ☀️</p>
-          )}
-          {stats.rainyDays > stats.sunnyDays && (
-            <p className="text-white/50 text-xs mt-2 italic">You embraced the rain this year! 🌧️</p>
+          {stats.perfectWeatherDays < 10 && stats.weatherEntries > 100 && (
+            <p className="text-white/50 text-xs mt-3 italic">Mother Nature wasn't very generous this year 😅</p>
           )}
         </div>
       ),
