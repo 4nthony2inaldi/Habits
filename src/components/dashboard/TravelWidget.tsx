@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { differenceInDays, parseISO } from 'date-fns'
 import { Plane, Train, MapPin, Moon } from 'lucide-react'
 import type { DailyEntryWithRelations, Profile } from '@/types/database'
 import dynamic from 'next/dynamic'
@@ -80,11 +81,16 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
   // Calculate travel stats
   const stats = useMemo(() => {
     const homeCity = profile.home_city?.toLowerCase() || ''
+    const today = new Date()
 
     // Count nights away (city_sleep is not home or unknown/empty)
     let nightsAway = 0
     let flights = 0
     let trains = 0
+    // Track dates for "days since" calculations
+    const awayDates: string[] = []
+    const flightDates: string[] = []
+    const trainDates: string[] = []
     // Track unique dates per location coordinate key
     const cityDatesMap = new Map<string, { name: string; lat: number; lng: number; dates: Set<string> }>()
     // Track sleep cities for tooltip
@@ -92,14 +98,21 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
 
     entries.forEach((entry) => {
       // Count flights and trains from life_events
-      if (entry.life_events?.some((e) => e.event_type === 'flight')) flights++
-      if (entry.life_events?.some((e) => e.event_type === 'train')) trains++
+      if (entry.life_events?.some((e) => e.event_type === 'flight')) {
+        flights++
+        flightDates.push(entry.entry_date)
+      }
+      if (entry.life_events?.some((e) => e.event_type === 'train')) {
+        trains++
+        trainDates.push(entry.entry_date)
+      }
 
       // Check if slept away from home
       const sleepCity = entry.city_sleep || ''
       const sleepCityLower = sleepCity.toLowerCase()
       if (sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity) {
         nightsAway++
+        awayDates.push(entry.entry_date)
         // Track sleep city with original casing
         const existingCount = sleepCitiesMap.get(sleepCity) || 0
         sleepCitiesMap.set(sleepCity, existingCount + 1)
@@ -148,6 +161,13 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       .map(([name, nights]) => ({ name, nights }))
       .sort((a, b) => b.nights - a.nights)
 
+    // Calculate days since last occurrence for each metric
+    const getDaysSince = (dates: string[]): number | null => {
+      if (dates.length === 0) return null
+      const sorted = [...dates].sort((a, b) => b.localeCompare(a)) // Sort descending
+      return differenceInDays(today, parseISO(sorted[0]))
+    }
+
     return {
       nightsAway,
       flights,
@@ -155,6 +175,9 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       cities,
       uniqueCityCount: cities.length,
       sleepCities,
+      daysSinceAway: getDaysSince(awayDates),
+      daysSinceFlight: getDaysSince(flightDates),
+      daysSinceTrain: getDaysSince(trainDates),
     }
   }, [entries, profile.home_city])
 
@@ -194,7 +217,10 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
             <p className="text-lg font-bold text-indigo-700">{stats.nightsAway}</p>
-            <p className="text-[10px] text-indigo-600">Nights Away</p>
+            <p className="text-[10px] text-indigo-600">Away</p>
+            {stats.daysSinceAway !== null && (
+              <p className="text-[9px] text-indigo-400">{stats.daysSinceAway}d ago</p>
+            )}
             {stats.sleepCities.length > 0 && (
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
                 <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
@@ -214,6 +240,9 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             </div>
             <p className="text-lg font-bold text-cyan-700">{stats.flights}</p>
             <p className="text-[10px] text-cyan-600">Flights</p>
+            {stats.daysSinceFlight !== null && (
+              <p className="text-[9px] text-cyan-400">{stats.daysSinceFlight}d ago</p>
+            )}
           </div>
           <div className="text-center p-2 bg-amber-50 rounded-lg">
             <div className="flex items-center justify-center mb-1">
@@ -221,6 +250,9 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             </div>
             <p className="text-lg font-bold text-amber-700">{stats.trains}</p>
             <p className="text-[10px] text-amber-600">Trains</p>
+            {stats.daysSinceTrain !== null && (
+              <p className="text-[9px] text-amber-400">{stats.daysSinceTrain}d ago</p>
+            )}
           </div>
           <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
