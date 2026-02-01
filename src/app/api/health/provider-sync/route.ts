@@ -180,6 +180,26 @@ export async function POST(request: NextRequest) {
       result = { ...data, action: 'created' }
     }
 
+    // Auto-add sleep_8hrs habit if sleep hours >= 8
+    if (healthData.sleepHours !== null && healthData.sleepHours >= 8) {
+      // Check if habit already exists for this entry
+      const { data: existingHabit } = await supabase
+        .from('healthy_habits')
+        .select('id')
+        .eq('entry_id', result.id)
+        .eq('habit_type', 'sleep_8hrs')
+        .single()
+
+      if (!existingHabit) {
+        await supabase
+          .from('healthy_habits')
+          .insert({
+            entry_id: result.id,
+            habit_type: 'sleep_8hrs',
+          })
+      }
+    }
+
     // Update connection sync status
     await supabase
       .from('health_connections')
