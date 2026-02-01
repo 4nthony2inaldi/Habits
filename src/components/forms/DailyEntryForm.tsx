@@ -727,21 +727,15 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         onToggle={() => toggleSection('drinks')}
         summary={summaries.drinks}
       >
-        <div className="space-y-4">
-          {/* Simple drink types */}
-          <div className="space-y-3">
+        <div className="space-y-3">
+          {/* Simple drink types - grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {!hiddenFields.includes('beers') && (
               <Controller
                 name="beers"
                 control={control}
                 render={({ field }) => (
-                  <TapCounter
-                    label="Beer"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-amber-500"
-                    max={6}
-                  />
+                  <TapCounter label="Beer" value={field.value || 0} onChange={field.onChange} color="bg-amber-500" />
                 )}
               />
             )}
@@ -750,13 +744,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 name="seltzers"
                 control={control}
                 render={({ field }) => (
-                  <TapCounter
-                    label="Seltzers"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-cyan-500"
-                    max={6}
-                  />
+                  <TapCounter label="Seltzer" value={field.value || 0} onChange={field.onChange} color="bg-cyan-500" />
                 )}
               />
             )}
@@ -765,13 +753,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 name="shots"
                 control={control}
                 render={({ field }) => (
-                  <TapCounter
-                    label="Shots"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-red-500"
-                    max={6}
-                  />
+                  <TapCounter label="Shots" value={field.value || 0} onChange={field.onChange} color="bg-red-500" />
                 )}
               />
             )}
@@ -779,132 +761,82 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
 
           {/* Wine breakdown */}
           {!hiddenFields.includes('wine') && (
-            <div className="pt-3 border-t space-y-3">
-              <Label className="text-sm font-medium text-gray-600 block">Wine</Label>
-              <Controller
-                name="wine_red"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Red"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-red-600"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="wine_white"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="White"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-yellow-400"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="wine_sparkling"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Sparkling"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-pink-400"
-                    max={4}
-                  />
-                )}
-              />
+            <div className="pt-2 border-t">
+              <Label className="text-xs font-medium text-gray-500 mb-1 block">Wine</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <Controller
+                  name="wine_red"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Red" value={field.value || 0} onChange={field.onChange} color="bg-red-600" max={4} />
+                  )}
+                />
+                <Controller
+                  name="wine_white"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="White" value={field.value || 0} onChange={field.onChange} color="bg-yellow-400" max={4} />
+                  )}
+                />
+                <Controller
+                  name="wine_sparkling"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Sparkling" value={field.value || 0} onChange={field.onChange} color="bg-pink-400" max={4} />
+                  )}
+                />
+              </div>
             </div>
           )}
 
           {/* Cocktail/Liquor breakdown */}
           {!hiddenFields.includes('liquor') && (
-            <div className="pt-3 border-t space-y-3">
-              <Label className="text-sm font-medium text-gray-600 block">Cocktails (by spirit)</Label>
-              <Controller
-                name="liquor_vodka"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Vodka"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-gray-400"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="liquor_gin"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Gin"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-teal-500"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="liquor_tequila"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Tequila"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-lime-500"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="liquor_whiskey"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Whiskey"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-amber-700"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="liquor_rum"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Rum"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-amber-600"
-                    max={4}
-                  />
-                )}
-              />
-              <Controller
-                name="liquor_other"
-                control={control}
-                render={({ field }) => (
-                  <TapCounter
-                    label="Other"
-                    value={field.value || 0}
-                    onChange={field.onChange}
-                    color="bg-purple-500"
-                    max={4}
-                  />
-                )}
-              />
+            <div className="pt-2 border-t">
+              <Label className="text-xs font-medium text-gray-500 mb-1 block">Cocktails</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <Controller
+                  name="liquor_vodka"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Vodka" value={field.value || 0} onChange={field.onChange} color="bg-gray-400" max={4} />
+                  )}
+                />
+                <Controller
+                  name="liquor_gin"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Gin" value={field.value || 0} onChange={field.onChange} color="bg-teal-500" max={4} />
+                  )}
+                />
+                <Controller
+                  name="liquor_tequila"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Tequila" value={field.value || 0} onChange={field.onChange} color="bg-lime-500" max={4} />
+                  )}
+                />
+                <Controller
+                  name="liquor_whiskey"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Whiskey" value={field.value || 0} onChange={field.onChange} color="bg-amber-700" max={4} />
+                  )}
+                />
+                <Controller
+                  name="liquor_rum"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Rum" value={field.value || 0} onChange={field.onChange} color="bg-amber-600" max={4} />
+                  )}
+                />
+                <Controller
+                  name="liquor_other"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Other" value={field.value || 0} onChange={field.onChange} color="bg-purple-500" max={4} />
+                  )}
+                />
+              </div>
             </div>
           )}
         </div>
