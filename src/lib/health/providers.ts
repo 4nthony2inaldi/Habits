@@ -200,12 +200,17 @@ export async function refreshWhoopToken(connection: HealthConnection): Promise<{
 // Fetch sleep and activity data from Oura for a specific date
 export async function fetchOuraData(accessToken: string, date: string): Promise<NormalizedSleepData | null> {
   try {
-    // Calculate the day before for sleep period lookup
-    // Sleep periods are indexed by bedtime date, so a Jan 31 wake-up might be under Jan 30
-    const targetDate = new Date(date)
+    // Calculate date range for sleep period lookup
+    // Sleep periods are indexed by bedtime START date, so a Jan 31 wake-up is under Jan 30
+    const targetDate = new Date(date + 'T12:00:00Z') // Use noon to avoid timezone issues
     const prevDate = new Date(targetDate)
     prevDate.setDate(prevDate.getDate() - 1)
     const prevDateStr = prevDate.toISOString().split('T')[0]
+
+    // Also try next day for activity in case of timezone issues
+    const nextDate = new Date(targetDate)
+    nextDate.setDate(nextDate.getDate() + 1)
+    const nextDateStr = nextDate.toISOString().split('T')[0]
 
     // Fetch daily sleep score for the target date
     const sleepResponse = await fetch(
@@ -215,17 +220,17 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods - query both prev day and target day to catch the right sleep session
+    // Fetch detailed sleep periods - query prev day since that's when bedtime starts
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${prevDateStr}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     )
 
-    // Fetch daily activity (for steps) for the target date
+    // Fetch daily activity (for steps) - try a range to catch timezone issues
     const activityResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${date}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${prevDateStr}&end_date=${nextDateStr}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
@@ -243,14 +248,21 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
     // Debug logging
     console.log('Oura API responses:', {
       date,
+      prevDateStr,
+      nextDateStr,
       sleepDataCount: sleepData.data?.length ?? 0,
       sleepPeriodsCount: sleepPeriodsData.data?.length ?? 0,
       activityDataCount: activityData.data?.length ?? 0,
-      activityData: activityData.data?.[0],
+      activityDays: activityData.data?.map((a: OuraDailyActivity) => ({ day: a.day, steps: a.steps })),
     })
 
     const dailySleep: OuraDailySleep | undefined = sleepData.data?.[0]
-    const dailyActivity: OuraDailyActivity | undefined = activityData.data?.[0]
+
+    // Find activity data for the target date
+    const activities: OuraDailyActivity[] = activityData.data || []
+    const dailyActivity: OuraDailyActivity | undefined = activities.find(a => a.day === date) || activities[0]
+
+    console.log('Selected activity:', dailyActivity ? { day: dailyActivity.day, steps: dailyActivity.steps } : null)
 
     // Find the sleep period that ended on the target date (main overnight sleep)
     // Sleep periods have bedtime_end which is the wake-up time
