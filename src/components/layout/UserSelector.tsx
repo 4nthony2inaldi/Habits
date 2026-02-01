@@ -9,6 +9,11 @@ interface UserSelectorProps {
   className?: string
 }
 
+// Get first name from display name for compact display
+function getFirstName(displayName: string): string {
+  return displayName.split(' ')[0] || displayName
+}
+
 export function UserSelector({
   users,
   selectedUserId,
@@ -23,7 +28,7 @@ export function UserSelector({
     >
       {users.map((user) => (
         <option key={user.id} value={user.id}>
-          {user.display_name}
+          {getFirstName(user.display_name)}
         </option>
       ))}
     </Select>

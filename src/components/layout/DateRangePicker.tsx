@@ -42,14 +42,14 @@ export function DateRangePicker({
     <div className={cn('relative', className)}>
       <Button
         variant="outline"
-        className="justify-start text-left font-normal min-w-[240px]"
+        className="justify-center text-left font-normal px-2 sm:px-3 sm:min-w-[200px]"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Calendar className="mr-2 h-4 w-4" />
-        <span>
-          {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}
+        <Calendar className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline text-sm">
+          {format(startDate, 'M/d/yy')} - {format(endDate, 'M/d/yy')}
         </span>
-        <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+        <ChevronDown className="hidden sm:block ml-auto h-4 w-4 opacity-50" />
       </Button>
 
       {isOpen && (
