@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { differenceInDays, parseISO } from 'date-fns'
+import { differenceInDays, parseISO, format } from 'date-fns'
 import { Plane, Train, MapPin, Moon } from 'lucide-react'
 import type { DailyEntryWithRelations, Profile } from '@/types/database'
 import dynamic from 'next/dynamic'
@@ -35,6 +35,13 @@ interface CityData {
   lng: number
   days: number
   trips: Trip[]
+}
+
+// Extract just the city name from a full address like "New Orleans, Louisiana, United States"
+function extractCityName(fullName: string): string {
+  if (!fullName) return ''
+  // Take only the first part before the comma
+  return fullName.split(',')[0].trim()
 }
 
 export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
@@ -165,41 +172,75 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
   }, [entries, profile.home_city])
 
   // Calculate "days since" from all-time data (ignores date filters)
+  // Also calculates median gaps and overdue status like EventsTracker
   const daysSince = useMemo(() => {
     const homeCity = profile.home_city?.toLowerCase() || ''
     const today = new Date()
     const sourceEntries = allEntries || entries
 
-    // Track dates for "days since" calculations
-    const awayDates: string[] = []
-    const flightDates: string[] = []
-    const trainDates: string[] = []
+    // Track dates and cities for "days since" calculations
+    const awayData: { date: string; city: string }[] = []
+    const flightData: { date: string; city: string }[] = []
+    const trainData: { date: string; city: string }[] = []
 
     sourceEntries.forEach((entry) => {
       if (entry.life_events?.some((e) => e.event_type === 'flight')) {
-        flightDates.push(entry.entry_date)
+        // Use sleep city as destination for flights
+        const city = entry.city_sleep || entry.city_noon || ''
+        flightData.push({ date: entry.entry_date, city })
       }
       if (entry.life_events?.some((e) => e.event_type === 'train')) {
-        trainDates.push(entry.entry_date)
+        // Use sleep city as destination for trains
+        const city = entry.city_sleep || entry.city_noon || ''
+        trainData.push({ date: entry.entry_date, city })
       }
 
       const sleepCity = entry.city_sleep || ''
       const sleepCityLower = sleepCity.toLowerCase()
       if (sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity) {
-        awayDates.push(entry.entry_date)
+        awayData.push({ date: entry.entry_date, city: sleepCity })
       }
     })
 
-    const getDaysSince = (dates: string[]): number | null => {
-      if (dates.length === 0) return null
-      const sorted = [...dates].sort((a, b) => b.localeCompare(a)) // Sort descending
-      return differenceInDays(today, parseISO(sorted[0]))
+    const calculateStats = (data: { date: string; city: string }[]) => {
+      if (data.length === 0) {
+        return { daysSince: null, lastDate: null, lastCity: null, medianGap: null, isOverdue: false }
+      }
+
+      // Sort descending by date
+      const sorted = [...data].sort((a, b) => b.date.localeCompare(a.date))
+      const lastDate = sorted[0].date
+      const lastCity = sorted[0].city
+      const daysSinceVal = differenceInDays(today, parseISO(lastDate))
+
+      // Calculate median gap (need at least 2 occurrences)
+      let medianGap: number | null = null
+      if (data.length >= 2) {
+        const sortedDates = data
+          .map((d) => parseISO(d.date))
+          .sort((a, b) => a.getTime() - b.getTime())
+
+        const gaps: number[] = []
+        for (let i = 1; i < sortedDates.length; i++) {
+          gaps.push(differenceInDays(sortedDates[i], sortedDates[i - 1]))
+        }
+        gaps.sort((a, b) => a - b)
+
+        const mid = Math.floor(gaps.length / 2)
+        medianGap = gaps.length % 2 === 0
+          ? Math.round((gaps[mid - 1] + gaps[mid]) / 2)
+          : gaps[mid]
+      }
+
+      const isOverdue = daysSinceVal !== null && medianGap !== null && daysSinceVal > medianGap
+
+      return { daysSince: daysSinceVal, lastDate, lastCity, medianGap, isOverdue }
     }
 
     return {
-      away: getDaysSince(awayDates),
-      flight: getDaysSince(flightDates),
-      train: getDaysSince(trainDates),
+      away: calculateStats(awayData),
+      flight: calculateStats(flightData),
+      train: calculateStats(trainData),
     }
   }, [allEntries, entries, profile.home_city])
 
@@ -234,48 +275,86 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
       <div className="flex-1 min-h-0 flex flex-col gap-3">
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
+          {/* Away */}
           <div className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
             <p className="text-lg font-bold text-indigo-700">{stats.nightsAway}</p>
             <p className="text-[10px] text-indigo-600">Away</p>
-            {daysSince.away !== null && (
-              <p className="text-[9px] text-indigo-400">{daysSince.away}d ago</p>
+            {daysSince.away.daysSince !== null && (
+              <p className={`text-[9px] ${daysSince.away.isOverdue ? 'text-red-500' : 'text-indigo-400'}`}>
+                {daysSince.away.daysSince}d ago
+              </p>
             )}
-            {stats.sleepCities.length > 0 && (
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
-                  <div className="font-medium text-gray-900 mb-1">Places stayed</div>
-                  <div className="text-gray-500 border-t pt-1 space-y-0.5">
-                    {stats.sleepCities.map((c, i) => (
-                      <div key={i}>{c.name} ({c.nights})</div>
-                    ))}
+            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+                {daysSince.away.lastCity && daysSince.away.lastDate && (
+                  <div className="font-medium text-gray-900 mb-1">
+                    Last: {extractCityName(daysSince.away.lastCity)} {format(parseISO(daysSince.away.lastDate), 'M/d')}
                   </div>
-                </div>
+                )}
+                {stats.sleepCities.length > 0 && (
+                  <>
+                    <div className="text-gray-400 text-[10px] mb-1">Top places</div>
+                    <div className="text-gray-500 space-y-0.5">
+                      {stats.sleepCities.slice(0, 5).map((c, i) => (
+                        <div key={i}>{extractCityName(c.name)} ({c.nights})</div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
-          <div className="text-center p-2 bg-cyan-50 rounded-lg">
+
+          {/* Flights */}
+          <div className="relative group text-center p-2 bg-cyan-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <Plane className="h-4 w-4 text-cyan-500" />
             </div>
             <p className="text-lg font-bold text-cyan-700">{stats.flights}</p>
             <p className="text-[10px] text-cyan-600">Flights</p>
-            {daysSince.flight !== null && (
-              <p className="text-[9px] text-cyan-400">{daysSince.flight}d ago</p>
+            {daysSince.flight.daysSince !== null && (
+              <p className={`text-[9px] ${daysSince.flight.isOverdue ? 'text-red-500' : 'text-cyan-400'}`}>
+                {daysSince.flight.daysSince}d ago
+              </p>
+            )}
+            {daysSince.flight.lastCity && daysSince.flight.lastDate && (
+              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+                  <div className="font-medium text-gray-900">
+                    Last: {extractCityName(daysSince.flight.lastCity)} {format(parseISO(daysSince.flight.lastDate), 'M/d')}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-          <div className="text-center p-2 bg-amber-50 rounded-lg">
+
+          {/* Trains */}
+          <div className="relative group text-center p-2 bg-amber-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <Train className="h-4 w-4 text-amber-500" />
             </div>
             <p className="text-lg font-bold text-amber-700">{stats.trains}</p>
             <p className="text-[10px] text-amber-600">Trains</p>
-            {daysSince.train !== null && (
-              <p className="text-[9px] text-amber-400">{daysSince.train}d ago</p>
+            {daysSince.train.daysSince !== null && (
+              <p className={`text-[9px] ${daysSince.train.isOverdue ? 'text-red-500' : 'text-amber-400'}`}>
+                {daysSince.train.daysSince}d ago
+              </p>
+            )}
+            {daysSince.train.lastCity && daysSince.train.lastDate && (
+              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+                  <div className="font-medium text-gray-900">
+                    Last: {extractCityName(daysSince.train.lastCity)} {format(parseISO(daysSince.train.lastDate), 'M/d')}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
+
+          {/* Cities */}
           <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-help">
             <div className="flex items-center justify-center mb-1">
               <MapPin className="h-4 w-4 text-emerald-500" />
@@ -284,11 +363,11 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
             <p className="text-[10px] text-emerald-600">Cities</p>
             {stats.cities.length > 0 && (
               <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px]">
-                  <div className="font-medium text-gray-900 mb-1">Cities visited</div>
-                  <div className="text-gray-500 border-t pt-1 space-y-0.5">
-                    {[...stats.cities].sort((a, b) => b.days - a.days).map((c, i) => (
-                      <div key={i}>{c.name} ({c.days})</div>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+                  <div className="font-medium text-gray-900 mb-1">Top cities</div>
+                  <div className="text-gray-500 space-y-0.5">
+                    {[...stats.cities].sort((a, b) => b.days - a.days).slice(0, 5).map((c, i) => (
+                      <div key={i}>{extractCityName(c.name)} ({c.days})</div>
                     ))}
                   </div>
                 </div>
