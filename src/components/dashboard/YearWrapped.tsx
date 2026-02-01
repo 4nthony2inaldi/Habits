@@ -246,8 +246,13 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     let longestTrip = 0
     let longestTripStart = ''
     let longestTripEnd = ''
-    let longestTripCity = ''
     let tempTripStart = ''
+
+    // Track full itinerary for longest trip
+    type TripStop = { city: string; date: string; lat: number | null; lng: number | null; nights: number }
+    let currentTripItinerary: TripStop[] = []
+    let longestTripItinerary: TripStop[] = []
+    let lastCity = ''
 
     let currentHomeStreak = 0
     let longestHomeStreak = 0
@@ -286,16 +291,33 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           }
         }
 
-        // Trip tracking
+        // Trip tracking with full itinerary
         if (currentTripLength === 0) {
           tempTripStart = entry.entry_date
+          currentTripItinerary = []
+          lastCity = ''
         }
         currentTripLength++
+
+        // Add to itinerary - combine consecutive nights in same city
+        if (city === lastCity && currentTripItinerary.length > 0) {
+          currentTripItinerary[currentTripItinerary.length - 1].nights++
+        } else {
+          currentTripItinerary.push({
+            city,
+            date: entry.entry_date,
+            lat: entry.city_sleep_lat,
+            lng: entry.city_sleep_lng,
+            nights: 1
+          })
+          lastCity = city
+        }
+
         if (currentTripLength > longestTrip) {
           longestTrip = currentTripLength
           longestTripStart = tempTripStart
           longestTripEnd = entry.entry_date
-          longestTripCity = city
+          longestTripItinerary = [...currentTripItinerary]
         }
 
         // Reset home streak
@@ -312,6 +334,8 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
 
         // Reset trip
         currentTripLength = 0
+        currentTripItinerary = []
+        lastCity = ''
       }
     })
 
@@ -422,7 +446,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       longestTrip,
       longestTripStart,
       longestTripEnd,
-      longestTripCity,
+      longestTripItinerary,
       longestHomeStreak,
       homeStreakStart,
       homeStreakEnd,
@@ -698,12 +722,60 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           {stats.longestTrip > 0 && (
             <p className="text-white/70 text-sm">
               Longest adventure: <span className="text-white font-medium">{stats.longestTrip} nights</span>
-              {stats.longestTripCity && <span className="text-white/50"> in {stats.longestTripCity}</span>}
+              <span className="text-white/50"> across {stats.longestTripItinerary.length} cities →</span>
             </p>
           )}
         </>
       ),
     },
+    // Longest Trip Journey slide
+    ...(stats.longestTrip > 3 && stats.longestTripItinerary.length > 1 ? [{
+      gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600',
+      content: (
+        <>
+          <MapPin className="h-10 w-10 text-white/80 mb-3" />
+          <p className="text-white/80 text-lg mb-1">Your epic {stats.longestTrip}-night journey</p>
+          <p className="text-white/50 text-sm mb-4">
+            {format(parseISO(stats.longestTripStart), 'MMM d')} - {format(parseISO(stats.longestTripEnd), 'MMM d')}
+          </p>
+          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur w-full max-w-sm max-h-[50vh] overflow-y-auto">
+            <div className="relative">
+              {stats.longestTripItinerary.map((stop, i) => (
+                <div key={i} className="flex items-start gap-3 relative">
+                  {/* Connecting line */}
+                  {i < stats.longestTripItinerary.length - 1 && (
+                    <div className="absolute left-[11px] top-6 w-0.5 h-[calc(100%-8px)] bg-white/30" />
+                  )}
+                  {/* Dot */}
+                  <div className={cn(
+                    'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                    i === 0 ? 'bg-green-400' : i === stats.longestTripItinerary.length - 1 ? 'bg-red-400' : 'bg-white/40'
+                  )}>
+                    {i === 0 ? (
+                      <span className="text-[10px]">🛫</span>
+                    ) : i === stats.longestTripItinerary.length - 1 ? (
+                      <span className="text-[10px]">🛬</span>
+                    ) : (
+                      <span className="text-[8px] text-white font-bold">{i + 1}</span>
+                    )}
+                  </div>
+                  {/* City info */}
+                  <div className="flex-1 pb-4">
+                    <p className="text-white font-medium text-sm">{stop.city}</p>
+                    <p className="text-white/50 text-xs">
+                      {stop.nights} night{stop.nights > 1 ? 's' : ''} · {format(parseISO(stop.date), 'MMM d')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-white/50 text-xs mt-3 italic">
+            {stats.longestTripItinerary.length} cities in {stats.longestTrip} nights - what an adventure! ✨
+          </p>
+        </>
+      ),
+    }] : []),
     // Furthest from home slide
     {
       gradient: 'bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700',
