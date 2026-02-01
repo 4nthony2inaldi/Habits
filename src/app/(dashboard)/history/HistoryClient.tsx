@@ -27,6 +27,9 @@ import {
   X,
   Search,
   ArrowLeft,
+  Moon,
+  Heart,
+  Activity,
 } from 'lucide-react'
 
 interface HistoryClientProps {
@@ -152,6 +155,59 @@ function EntryCard({ entry, onDelete }: { entry: DailyEntryWithRelations; onDele
                 </p>
               </div>
             </div>
+
+            {/* Sleep & Health Data */}
+            {(entry.sleep_score !== null || entry.sleep_hours !== null || entry.hrv !== null) && (
+              <div className="pt-2">
+                <p className="text-gray-500 mb-2 flex items-center gap-1">
+                  <Moon className="h-3.5 w-3.5" />
+                  Sleep & Health
+                  {entry.health_data_source && entry.health_data_source !== 'manual' && (
+                    <span className="text-xs text-purple-500 ml-1">
+                      via {entry.health_data_source === 'oura' ? 'Oura' : entry.health_data_source === 'whoop' ? 'Whoop' : entry.health_data_source}
+                    </span>
+                  )}
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {entry.sleep_score !== null && (
+                    <div>
+                      <p className="text-gray-400 text-xs">Sleep Score</p>
+                      <p className="font-medium">{entry.sleep_score}</p>
+                    </div>
+                  )}
+                  {entry.sleep_hours !== null && (
+                    <div>
+                      <p className="text-gray-400 text-xs">Sleep Hours</p>
+                      <p className="font-medium">{entry.sleep_hours.toFixed(1)}h</p>
+                    </div>
+                  )}
+                  {entry.sleep_start && entry.sleep_end && (
+                    <div>
+                      <p className="text-gray-400 text-xs">Bed/Wake</p>
+                      <p className="font-medium">{entry.sleep_start.slice(0, 5)} - {entry.sleep_end.slice(0, 5)}</p>
+                    </div>
+                  )}
+                  {entry.hrv !== null && (
+                    <div>
+                      <p className="text-gray-400 text-xs">HRV</p>
+                      <p className="font-medium">{entry.hrv} ms</p>
+                    </div>
+                  )}
+                  {entry.resting_hr !== null && (
+                    <div>
+                      <p className="text-gray-400 text-xs">Resting HR</p>
+                      <p className="font-medium">{entry.resting_hr} bpm</p>
+                    </div>
+                  )}
+                  {entry.respiratory_rate !== null && (
+                    <div>
+                      <p className="text-gray-400 text-xs">Resp. Rate</p>
+                      <p className="font-medium">{Number(entry.respiratory_rate).toFixed(1)}/min</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {entry.healthy_habits.length > 0 && (
               <div>
