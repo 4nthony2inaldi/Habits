@@ -36,6 +36,8 @@ import {
 } from 'lucide-react'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 import { AppleHealthSyncSettings } from '@/components/settings/AppleHealthSyncSettings'
+import { HealthConnectionsSettings } from '@/components/settings/HealthConnectionsSettings'
+import { Watch } from 'lucide-react'
 
 interface SettingsClientProps {
   profile: Profile
@@ -454,6 +456,22 @@ export function SettingsClient({ profile }: SettingsClientProps) {
             profileId={profile.id}
             initialToken={profile.health_sync_token}
           />
+        </CardContent>
+      </Card>
+
+      {/* Wearable Device Connections */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Watch className="h-5 w-5" />
+            Wearable Devices
+          </CardTitle>
+          <CardDescription>
+            Connect Oura Ring or Whoop for automatic sleep and health data
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <HealthConnectionsSettings />
         </CardContent>
       </Card>
 

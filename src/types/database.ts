@@ -67,6 +67,13 @@ export type NotificationType =
   | 'weekly_digest'
   | 'behind_nudge'
 
+// Health integration types
+export type HealthProvider = 'oura' | 'whoop'
+
+export type HealthSyncStatus = 'success' | 'error' | 'pending'
+
+export type HealthDataSource = 'manual' | 'oura' | 'whoop' | 'apple_health'
+
 // Report configuration types
 export type ReportMetric =
   | 'total_drinks'
@@ -301,6 +308,22 @@ export interface Database {
           weather_humidity: number | null
           weather_precipitation: number | null
           weather_location: string | null
+          // Sleep tracking (from health devices)
+          sleep_hours: number | null
+          sleep_score: number | null
+          sleep_start: string | null
+          sleep_end: string | null
+          sleep_in_bed_minutes: number | null
+          sleep_awake_minutes: number | null
+          sleep_rem_minutes: number | null
+          sleep_core_minutes: number | null
+          sleep_deep_minutes: number | null
+          // Health metrics (from health devices)
+          hrv: number | null
+          resting_hr: number | null
+          respiratory_rate: number | null
+          miles_walked: number | null
+          health_data_source: HealthDataSource | null
           best_part: string | null
           notes: string | null
           created_at: string
@@ -356,6 +379,22 @@ export interface Database {
           weather_humidity?: number | null
           weather_precipitation?: number | null
           weather_location?: string | null
+          // Sleep tracking (from health devices)
+          sleep_hours?: number | null
+          sleep_score?: number | null
+          sleep_start?: string | null
+          sleep_end?: string | null
+          sleep_in_bed_minutes?: number | null
+          sleep_awake_minutes?: number | null
+          sleep_rem_minutes?: number | null
+          sleep_core_minutes?: number | null
+          sleep_deep_minutes?: number | null
+          // Health metrics (from health devices)
+          hrv?: number | null
+          resting_hr?: number | null
+          respiratory_rate?: number | null
+          miles_walked?: number | null
+          health_data_source?: HealthDataSource | null
           best_part?: string | null
           notes?: string | null
           created_at?: string
@@ -411,8 +450,71 @@ export interface Database {
           weather_humidity?: number | null
           weather_precipitation?: number | null
           weather_location?: string | null
+          // Sleep tracking (from health devices)
+          sleep_hours?: number | null
+          sleep_score?: number | null
+          sleep_start?: string | null
+          sleep_end?: string | null
+          sleep_in_bed_minutes?: number | null
+          sleep_awake_minutes?: number | null
+          sleep_rem_minutes?: number | null
+          sleep_core_minutes?: number | null
+          sleep_deep_minutes?: number | null
+          // Health metrics (from health devices)
+          hrv?: number | null
+          resting_hr?: number | null
+          respiratory_rate?: number | null
+          miles_walked?: number | null
+          health_data_source?: HealthDataSource | null
           best_part?: string | null
           notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      health_connections: {
+        Row: {
+          id: string
+          user_id: string
+          provider: HealthProvider
+          access_token: string
+          refresh_token: string | null
+          token_expires_at: string | null
+          scopes: string[] | null
+          provider_user_id: string | null
+          last_sync_at: string | null
+          last_sync_status: HealthSyncStatus | null
+          last_sync_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: HealthProvider
+          access_token: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          scopes?: string[] | null
+          provider_user_id?: string | null
+          last_sync_at?: string | null
+          last_sync_status?: HealthSyncStatus | null
+          last_sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: HealthProvider
+          access_token?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          scopes?: string[] | null
+          provider_user_id?: string | null
+          last_sync_at?: string | null
+          last_sync_status?: HealthSyncStatus | null
+          last_sync_error?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -609,6 +711,10 @@ export type LifeEvent = Database['public']['Tables']['life_events']['Row']
 
 export type UserGoal = Database['public']['Tables']['user_goals']['Row']
 export type GoalSnapshot = Database['public']['Tables']['goal_snapshots']['Row']
+
+export type HealthConnection = Database['public']['Tables']['health_connections']['Row']
+export type HealthConnectionInsert = Database['public']['Tables']['health_connections']['Insert']
+export type HealthConnectionUpdate = Database['public']['Tables']['health_connections']['Update']
 
 export type SavedReport = Database['public']['Tables']['saved_reports']['Row']
 export type SavedReportInsert = Database['public']['Tables']['saved_reports']['Insert']
