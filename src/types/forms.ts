@@ -89,6 +89,92 @@ export const eventLabels: Record<EventType, string> = {
   bus: 'Took a bus',
 }
 
+// All trackable field IDs (habits + events combined for grouping purposes)
+export const allTrackableFields = [...habitTypes, ...eventTypes] as const
+export type TrackableField = typeof allTrackableFields[number]
+
+// All field labels combined
+export const allFieldLabels: Record<TrackableField, string> = {
+  ...habitLabels,
+  ...eventLabels,
+}
+
+// Custom grouping types
+export type FieldGrouping = {
+  id: string
+  name: string
+  fields: TrackableField[]
+  color: 'green' | 'purple' | 'blue' | 'orange' | 'pink'
+}
+
+export type FieldGroupings = FieldGrouping[]
+
+// Default groupings
+export const defaultFieldGroupings: FieldGroupings = [
+  {
+    id: 'healthy-habits',
+    name: 'Healthy Habits',
+    color: 'green',
+    fields: [
+      'sleep_8hrs',
+      'breakfast',
+      'vitamin',
+      'water_8cups',
+      'cooked_dinner',
+      'exercise',
+      'read_5pages',
+      'family_interaction',
+      'family_phone',
+      'family_in_person',
+      'ate_fruit',
+      'ate_vegetables',
+      'journaled',
+    ],
+  },
+  {
+    id: 'events',
+    name: 'Events',
+    color: 'purple',
+    fields: [
+      'pto',
+      'flight',
+      'train',
+      'subway',
+      'bus',
+      'played_sport',
+      'attended_sport',
+      'concert',
+      'stage_production',
+      'movies',
+      'museum',
+      'guys_night',
+      'diner',
+      'ice_cream',
+      'park',
+    ],
+  },
+  {
+    id: 'self-care',
+    name: 'Self-care',
+    color: 'pink',
+    fields: [
+      'haircut',
+      'doctor',
+      'dentist',
+      'massage',
+      'facial',
+      'pedicure',
+      'manicure',
+      'other_selfcare',
+    ],
+  },
+]
+
+// Helper to get a label for any trackable field
+export function getFieldLabel(field: TrackableField): string {
+  return allFieldLabels[field] || field
+}
+
 export const workLocationLabels: Record<WorkLocation, string> = {
   home: 'From home',
   office: 'In office',

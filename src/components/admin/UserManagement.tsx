@@ -177,6 +177,7 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
         weekly_digest_enabled: false,
         weekly_digest_day: 0,
         hidden_fields: [],
+        field_groupings: null,
         home_city: null,
         home_lat: null,
         home_lng: null,

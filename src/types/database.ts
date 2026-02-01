@@ -180,6 +180,7 @@ export interface Database {
           share_steps: boolean
           leaderboard_anonymous: boolean
           hidden_fields: string[]
+          field_groupings: Json | null
           custom_habits: Json[]
           custom_metrics: Json[]
           reminder_enabled: boolean
@@ -205,6 +206,7 @@ export interface Database {
           share_steps?: boolean
           leaderboard_anonymous?: boolean
           hidden_fields?: string[]
+          field_groupings?: Json | null
           custom_habits?: Json[]
           custom_metrics?: Json[]
           reminder_enabled?: boolean
@@ -230,6 +232,7 @@ export interface Database {
           share_steps?: boolean
           leaderboard_anonymous?: boolean
           hidden_fields?: string[]
+          field_groupings?: Json | null
           custom_habits?: Json[]
           custom_metrics?: Json[]
           reminder_enabled?: boolean

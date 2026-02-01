@@ -10,7 +10,15 @@ import { Label } from '@/components/ui/label'
 import { CityAutocomplete } from '@/components/ui/city-autocomplete'
 import { cn } from '@/lib/utils/cn'
 import type { Profile } from '@/types/database'
-import { habitLabels, eventLabels } from '@/types/forms'
+import {
+  habitLabels,
+  eventLabels,
+  defaultFieldGroupings,
+  getFieldLabel,
+  type FieldGroupings,
+  type FieldGrouping,
+  type TrackableField,
+} from '@/types/forms'
 import {
   User,
   Eye,
@@ -23,6 +31,8 @@ import {
   Smartphone,
   Lock,
   Heart,
+  GripVertical,
+  RotateCcw,
 } from 'lucide-react'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 import { AppleHealthSyncSettings } from '@/components/settings/AppleHealthSyncSettings'
@@ -51,6 +61,18 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   // Hidden fields
   const [hiddenFields, setHiddenFields] = useState<string[]>(profile.hidden_fields || [])
 
+  // Field groupings (with deep clone to avoid mutation)
+  const [fieldGroupings, setFieldGroupings] = useState<FieldGroupings>(() => {
+    if (profile.field_groupings) {
+      return JSON.parse(JSON.stringify(profile.field_groupings)) as FieldGroupings
+    }
+    return JSON.parse(JSON.stringify(defaultFieldGroupings)) as FieldGroupings
+  })
+
+  // Drag state
+  const [draggedField, setDraggedField] = useState<TrackableField | null>(null)
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null)
+
   // Notification settings
   const [reminderEnabled, setReminderEnabled] = useState(profile.reminder_enabled)
   const [reminderTime, setReminderTime] = useState(profile.reminder_time || '21:00')
@@ -70,6 +92,89 @@ export function SettingsClient({ profile }: SettingsClientProps) {
     )
   }
 
+  // Drag and drop handlers for field groupings
+  const handleDragStart = (field: TrackableField) => {
+    setDraggedField(field)
+  }
+
+  const handleDragOver = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault()
+    setDragOverGroup(groupId)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverGroup(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetGroupId: string) => {
+    e.preventDefault()
+    if (!draggedField) return
+
+    setFieldGroupings((prev) => {
+      const newGroupings = prev.map((group) => ({
+        ...group,
+        fields: group.fields.filter((f) => f !== draggedField),
+      }))
+
+      const targetGroup = newGroupings.find((g) => g.id === targetGroupId)
+      if (targetGroup && !targetGroup.fields.includes(draggedField)) {
+        targetGroup.fields.push(draggedField)
+      }
+
+      return newGroupings
+    })
+
+    setDraggedField(null)
+    setDragOverGroup(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedField(null)
+    setDragOverGroup(null)
+  }
+
+  const resetGroupingsToDefault = () => {
+    setFieldGroupings(JSON.parse(JSON.stringify(defaultFieldGroupings)))
+  }
+
+  const getGroupColorClasses = (color: FieldGrouping['color'], isHidden: boolean) => {
+    if (isHidden) {
+      return 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+    }
+    switch (color) {
+      case 'green':
+        return 'bg-green-50 text-green-700 border-green-200'
+      case 'purple':
+        return 'bg-purple-50 text-purple-700 border-purple-200'
+      case 'pink':
+        return 'bg-pink-50 text-pink-700 border-pink-200'
+      case 'blue':
+        return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'orange':
+        return 'bg-orange-50 text-orange-700 border-orange-200'
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
+  const getGroupDropZoneClasses = (color: FieldGrouping['color'], isOver: boolean) => {
+    if (!isOver) return 'border-dashed border-gray-200'
+    switch (color) {
+      case 'green':
+        return 'border-solid border-green-400 bg-green-50/50'
+      case 'purple':
+        return 'border-solid border-purple-400 bg-purple-50/50'
+      case 'pink':
+        return 'border-solid border-pink-400 bg-pink-50/50'
+      case 'blue':
+        return 'border-solid border-blue-400 bg-blue-50/50'
+      case 'orange':
+        return 'border-solid border-orange-400 bg-orange-50/50'
+      default:
+        return 'border-solid border-gray-400 bg-gray-50/50'
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -85,6 +190,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           share_steps: shareSteps,
           leaderboard_anonymous: anonymous,
           hidden_fields: hiddenFields,
+          field_groupings: fieldGroupings,
           reminder_enabled: reminderEnabled,
           reminder_time: reminderTime,
           streak_warnings_enabled: streakWarnings,
@@ -436,46 +542,61 @@ export function SettingsClient({ profile }: SettingsClientProps) {
             </button>
           </div>
 
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Healthy Habits</h4>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(habitLabels).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleHiddenField(key)}
-                  className={cn(
-                    'px-2 py-1 rounded text-xs border transition-colors',
-                    hiddenFields.includes(key)
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                      : 'bg-green-50 text-green-700 border-green-200'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+          {/* Customizable Field Groupings */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Drag items between groups to customize. Click to toggle visibility.
+              </p>
+              <button
+                type="button"
+                onClick={resetGroupingsToDefault}
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </button>
             </div>
-          </div>
 
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Life Events</h4>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(eventLabels).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleHiddenField(key)}
-                  className={cn(
-                    'px-2 py-1 rounded text-xs border transition-colors',
-                    hiddenFields.includes(key)
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                      : 'bg-purple-50 text-purple-700 border-purple-200'
+            {fieldGroupings.map((group) => (
+              <div
+                key={group.id}
+                onDragOver={(e) => handleDragOver(e, group.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, group.id)}
+                className={cn(
+                  'border-2 rounded-lg p-3 transition-colors min-h-[60px]',
+                  getGroupDropZoneClasses(group.color, dragOverGroup === group.id)
+                )}
+              >
+                <h4 className="text-sm font-medium text-gray-700 mb-2">{group.name}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {group.fields.map((field) => (
+                    <button
+                      key={field}
+                      type="button"
+                      draggable
+                      onDragStart={() => handleDragStart(field)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => toggleHiddenField(field)}
+                      className={cn(
+                        'px-2 py-1 rounded text-xs border transition-colors cursor-grab active:cursor-grabbing flex items-center gap-1',
+                        getGroupColorClasses(group.color, hiddenFields.includes(field)),
+                        draggedField === field && 'opacity-50'
+                      )}
+                    >
+                      <GripVertical className="h-3 w-3 opacity-40" />
+                      {getFieldLabel(field)}
+                    </button>
+                  ))}
+                  {group.fields.length === 0 && (
+                    <span className="text-xs text-gray-400 italic">
+                      Drop items here
+                    </span>
                   )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
