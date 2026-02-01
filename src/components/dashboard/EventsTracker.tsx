@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { differenceInDays, parseISO, subYears, isWithinInterval, format } from 'date-fns'
 import type { DailyEntryWithRelations, EventType } from '@/types/database'
-import { eventLabels } from '@/types/forms'
-import { AlertCircle, Calendar } from 'lucide-react'
+import { eventLabels, defaultFieldGroupings, type FieldGroupings } from '@/types/forms'
+import { AlertCircle, Calendar, Sparkles } from 'lucide-react'
 
 // Short labels for compact display
 const shortEventLabels: Record<EventType, string> = {
@@ -38,6 +38,7 @@ interface EventsTrackerProps {
   entries: DailyEntryWithRelations[]
   dateRange: { start: Date; end: Date }
   selectedEvents?: EventType[]
+  fieldGroupings?: FieldGroupings | null
   title?: string
   subtitle?: string
 }
@@ -60,7 +61,18 @@ interface TooltipData {
   y: number
 }
 
-export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Life Events', subtitle }: EventsTrackerProps) {
+export function EventsTracker({ entries, dateRange, selectedEvents, fieldGroupings, title = 'Life Events', subtitle }: EventsTrackerProps) {
+  // Get the groupings (use custom or default)
+  const groupings = fieldGroupings || defaultFieldGroupings
+
+  // Find the events and self-care groups
+  const eventsGroup = groupings.find(g => g.id === 'events')
+  const selfCareGroup = groupings.find(g => g.id === 'self-care')
+
+  // Get the event types from each group (filtering to only EventType values)
+  const eventsGroupEvents = (eventsGroup?.fields || []).filter(f => f in eventLabels) as EventType[]
+  const selfCareGroupEvents = (selfCareGroup?.fields || []).filter(f => f in eventLabels) as EventType[]
+
   // Calculate prior period (same duration, shifted back 1 year)
   const { priorPeriod, hasPriorPeriod } = useMemo(() => {
     const priorStart = subYears(dateRange.start, 1)
@@ -78,89 +90,103 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
     }
   }, [dateRange, entries])
 
-  const eventData = useMemo(() => {
-    const allEvents = Object.keys(eventLabels) as EventType[]
-    // Filter by selectedEvents if provided
-    const events = selectedEvents && selectedEvents.length > 0
-      ? allEvents.filter(e => selectedEvents.includes(e))
-      : allEvents
-    const today = new Date()
+  // Helper to compute event data for a list of events
+  const computeEventData = useMemo(() => {
+    return (eventsToCompute: EventType[]) => {
+      const today = new Date()
 
-    return events.map((event) => {
-      // Find all entries with this event
-      const entriesWithEvent = entries.filter((e) =>
-        e.life_events.some((le) => le.event_type === event)
-      )
-
-      // Calculate days since last occurrence
-      let daysSince: number | null = null
-      let lastDate: string | null = null
-      let medianGap: number | null = null
-
-      if (entriesWithEvent.length > 0) {
-        const sorted = entriesWithEvent.sort(
-          (a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()
+      return eventsToCompute.map((event) => {
+        // Find all entries with this event
+        const entriesWithEvent = entries.filter((e) =>
+          e.life_events.some((le) => le.event_type === event)
         )
-        lastDate = sorted[0].entry_date
-        daysSince = differenceInDays(today, parseISO(lastDate))
 
-        // Calculate median gap between occurrences (need at least 2 occurrences)
-        if (entriesWithEvent.length >= 2) {
-          const sortedDates = entriesWithEvent
-            .map((e) => parseISO(e.entry_date))
-            .sort((a, b) => a.getTime() - b.getTime())
+        // Calculate days since last occurrence
+        let daysSince: number | null = null
+        let lastDate: string | null = null
+        let medianGap: number | null = null
 
-          const gaps: number[] = []
-          for (let i = 1; i < sortedDates.length; i++) {
-            gaps.push(differenceInDays(sortedDates[i], sortedDates[i - 1]))
+        if (entriesWithEvent.length > 0) {
+          const sorted = entriesWithEvent.sort(
+            (a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()
+          )
+          lastDate = sorted[0].entry_date
+          daysSince = differenceInDays(today, parseISO(lastDate))
+
+          // Calculate median gap between occurrences (need at least 2 occurrences)
+          if (entriesWithEvent.length >= 2) {
+            const sortedDates = entriesWithEvent
+              .map((e) => parseISO(e.entry_date))
+              .sort((a, b) => a.getTime() - b.getTime())
+
+            const gaps: number[] = []
+            for (let i = 1; i < sortedDates.length; i++) {
+              gaps.push(differenceInDays(sortedDates[i], sortedDates[i - 1]))
+            }
+            gaps.sort((a, b) => a - b)
+
+            const mid = Math.floor(gaps.length / 2)
+            medianGap = gaps.length % 2 === 0
+              ? Math.round((gaps[mid - 1] + gaps[mid]) / 2)
+              : gaps[mid]
           }
-          gaps.sort((a, b) => a - b)
-
-          const mid = Math.floor(gaps.length / 2)
-          medianGap = gaps.length % 2 === 0
-            ? Math.round((gaps[mid - 1] + gaps[mid]) / 2)
-            : gaps[mid]
         }
-      }
 
-      // Count occurrences in current period (selected date range)
-      const countCurrentPeriod = entriesWithEvent.filter((e) => {
-        const entryDate = parseISO(e.entry_date)
-        return isWithinInterval(entryDate, { start: dateRange.start, end: dateRange.end })
-      }).length
+        // Count occurrences in current period (selected date range)
+        const countCurrentPeriod = entriesWithEvent.filter((e) => {
+          const entryDate = parseISO(e.entry_date)
+          return isWithinInterval(entryDate, { start: dateRange.start, end: dateRange.end })
+        }).length
 
-      // Count occurrences in prior period (same range, 1 year earlier)
-      const countPriorPeriod = entriesWithEvent.filter((e) => {
-        const entryDate = parseISO(e.entry_date)
-        return isWithinInterval(entryDate, { start: priorPeriod.start, end: priorPeriod.end })
-      }).length
+        // Count occurrences in prior period (same range, 1 year earlier)
+        const countPriorPeriod = entriesWithEvent.filter((e) => {
+          const entryDate = parseISO(e.entry_date)
+          return isWithinInterval(entryDate, { start: priorPeriod.start, end: priorPeriod.end })
+        }).length
 
-      // Overdue if days since exceeds the event's own average gap
-      const isOverdue = daysSince !== null && medianGap !== null && daysSince > medianGap
+        // Overdue if days since exceeds the event's own average gap
+        const isOverdue = daysSince !== null && medianGap !== null && daysSince > medianGap
 
-      return {
-        event,
-        label: shortEventLabels[event] || eventLabels[event],
-        daysSince,
-        lastDate,
-        countCurrentPeriod,
-        countPriorPeriod,
-        totalCount: entriesWithEvent.length,
-        isOverdue,
-        medianGap,
-      }
-    })
-      // When specific events are selected, show all of them (even if never occurred)
-      // When showing all events, only show ones that have occurred
-      .filter((e) => (selectedEvents && selectedEvents.length > 0) || e.totalCount > 0)
-      .sort((a, b) => {
-        // Sort by days since (null values last, meaning "never" goes to bottom)
-        if (a.daysSince === null && b.daysSince === null) return 0
-        if (a.daysSince === null) return 1
-        if (b.daysSince === null) return -1
-        return a.daysSince - b.daysSince
+        return {
+          event,
+          label: shortEventLabels[event] || eventLabels[event],
+          daysSince,
+          lastDate,
+          countCurrentPeriod,
+          countPriorPeriod,
+          totalCount: entriesWithEvent.length,
+          isOverdue,
+          medianGap,
+        }
       })
+        // Only show events that have occurred (unless selectedEvents is provided)
+        .filter((e) => (selectedEvents && selectedEvents.length > 0) || e.totalCount > 0)
+        .sort((a, b) => {
+          // Sort by days since (null values last, meaning "never" goes to bottom)
+          if (a.daysSince === null && b.daysSince === null) return 0
+          if (a.daysSince === null) return 1
+          if (b.daysSince === null) return -1
+          return a.daysSince - b.daysSince
+        })
+    }
   }, [entries, dateRange, priorPeriod, selectedEvents])
+
+  // Compute event data for both groups
+  const { eventsData, selfCareData } = useMemo(() => {
+    // If selectedEvents is provided, filter both groups by it
+    const filterBySelected = (events: EventType[]) =>
+      selectedEvents && selectedEvents.length > 0
+        ? events.filter(e => selectedEvents.includes(e))
+        : events
+
+    return {
+      eventsData: computeEventData(filterBySelected(eventsGroupEvents)),
+      selfCareData: computeEventData(filterBySelected(selfCareGroupEvents)),
+    }
+  }, [computeEventData, eventsGroupEvents, selfCareGroupEvents, selectedEvents])
+
+  // Combined for checking if empty
+  const allEventData = [...eventsData, ...selfCareData]
 
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
 
@@ -177,7 +203,51 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
     setTooltip(null)
   }
 
-  if (eventData.length === 0) {
+  // Helper to render an event item row
+  const renderEventItem = (item: EventItemData) => (
+    <div
+      key={item.event}
+      className={cn(
+        'flex items-center px-2 rounded-lg cursor-default py-1',
+        item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
+      )}
+      onMouseEnter={(e) => handleItemHover(item, e)}
+      onMouseLeave={handleItemLeave}
+    >
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {item.isOverdue && (
+          <AlertCircle className="h-3 w-3 text-orange-500 flex-shrink-0" />
+        )}
+        <span className="text-xs text-gray-700 truncate">{item.label}</span>
+      </div>
+      <div className="flex items-center">
+        <p
+          className={cn(
+            'text-sm font-bold w-12 text-right',
+            item.daysSince === null
+              ? 'text-gray-400'
+              : item.isOverdue
+              ? 'text-orange-600'
+              : 'text-gray-900'
+          )}
+        >
+          {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
+        </p>
+        <div className="text-[10px] text-gray-500 w-14 text-right">
+          {item.countCurrentPeriod > 0 || item.countPriorPeriod > 0 ? (
+            <span>
+              {item.countCurrentPeriod}x
+              {hasPriorPeriod && <span className="text-gray-400"> / {item.countPriorPeriod}x</span>}
+            </span>
+          ) : (
+            <span>-</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  if (allEventData.length === 0) {
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
@@ -203,50 +273,32 @@ export function EventsTracker({ entries, dateRange, selectedEvents, title = 'Lif
         </h3>
         {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
-      <div className="flex-1 min-h-0 flex flex-col gap-1 scrollbar-hidden">
-        {eventData.map((item) => (
-          <div
-            key={item.event}
-            className={cn(
-              'flex items-center px-2 rounded-lg flex-1 cursor-default',
-              item.isOverdue ? 'bg-orange-50' : 'bg-gray-50'
-            )}
-            style={{ minHeight: 0 }}
-            onMouseEnter={(e) => handleItemHover(item, e)}
-            onMouseLeave={handleItemLeave}
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {item.isOverdue && (
-                <AlertCircle className="h-3 w-3 text-orange-500 flex-shrink-0" />
-              )}
-              <span className="text-xs text-gray-700 truncate">{item.label}</span>
-            </div>
-            <div className="flex items-center">
-              <p
-                className={cn(
-                  'text-sm font-bold w-12 text-right',
-                  item.daysSince === null
-                    ? 'text-gray-400'
-                    : item.isOverdue
-                    ? 'text-orange-600'
-                    : 'text-gray-900'
-                )}
-              >
-                {item.daysSince !== null ? `${item.daysSince}d` : 'Never'}
-              </p>
-              <div className="text-[10px] text-gray-500 w-14 text-right">
-                {item.countCurrentPeriod > 0 || item.countPriorPeriod > 0 ? (
-                  <span>
-                    {item.countCurrentPeriod}x
-                    {hasPriorPeriod && <span className="text-gray-400"> / {item.countPriorPeriod}x</span>}
-                  </span>
-                ) : (
-                  <span>-</span>
-                )}
-              </div>
-            </div>
+      <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-y-auto scrollbar-hidden">
+        {/* Events Section */}
+        {eventsData.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {eventsData.map(renderEventItem)}
           </div>
-        ))}
+        )}
+
+        {/* Divider between Events and Self-care */}
+        {eventsData.length > 0 && selfCareData.length > 0 && (
+          <div className="flex items-center gap-2 py-1 my-1">
+            <div className="flex-1 border-t border-gray-200" />
+            <span className="text-[10px] text-gray-400 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Self-care
+            </span>
+            <div className="flex-1 border-t border-gray-200" />
+          </div>
+        )}
+
+        {/* Self-care Section */}
+        {selfCareData.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {selfCareData.map(renderEventItem)}
+          </div>
+        )}
       </div>
 
       {/* Tooltip - fixed positioning to extend beyond widget */}

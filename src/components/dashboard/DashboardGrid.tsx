@@ -212,7 +212,7 @@ export function DashboardGrid({
         return <MovementChart entries={entries} title={titles.title} subtitle={titles.subtitle} />
       case 'eventsTracker':
         // Use allEntries so "days since" is always calculated from all-time data
-        return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} title={titles.title} subtitle={titles.subtitle} />
+        return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} fieldGroupings={profile.field_groupings as import('@/types/forms').FieldGroupings | null} title={titles.title} subtitle={titles.subtitle} />
       case 'travelWidget':
         return <TravelWidget entries={entries} allEntries={allEntries} profile={profile} title={titles.title} subtitle={titles.subtitle} />
       default:
