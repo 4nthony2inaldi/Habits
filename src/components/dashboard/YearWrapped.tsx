@@ -571,6 +571,19 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     const isMoodTracker = moodScores.length > totalEntries * 0.8
     const percentSober = Math.round((soberDays / totalEntries) * 100)
 
+    // Track travel days for radial visualization (day of year -> was traveling)
+    const travelDayMap: Record<number, { city: string; date: string }> = {}
+    yearEntries.forEach(entry => {
+      const sleepCity = entry.city_sleep || ''
+      const sleepCityLower = sleepCity.toLowerCase()
+      const isAway = sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity
+      if (isAway) {
+        const date = parseISO(entry.entry_date)
+        const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
+        travelDayMap[dayOfYear] = { city: sleepCity.split(',')[0].trim(), date: entry.entry_date }
+      }
+    })
+
     return {
       totalEntries,
       totalHabitsCompleted,
@@ -651,6 +664,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       isHealthNut,
       isConsistent,
       isMoodTracker,
+      travelDayMap,
     }
   }, [profile])
 
@@ -1058,6 +1072,71 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     },
+    // Radial year travel visualization
+    ...(stats.nightsAway > 0 ? [{
+      gradient: 'bg-gradient-to-br from-slate-800 via-slate-900 to-black',
+      content: (
+        <div className="text-center">
+          <p className="text-white/80 text-lg mb-2">Your year at a glance</p>
+          <p className="text-white/50 text-sm mb-4">Each dot is a day · Raised dots = nights away</p>
+          <div className="relative w-72 h-72 mx-auto">
+            <svg viewBox="0 0 200 200" className="w-full h-full">
+              {/* Month labels */}
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => {
+                const angle = (i * 30 - 90) * (Math.PI / 180)
+                const x = 100 + Math.cos(angle) * 92
+                const y = 100 + Math.sin(angle) * 92
+                return (
+                  <text
+                    key={month}
+                    x={x}
+                    y={y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="fill-white/30 text-[6px]"
+                  >
+                    {month}
+                  </text>
+                )
+              })}
+              {/* Days of year */}
+              {Array.from({ length: 365 }, (_, i) => {
+                const dayNum = i + 1
+                const angle = ((dayNum / 365) * 360 - 90) * (Math.PI / 180)
+                const isTraveling = stats.travelDayMap[dayNum]
+                const baseRadius = 55
+                const travelRadius = 75
+                const radius = isTraveling ? travelRadius : baseRadius
+                const x = 100 + Math.cos(angle) * radius
+                const y = 100 + Math.sin(angle) * radius
+                return (
+                  <circle
+                    key={i}
+                    cx={x}
+                    cy={y}
+                    r={isTraveling ? 2.5 : 1.2}
+                    className={isTraveling ? 'fill-cyan-400' : 'fill-white/20'}
+                  />
+                )
+              })}
+              {/* Center text */}
+              <text x="100" y="95" textAnchor="middle" className="fill-white text-[24px] font-bold">
+                {stats.nightsAway}
+              </text>
+              <text x="100" y="110" textAnchor="middle" className="fill-white/60 text-[8px]">
+                nights away
+              </text>
+            </svg>
+          </div>
+          <p className="text-white/50 text-xs mt-4 italic">
+            {stats.nightsAway > 100 ? "You were barely home! 🌍" :
+             stats.nightsAway > 50 ? "A well-traveled year! ✈️" :
+             stats.nightsAway > 20 ? "Some great adventures! 🗺️" :
+             "Home was your happy place 🏠"}
+          </p>
+        </div>
+      ),
+    }] : []),
     // Longest Trip Journey slide
     ...(stats.longestTrip > 3 && stats.longestTripItinerary.length > 1 ? [{
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600',
