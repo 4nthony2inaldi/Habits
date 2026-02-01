@@ -20,7 +20,8 @@ import {
   UserPlus,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  LayoutGrid
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Profile, NotificationChannel } from '@/types/database'
@@ -50,6 +51,7 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteDisplayName, setInviteDisplayName] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [pushLayoutLoading, setPushLayoutLoading] = useState(false)
   const [inviteResult, setInviteResult] = useState<{
     email: string
     displayName: string
@@ -223,6 +225,49 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
     setTimeout(() => setCopiedField(null), 2000)
   }
 
+  const pushLayoutToAllUsers = async () => {
+    if (!currentUser.custom_metrics) {
+      setMessage({ type: 'error', text: 'No dashboard layout configured to push' })
+      return
+    }
+
+    setPushLayoutLoading(true)
+    setMessage(null)
+
+    const supabase = createClient()
+    const nonAdminUsers = users.filter(u => !u.is_admin && u.id !== currentUser.id)
+
+    if (nonAdminUsers.length === 0) {
+      setMessage({ type: 'error', text: 'No other users to update' })
+      setPushLayoutLoading(false)
+      return
+    }
+
+    try {
+      // Update all non-admin users with the admin's dashboard layout
+      const { error } = await supabase
+        .from('profiles')
+        .update({ custom_metrics: currentUser.custom_metrics })
+        .in('id', nonAdminUsers.map(u => u.id))
+
+      if (error) {
+        throw error
+      }
+
+      setMessage({
+        type: 'success',
+        text: `Dashboard layout pushed to ${nonAdminUsers.length} user${nonAdminUsers.length === 1 ? '' : 's'}`
+      })
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to push layout'
+      })
+    } finally {
+      setPushLayoutLoading(false)
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -351,6 +396,31 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
             </p>
           </div>
         )}
+      </div>
+
+      {/* Push Layout Section */}
+      <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+        <h3 className="font-medium text-gray-900 flex items-center gap-2 mb-2">
+          <LayoutGrid className="h-5 w-5 text-blue-600" />
+          Dashboard Layout
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Push your current dashboard layout (widget positions, visibility, and settings) to all non-admin users.
+          New users will automatically get your layout when invited.
+        </p>
+        <Button
+          onClick={pushLayoutToAllUsers}
+          disabled={pushLayoutLoading}
+          variant="outline"
+          className="border-blue-300 text-blue-700 hover:bg-blue-100"
+        >
+          {pushLayoutLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <LayoutGrid className="h-4 w-4 mr-2" />
+          )}
+          Push My Layout to All Users
+        </Button>
       </div>
 
       {/* User List */}
