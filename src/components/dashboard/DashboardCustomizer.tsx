@@ -222,7 +222,7 @@ const defaultConfig: DashboardWidgetConfig = {
   workLocationChart: { visible: true },
   habitsGrid: { visible: true },
   habitsScore: { visible: true },
-  busyTrend: { visible: true },
+  busyTrend: { visible: false },
   alcoholTracker: { visible: true },
   alcoholCalendar: { visible: true },
   alcoholStats: { visible: true },

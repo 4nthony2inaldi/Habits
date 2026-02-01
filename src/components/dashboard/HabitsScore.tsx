@@ -2,16 +2,18 @@
 
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { format, subDays } from 'date-fns'
+import { format, subDays, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns'
 import { Target } from 'lucide-react'
-import type { DailyEntryWithRelations, HabitType } from '@/types/database'
-import { habitLabels } from '@/types/forms'
+import type { DailyEntryWithRelations, HabitType, EventType } from '@/types/database'
+import { habitLabels, eventLabels, defaultFieldGroupings, type FieldGroupings } from '@/types/forms'
 import type { SelectableHabitType } from './DashboardCustomizer'
 
 interface HabitsScoreProps {
   entries: DailyEntryWithRelations[]
   selectedHabits?: SelectableHabitType[]
   dateRange: { start: Date; end: Date }
+  fieldGroupings?: FieldGroupings | null
+  homeCity?: string | null
   title?: string
   subtitle?: string
 }
@@ -84,13 +86,52 @@ function calculateScoreForPeriod(
   }
 }
 
-export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habits Score' }: HabitsScoreProps) {
+function countEventsForWeek(
+  entries: DailyEntryWithRelations[],
+  weekEndDate: Date,
+  eventsToCount: EventType[],
+  homeCity: string | null
+): number {
+  const weekStart = startOfWeek(weekEndDate, { weekStartsOn: 0 })
+  const weekEnd = endOfWeek(weekEndDate, { weekStartsOn: 0 })
+
+  let count = 0
+
+  entries.forEach((entry) => {
+    const entryDate = parseISO(entry.entry_date)
+    if (!isWithinInterval(entryDate, { start: weekStart, end: weekEnd })) return
+
+    // Count matching events (excluding flight/train which we handle separately)
+    entry.life_events.forEach((le) => {
+      if (eventsToCount.includes(le.event_type) && le.event_type !== 'flight' && le.event_type !== 'train') {
+        count++
+      }
+    })
+
+    // Count flights and trains
+    entry.life_events.forEach((le) => {
+      if (le.event_type === 'flight' || le.event_type === 'train') {
+        count++
+      }
+    })
+
+    // Count nights away (city_sleep differs from home)
+    if (homeCity && entry.city_sleep && entry.city_sleep.toLowerCase() !== homeCity.toLowerCase()) {
+      count++
+    }
+  })
+
+  return count
+}
+
+export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings, homeCity, title = 'Habits Score' }: HabitsScoreProps) {
   // Generate dynamic subtitle showing actual date range
   const dateRangeLabel = useMemo(() => {
     const endDate = dateRange.end
     const startDate = subDays(endDate, 6)
     return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
   }, [dateRange.end])
+
   // Get habits to count
   const habitsToCount = useMemo(() => {
     const regularHabits = Object.keys(habitLabels) as HabitType[]
@@ -101,6 +142,22 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
       ? allSelectableHabits.filter(h => selectedHabits.includes(h))
       : allSelectableHabits
   }, [selectedHabits])
+
+  // Get events to count from groupings
+  const eventsToCount = useMemo(() => {
+    const groupings = fieldGroupings || defaultFieldGroupings
+    const eventsGroup = groupings.find((g) => g.id === 'events')
+    const selfCareGroup = groupings.find((g) => g.id === 'self-care')
+
+    const eventsGroupEvents = (eventsGroup?.fields || []).filter(
+      (f) => f in eventLabels
+    ) as EventType[]
+    const selfCareGroupEvents = (selfCareGroup?.fields || []).filter(
+      (f) => f in eventLabels
+    ) as EventType[]
+
+    return [...eventsGroupEvents, ...selfCareGroupEvents]
+  }, [fieldGroupings])
 
   // Current score (most recent 7 days from end of date range)
   const currentScore = useMemo(() => {
@@ -121,6 +178,22 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
     return weeks
   }, [entries, dateRange.end, habitsToCount])
 
+  // Events sparkline data: 12 weeks
+  const eventsSparklineData = useMemo(() => {
+    const weeks: { count: number; endDate: Date }[] = []
+
+    for (let i = 0; i < 12; i++) {
+      const weekEndDate = subDays(dateRange.end, i * 7)
+      const count = countEventsForWeek(entries, weekEndDate, eventsToCount, homeCity || null)
+      weeks.unshift({ count, endDate: weekEndDate })
+    }
+
+    return weeks
+  }, [entries, dateRange.end, eventsToCount, homeCity])
+
+  const eventsMaxCount = Math.max(...eventsSparklineData.map((d) => d.count), 1)
+  const currentWeekEvents = eventsSparklineData[eventsSparklineData.length - 1]?.count || 0
+
   // Determine color based on percentage
   const getColor = () => {
     if (currentScore.percentage >= 70) return 'text-green-600'
@@ -128,16 +201,11 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
     return 'text-gray-400'
   }
 
-  const getBackgroundColor = () => {
-    if (currentScore.percentage >= 70) return 'bg-green-500'
-    if (currentScore.percentage >= 40) return 'bg-yellow-500'
-    return 'bg-gray-300'
-  }
-
   // Sparkline rendering
-  const maxPercentage = Math.max(...sparklineData.map(d => d.percentage), 1)
   const sparklineHeight = 40
   const sparklineWidth = 120
+  const eventsBarHeight = 24
+  const eventsBarWidth = sparklineWidth / 12 - 2
 
   return (
     <div className="h-full flex flex-col p-4">
@@ -155,21 +223,13 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
         </div>
 
         {/* Fraction display */}
-        <div className="mt-2 text-lg text-gray-600">
+        <div className="mt-1 text-lg text-gray-600">
           <span className="font-semibold">{currentScore.completed}</span>
           <span className="text-gray-400"> / {currentScore.possible}</span>
         </div>
 
-        {/* Progress bar */}
-        <div className="w-full max-w-[200px] mt-4 h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={cn('h-full transition-all duration-500 rounded-full', getBackgroundColor())}
-            style={{ width: `${currentScore.percentage}%` }}
-          />
-        </div>
-
         {/* Sparkline - 12 week trend */}
-        <div className="mt-4 flex flex-col items-center">
+        <div className="mt-3 flex flex-col items-center">
           <svg
             width={sparklineWidth}
             height={sparklineHeight}
@@ -207,6 +267,34 @@ export function HabitsScore({ entries, selectedHabits, dateRange, title = 'Habit
             })}
           </svg>
           <div className="text-[10px] text-gray-400 mt-1">12 week trend</div>
+        </div>
+
+        {/* Events this week - mini bar chart */}
+        <div className="mt-4 flex flex-col items-center w-full">
+          <div className="text-[10px] text-gray-500 mb-1">
+            events this week: <span className="font-medium text-gray-700">{currentWeekEvents}</span>
+          </div>
+          <svg width={sparklineWidth} height={eventsBarHeight} className="overflow-visible">
+            {eventsSparklineData.map((d, i) => {
+              const barHeight = eventsMaxCount > 0 ? (d.count / eventsMaxCount) * eventsBarHeight : 0
+              const x = i * (eventsBarWidth + 2)
+              const y = eventsBarHeight - barHeight
+              const isLast = i === eventsSparklineData.length - 1
+
+              return (
+                <rect
+                  key={i}
+                  x={x}
+                  y={y}
+                  width={eventsBarWidth}
+                  height={Math.max(barHeight, d.count > 0 ? 2 : 0)}
+                  rx={1}
+                  fill={isLast ? '#f59e0b' : '#d1d5db'}
+                  className={isLast ? '' : 'opacity-60'}
+                />
+              )
+            })}
+          </svg>
         </div>
       </div>
     </div>

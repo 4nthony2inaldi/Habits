@@ -193,6 +193,8 @@ export function DashboardGrid({
             entries={allEntries}
             dateRange={dateRange}
             selectedHabits={config.selectedHabits}
+            fieldGroupings={profile.field_groupings as import('@/types/forms').FieldGroupings | null}
+            homeCity={profile.home_city}
             title={titles.title}
             subtitle={titles.subtitle}
           />
