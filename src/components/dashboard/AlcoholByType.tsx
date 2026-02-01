@@ -12,15 +12,6 @@ interface AlcoholByTypeProps {
   subtitle?: string
 }
 
-interface TooltipData {
-  label: string
-  percent: number
-  count: number
-  color: string
-  x: number
-  y: number
-}
-
 const TYPE_COLORS = {
   wine: { bg: 'bg-red-500', hex: '#ef4444' },
   beers: { bg: 'bg-blue-500', hex: '#3b82f6' },
@@ -32,42 +23,15 @@ const TYPE_COLORS = {
 const TYPE_LABELS = {
   wine: 'Wine',
   beers: 'Beer',
-  seltzers: 'Seltzer',
+  seltzers: 'Seltzers',
   liquor: 'Liquor',
   shots: 'Shots',
 }
 
-const TYPE_ORDER = ['wine', 'beers', 'seltzers', 'liquor', 'shots'] as const
+type DrinkType = keyof typeof TYPE_COLORS
 
-interface BreakdownData {
-  label: string
-  total: number
-  byType: Record<string, { count: number; percent: number }>
-}
-
-export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: AlcoholByTypeProps) {
+export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByTypeProps) {
   const [viewMode, setViewMode] = useState<'total' | 'byYear'>('total')
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null)
-
-  const handleSegmentHover = (
-    type: string,
-    typeData: { count: number; percent: number },
-    event: React.MouseEvent
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    setTooltip({
-      label: TYPE_LABELS[type as keyof typeof TYPE_LABELS],
-      percent: typeData.percent,
-      count: typeData.count,
-      color: TYPE_COLORS[type as keyof typeof TYPE_COLORS].hex,
-      x: rect.left + rect.width / 2,
-      y: rect.top,
-    })
-  }
-
-  const handleSegmentLeave = () => {
-    setTooltip(null)
-  }
 
   const data = useMemo(() => {
     // Calculate total breakdown for entire period
@@ -102,43 +66,56 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
       byYear.set(year, yearTotals)
     })
 
-    // Helper to convert totals to breakdown data
-    const toBreakdownData = (label: string, totals: typeof totalBreakdown): BreakdownData | null => {
+    // Get years sorted descending
+    const years = Array.from(byYear.keys()).sort((a, b) => b - a)
+
+    // Calculate percentages for each year
+    const yearData = years.map((year) => {
+      const totals = byYear.get(year)!
       const total = totals.beers + totals.seltzers + totals.wine + totals.liquor + totals.shots
       if (total === 0) return null
 
-      const byType: Record<string, { count: number; percent: number }> = {}
-      Object.entries(totals).forEach(([type, count]) => {
-        byType[type] = {
-          count,
-          percent: Math.round((count / total) * 100),
-        }
+      const percentages: Record<DrinkType, number> = {
+        beers: Math.round((totals.beers / total) * 100),
+        seltzers: Math.round((totals.seltzers / total) * 100),
+        wine: Math.round((totals.wine / total) * 100),
+        liquor: Math.round((totals.liquor / total) * 100),
+        shots: Math.round((totals.shots / total) * 100),
+      }
+
+      return { year, total, percentages }
+    }).filter(Boolean) as { year: number; total: number; percentages: Record<DrinkType, number> }[]
+
+    // Calculate total percentages
+    const totalSum = totalBreakdown.beers + totalBreakdown.seltzers + totalBreakdown.wine + totalBreakdown.liquor + totalBreakdown.shots
+    const totalPercentages: Record<DrinkType, number> = totalSum > 0 ? {
+      beers: Math.round((totalBreakdown.beers / totalSum) * 100),
+      seltzers: Math.round((totalBreakdown.seltzers / totalSum) * 100),
+      wine: Math.round((totalBreakdown.wine / totalSum) * 100),
+      liquor: Math.round((totalBreakdown.liquor / totalSum) * 100),
+      shots: Math.round((totalBreakdown.shots / totalSum) * 100),
+    } : { beers: 0, seltzers: 0, wine: 0, liquor: 0, shots: 0 }
+
+    // Determine type order based on current year (or total) - sorted by percentage descending
+    const referencePercentages = yearData.length > 0 ? yearData[0].percentages : totalPercentages
+    const typeOrder = (Object.keys(TYPE_COLORS) as DrinkType[])
+      .filter((type) => {
+        // Include type if it has any data in total
+        return totalBreakdown[type] > 0
       })
-
-      return { label, total, byType }
-    }
-
-    // Total view data
-    const totalData = toBreakdownData('Total', totalBreakdown)
-
-    // By year view data
-    const yearBreakdowns: BreakdownData[] = []
-    byYear.forEach((yearTotals, year) => {
-      const breakdown = toBreakdownData(String(year), yearTotals)
-      if (breakdown) yearBreakdowns.push(breakdown)
-    })
-    yearBreakdowns.sort((a, b) => Number(b.label) - Number(a.label))
+      .sort((a, b) => referencePercentages[b] - referencePercentages[a])
 
     return {
-      total: totalData ? [totalData] : [],
-      byYear: yearBreakdowns,
-      hasMultipleYears: yearBreakdowns.length > 1,
+      years,
+      yearData,
+      totalPercentages,
+      totalSum,
+      typeOrder,
+      hasMultipleYears: years.length > 1,
     }
   }, [entries])
 
-  const displayData = viewMode === 'total' ? data.total : data.byYear
-
-  if (entries.length === 0 || displayData.length === 0) {
+  if (entries.length === 0 || data.totalSum === 0) {
     return (
       <div className="h-full flex flex-col p-4">
         <div className="mb-3">
@@ -154,6 +131,15 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
       </div>
     )
   }
+
+  // For total view, we show a single column
+  // For by year view, we show multiple columns
+  const columns = viewMode === 'total'
+    ? [{ label: 'Total', percentages: data.totalPercentages }]
+    : data.yearData.map((yd, idx) => ({
+        label: idx === 0 ? String(yd.year) : `'${String(yd.year).slice(-2)}`,
+        percentages: yd.percentages,
+      }))
 
   return (
     <div className="h-full flex flex-col p-4">
@@ -177,91 +163,57 @@ export function AlcoholByType({ entries, title = 'What Drinking', subtitle }: Al
         )}
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col scrollbar-hidden">
-        {/* Stacked bars - fills available space */}
-        <div className="flex-1 flex flex-col justify-evenly gap-4">
-          {displayData.map((itemData) => (
-            <div key={itemData.label} className={cn(
-              'flex flex-col gap-2',
-              displayData.length === 1 && 'flex-1'
-            )}>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-700">{itemData.label}</span>
-                <span className="text-gray-500 text-xs">{itemData.total} drinks</span>
-              </div>
-
-              {/* Stacked bar - responsive height when single bar */}
-              <div className={cn(
-                'rounded-lg overflow-hidden flex w-full',
-                displayData.length === 1 ? 'flex-1 min-h-12' : 'h-8'
-              )}>
-                {/* Sort types by percentage (highest first) */}
-                {TYPE_ORDER
-                  .filter((type) => itemData.byType[type]?.percent > 0)
-                  .sort((a, b) => (itemData.byType[b]?.percent || 0) - (itemData.byType[a]?.percent || 0))
-                  .map((type) => {
-                    const typeData = itemData.byType[type]
-                    // Only show text if segment is wide enough (15%+ for single bar, 12%+ for multi)
-                    const minPercentForText = displayData.length === 1 ? 15 : 12
-
-                    return (
-                      <div
-                        key={type}
-                        className={cn(
-                          'h-full flex items-center justify-center text-white font-medium cursor-pointer transition-opacity hover:opacity-90',
-                          displayData.length === 1 ? 'text-base' : 'text-[10px]',
-                          TYPE_COLORS[type].bg
-                        )}
-                        style={{ width: `${typeData.percent}%` }}
-                        onMouseEnter={(e) => handleSegmentHover(type, typeData, e)}
-                        onMouseLeave={handleSegmentLeave}
-                      >
-                        {typeData.percent >= minPercentForText && (
-                          <span>{typeData.percent}%</span>
-                        )}
-                      </div>
-                    )
-                  })}
-              </div>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Header row with year labels */}
+        <div className="flex mb-2">
+          <div className="w-16 flex-shrink-0" /> {/* Spacer for row labels */}
+          {columns.map((col, idx) => (
+            <div key={idx} className="flex-1 text-center text-sm font-medium text-gray-700">
+              {col.label}
             </div>
           ))}
         </div>
 
-        {/* Legend - compact */}
-        <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t flex-shrink-0">
-          {TYPE_ORDER.map((type) => (
-            <div key={type} className="flex items-center gap-1">
-              <div className={cn('w-2.5 h-2.5 rounded', TYPE_COLORS[type].bg)} />
-              <span className="text-[10px] text-gray-600">{TYPE_LABELS[type]}</span>
+        {/* Grid of bars */}
+        <div className="flex-1 flex flex-col justify-evenly gap-1">
+          {data.typeOrder.map((type) => (
+            <div key={type} className="flex items-center">
+              {/* Row label */}
+              <div className="w-16 flex-shrink-0 text-xs text-gray-600 pr-2 text-right">
+                {TYPE_LABELS[type]}
+              </div>
+
+              {/* Bars for each column */}
+              {columns.map((col, colIdx) => {
+                const percent = col.percentages[type]
+                const isFirstColumn = colIdx === 0
+                const maxHeight = 48 // Max bar height in pixels
+
+                return (
+                  <div key={colIdx} className="flex-1 flex justify-center px-1">
+                    <div
+                      className={cn(
+                        'w-full max-w-[60px] rounded-md flex items-end justify-center transition-all',
+                        TYPE_COLORS[type].bg
+                      )}
+                      style={{
+                        height: `${Math.max((percent / 100) * maxHeight, percent > 0 ? 4 : 0)}px`,
+                      }}
+                    >
+                      {/* Show percentage inside bar for first column if tall enough */}
+                      {isFirstColumn && percent >= 10 && (
+                        <span className="text-white text-[10px] font-medium pb-0.5">
+                          {percent}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
       </div>
-
-      {/* Tooltip */}
-      {tooltip && (
-        <div
-          className="fixed z-[100] pointer-events-none"
-          style={{
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          <div className="bg-gray-900 text-white rounded-lg shadow-lg px-3 py-2 text-sm mb-2">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: tooltip.color }}
-              />
-              <span className="font-medium">{tooltip.label}</span>
-            </div>
-            <div className="text-gray-300 text-xs mt-1">
-              {tooltip.count} drinks ({tooltip.percent}%)
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
