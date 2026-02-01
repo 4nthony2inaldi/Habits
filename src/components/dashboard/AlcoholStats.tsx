@@ -179,7 +179,7 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
     },
     {
       key: 'avgWeekly',
-      label: 'Weekly',
+      label: 'Wkly',
       last30: stats.last30.avgWeekly,
       twoYearsAgo: stats.twoYearsAgo.avgWeekly,
       lastYear: stats.lastYear.avgWeekly,
