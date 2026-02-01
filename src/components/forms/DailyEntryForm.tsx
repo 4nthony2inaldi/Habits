@@ -768,21 +768,21 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   name="wine_red"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Red" value={field.value || 0} onChange={field.onChange} color="bg-red-600" max={4} />
+                    <TapCounter label="Red" value={field.value || 0} onChange={field.onChange} color="bg-red-600" />
                   )}
                 />
                 <Controller
                   name="wine_white"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="White" value={field.value || 0} onChange={field.onChange} color="bg-yellow-400" max={4} />
+                    <TapCounter label="White" value={field.value || 0} onChange={field.onChange} color="bg-yellow-400" />
                   )}
                 />
                 <Controller
                   name="wine_sparkling"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Sparkling" value={field.value || 0} onChange={field.onChange} color="bg-pink-400" max={4} />
+                    <TapCounter label="Sparkling" value={field.value || 0} onChange={field.onChange} color="bg-pink-400" />
                   )}
                 />
               </div>
@@ -798,42 +798,42 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   name="liquor_vodka"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Vodka" value={field.value || 0} onChange={field.onChange} color="bg-gray-400" max={4} />
+                    <TapCounter label="Vodka" value={field.value || 0} onChange={field.onChange} color="bg-gray-400" />
                   )}
                 />
                 <Controller
                   name="liquor_gin"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Gin" value={field.value || 0} onChange={field.onChange} color="bg-teal-500" max={4} />
+                    <TapCounter label="Gin" value={field.value || 0} onChange={field.onChange} color="bg-teal-500" />
                   )}
                 />
                 <Controller
                   name="liquor_tequila"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Tequila" value={field.value || 0} onChange={field.onChange} color="bg-lime-500" max={4} />
+                    <TapCounter label="Tequila" value={field.value || 0} onChange={field.onChange} color="bg-lime-500" />
                   )}
                 />
                 <Controller
                   name="liquor_whiskey"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Whiskey" value={field.value || 0} onChange={field.onChange} color="bg-amber-700" max={4} />
+                    <TapCounter label="Whiskey" value={field.value || 0} onChange={field.onChange} color="bg-amber-700" />
                   )}
                 />
                 <Controller
                   name="liquor_rum"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Rum" value={field.value || 0} onChange={field.onChange} color="bg-amber-600" max={4} />
+                    <TapCounter label="Rum" value={field.value || 0} onChange={field.onChange} color="bg-amber-600" />
                   )}
                 />
                 <Controller
                   name="liquor_other"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Other" value={field.value || 0} onChange={field.onChange} color="bg-purple-500" max={4} />
+                    <TapCounter label="Other" value={field.value || 0} onChange={field.onChange} color="bg-purple-500" />
                   )}
                 />
               </div>
