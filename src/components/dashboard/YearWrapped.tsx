@@ -1496,7 +1496,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3">
             {(() => {
               // Bin by temperature, track avg humidity deviation from 50%
-              const tempBins: Record<number, { count: number; totalHumDev: number; totalScore: number; rainDays: number }> = {}
+              const tempBins: Record<number, { count: number; totalHumDev: number; totalScore: number }> = {}
               const tempBinSize = 5
 
               // Find temperature range from data
@@ -1505,111 +1505,83 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                 minTemp = Math.min(minTemp, d.temp)
                 maxTemp = Math.max(maxTemp, d.temp)
               })
-              // Round to nice bin boundaries
               minTemp = Math.floor(minTemp / tempBinSize) * tempBinSize
               maxTemp = Math.ceil(maxTemp / tempBinSize) * tempBinSize
 
               stats.weatherDataPoints.forEach(d => {
                 const tempBin = Math.floor(d.temp / tempBinSize) * tempBinSize
                 if (!tempBins[tempBin]) {
-                  tempBins[tempBin] = { count: 0, totalHumDev: 0, totalScore: 0, rainDays: 0 }
+                  tempBins[tempBin] = { count: 0, totalHumDev: 0, totalScore: 0 }
                 }
                 tempBins[tempBin].count++
                 tempBins[tempBin].totalHumDev += (50 - d.humidity) // positive = dry, negative = humid
                 tempBins[tempBin].totalScore += d.niceScore
-                if (d.precip > 0) tempBins[tempBin].rainDays++
               })
-
-              // Find max deviation for scale
-              let maxDev = 0
-              Object.values(tempBins).forEach(bin => {
-                const avgDev = Math.abs(bin.totalHumDev / bin.count)
-                maxDev = Math.max(maxDev, avgDev)
-              })
-              maxDev = Math.ceil(maxDev / 5) * 5 + 5 // Round up and add padding
 
               const bins = Object.entries(tempBins).sort((a, b) => Number(a[0]) - Number(b[0]))
+              const maxCount = Math.max(...bins.map(([, b]) => b.count))
               const barWidth = 160 / bins.length
               const centerY = 70
-              const maxBarHeight = 45
+              const maxBarHeight = 50
 
               return (
                 <>
                   <svg viewBox="0 0 200 140" className="w-full h-32">
-                    {/* Center line (50% humidity) */}
+                    {/* Center line (50% humidity baseline) */}
                     <line x1="20" y1={centerY} x2="180" y2={centerY} className="stroke-white/30" strokeWidth="1" />
 
                     {/* Y-axis labels */}
-                    <text x="12" y="28" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
-                    <text x="12" y={centerY + 2} className="fill-white/40 text-[7px]" textAnchor="middle">50%</text>
-                    <text x="12" y="118" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
+                    <text x="10" y="25" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
+                    <text x="10" y="118" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
 
-                    {/* Bars */}
+                    {/* Bars - height = day count, direction = dry/humid */}
                     {bins.map(([tempStr, bin], i) => {
                       const temp = Number(tempStr)
-                      const avgHumDev = bin.totalHumDev / bin.count // positive = dry (up), negative = humid (down)
+                      const avgHumDev = bin.totalHumDev / bin.count // positive = dry, negative = humid
                       const avgScore = bin.totalScore / bin.count
-                      const barHeight = (Math.abs(avgHumDev) / maxDev) * maxBarHeight
-                      const x = 20 + i * barWidth + barWidth * 0.15
-                      const width = barWidth * 0.7
+                      const barHeight = (bin.count / maxCount) * maxBarHeight
+                      const x = 20 + i * barWidth + barWidth * 0.1
+                      const width = barWidth * 0.8
 
-                      // Color based on nice score
+                      // Color based on nice score (green = comfy, red = harsh)
                       const hue = (avgScore / 100) * 120
-                      const color = `hsl(${hue}, 65%, 55%)`
-                      const brightColor = `hsl(${hue}, 75%, 65%)`
+                      const color = `hsl(${hue}, 70%, 50%)`
 
-                      // Highlight bar if most days
-                      const isMax = bin.count === Math.max(...Object.values(tempBins).map(b => b.count))
+                      const goesUp = avgHumDev >= 0 // dry days go up
 
-                      if (avgHumDev >= 0) {
-                        // Dry - bar goes up
-                        return (
-                          <g key={temp}>
-                            <rect
-                              x={x}
-                              y={centerY - barHeight}
-                              width={width}
-                              height={barHeight}
-                              fill={isMax ? brightColor : color}
-                              rx="2"
-                            />
-                            {isMax && (
-                              <text x={x + width/2} y={centerY - barHeight - 4} className="fill-white text-[7px] font-medium" textAnchor="middle">
-                                {bin.count}d
-                              </text>
-                            )}
-                          </g>
-                        )
-                      } else {
-                        // Humid - bar goes down
-                        return (
-                          <g key={temp}>
-                            <rect
-                              x={x}
-                              y={centerY}
-                              width={width}
-                              height={barHeight}
-                              fill={isMax ? brightColor : color}
-                              rx="2"
-                            />
-                            {isMax && (
-                              <text x={x + width/2} y={centerY + barHeight + 10} className="fill-white text-[7px] font-medium" textAnchor="middle">
-                                {bin.count}d
-                              </text>
-                            )}
-                          </g>
-                        )
-                      }
+                      return (
+                        <g key={temp}>
+                          <rect
+                            x={x}
+                            y={goesUp ? centerY - barHeight : centerY}
+                            width={width}
+                            height={Math.max(barHeight, 2)}
+                            fill={color}
+                            rx="2"
+                          />
+                          {bin.count > 15 && (
+                            <text
+                              x={x + width / 2}
+                              y={goesUp ? centerY - barHeight / 2 + 1 : centerY + barHeight / 2 + 1}
+                              className="fill-white/90 text-[6px] font-medium"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              {bin.count}
+                            </text>
+                          )}
+                        </g>
+                      )
                     })}
 
-                    {/* X-axis temp labels */}
-                    {bins.filter((_, i) => i % 2 === 0 || bins.length <= 8).map(([tempStr], i) => {
-                      const actualIndex = bins.findIndex(b => b[0] === tempStr)
+                    {/* X-axis temp labels - show every other if many bins */}
+                    {bins.filter((_, i) => bins.length <= 10 || i % 2 === 0).map(([tempStr]) => {
+                      const idx = bins.findIndex(b => b[0] === tempStr)
                       return (
                         <text
                           key={tempStr}
-                          x={20 + actualIndex * barWidth + barWidth/2}
-                          y="135"
+                          x={20 + idx * barWidth + barWidth / 2}
+                          y="132"
                           className="fill-white/50 text-[7px]"
                           textAnchor="middle"
                         >
@@ -1620,9 +1592,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
                   </svg>
 
                   {/* Legend */}
-                  <div className="flex justify-center gap-3 -mt-1">
-                    <span className="text-[9px] text-white/50">Cold → Hot</span>
-                    <span className="text-[9px] text-white/40">|</span>
+                  <div className="flex justify-center gap-4 -mt-1">
                     <span className="text-[9px] text-white/40 flex items-center gap-1">
                       <span className="w-2 h-2 rounded-sm bg-green-500"></span> comfy
                     </span>
