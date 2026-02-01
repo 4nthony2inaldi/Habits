@@ -97,6 +97,7 @@ interface CityData {
   lng: number
   days: number
   trips: Trip[]
+  dates: string[] // Raw dates for re-grouping at higher zoom levels
 }
 
 // Extract just the city name from a full address like "New Orleans, Louisiana, United States"
@@ -268,6 +269,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
         lng,
         days: datesArray.length,
         trips: groupDatesIntoTrips(datesArray),
+        dates: datesArray, // Keep raw dates for re-grouping
       }
     })
 
@@ -392,15 +394,14 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
 
     if (zoomLevel === 'regions') {
       // Group by state (US) or country (non-US)
-      const regionMap = new Map<string, { displayName: string; lat: number; lng: number; days: number; trips: Trip[]; isUS: boolean }>()
+      const regionMap = new Map<string, { displayName: string; lat: number; lng: number; dates: string[]; isUS: boolean }>()
 
       stats.cities.forEach(city => {
         const { key, displayName, isUS } = getRegionKey(city.name)
 
         if (regionMap.has(key)) {
           const existing = regionMap.get(key)!
-          existing.days += city.days
-          existing.trips = [...existing.trips, ...city.trips]
+          existing.dates = [...existing.dates, ...city.dates]
         } else {
           // Get center coordinates for the region
           let lat = city.lat
@@ -409,42 +410,51 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
             lat = usStateCenters[key].lat
             lng = usStateCenters[key].lng
           }
-          regionMap.set(key, { displayName, lat, lng, days: city.days, trips: [...city.trips], isUS })
+          regionMap.set(key, { displayName, lat, lng, dates: [...city.dates], isUS })
         }
       })
 
-      return Array.from(regionMap.values()).map(r => ({
-        name: r.displayName,
-        lat: r.lat,
-        lng: r.lng,
-        days: r.days,
-        trips: r.trips,
-      }))
+      return Array.from(regionMap.values()).map(r => {
+        // Dedupe dates and recompute trips from combined dates
+        const uniqueDates = [...new Set(r.dates)]
+        return {
+          name: r.displayName,
+          lat: r.lat,
+          lng: r.lng,
+          days: uniqueDates.length,
+          trips: groupDatesIntoTrips(uniqueDates),
+          dates: uniqueDates,
+        }
+      })
     }
 
     // Continents
-    const continentMap = new Map<string, { lat: number; lng: number; days: number; trips: Trip[] }>()
+    const continentMap = new Map<string, { lat: number; lng: number; dates: string[] }>()
 
     stats.cities.forEach(city => {
       const continent = getContinent(city.name)
 
       if (continentMap.has(continent)) {
         const existing = continentMap.get(continent)!
-        existing.days += city.days
-        existing.trips = [...existing.trips, ...city.trips]
+        existing.dates = [...existing.dates, ...city.dates]
       } else {
         const center = continentCenters[continent] || { lat: city.lat, lng: city.lng }
-        continentMap.set(continent, { lat: center.lat, lng: center.lng, days: city.days, trips: [...city.trips] })
+        continentMap.set(continent, { lat: center.lat, lng: center.lng, dates: [...city.dates] })
       }
     })
 
-    return Array.from(continentMap.entries()).map(([name, data]) => ({
-      name,
-      lat: data.lat,
-      lng: data.lng,
-      days: data.days,
-      trips: data.trips,
-    }))
+    return Array.from(continentMap.entries()).map(([name, data]) => {
+      // Dedupe dates and recompute trips from combined dates
+      const uniqueDates = [...new Set(data.dates)]
+      return {
+        name,
+        lat: data.lat,
+        lng: data.lng,
+        days: uniqueDates.length,
+        trips: groupDatesIntoTrips(uniqueDates),
+        dates: uniqueDates,
+      }
+    })
   }, [stats.cities, zoomLevel])
 
   // No travel data
