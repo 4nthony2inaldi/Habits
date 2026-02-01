@@ -724,6 +724,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         summary={summaries.drinks}
       >
         <div className="space-y-3">
+          <p className="text-xs text-gray-400">tap to add · double-tap to subtract</p>
           {/* Simple drink types - grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {!hiddenFields.includes('beers') && (
