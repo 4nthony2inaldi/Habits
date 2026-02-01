@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { differenceInDays, parseISO, format } from 'date-fns'
-import { Plane, Train, MapPin, Moon } from 'lucide-react'
+import { Plane, Train, MapPin, Moon, ZoomIn, ZoomOut } from 'lucide-react'
 import type { DailyEntryWithRelations, Profile } from '@/types/database'
 import dynamic from 'next/dynamic'
 
@@ -15,6 +15,68 @@ const TravelMap = dynamic(() => import('./TravelMap'), {
     </div>
   ),
 })
+
+type ZoomLevel = 'cities' | 'regions' | 'continents'
+
+// Country to continent mapping
+const countryToContinent: Record<string, string> = {
+  'united states': 'North America', 'usa': 'North America', 'canada': 'North America', 'mexico': 'North America',
+  'united kingdom': 'Europe', 'uk': 'Europe', 'england': 'Europe', 'scotland': 'Europe', 'wales': 'Europe',
+  'france': 'Europe', 'germany': 'Europe', 'italy': 'Europe', 'spain': 'Europe', 'portugal': 'Europe',
+  'netherlands': 'Europe', 'belgium': 'Europe', 'switzerland': 'Europe', 'austria': 'Europe',
+  'greece': 'Europe', 'ireland': 'Europe', 'poland': 'Europe', 'czech republic': 'Europe', 'czechia': 'Europe',
+  'sweden': 'Europe', 'norway': 'Europe', 'denmark': 'Europe', 'finland': 'Europe',
+  'morocco': 'Africa', 'egypt': 'Africa', 'south africa': 'Africa', 'kenya': 'Africa', 'tanzania': 'Africa',
+  'japan': 'Asia', 'china': 'Asia', 'south korea': 'Asia', 'korea': 'Asia', 'thailand': 'Asia',
+  'vietnam': 'Asia', 'indonesia': 'Asia', 'singapore': 'Asia', 'india': 'Asia', 'philippines': 'Asia',
+  'australia': 'Oceania', 'new zealand': 'Oceania',
+  'brazil': 'South America', 'argentina': 'South America', 'chile': 'South America', 'peru': 'South America',
+  'colombia': 'South America', 'costa rica': 'Central America', 'panama': 'Central America',
+  'puerto rico': 'Caribbean', 'jamaica': 'Caribbean', 'bahamas': 'Caribbean', 'cuba': 'Caribbean',
+  'dominican republic': 'Caribbean', 'aruba': 'Caribbean', 'barbados': 'Caribbean',
+}
+
+// Continent center coordinates for display
+const continentCenters: Record<string, { lat: number; lng: number }> = {
+  'North America': { lat: 40, lng: -100 },
+  'South America': { lat: -15, lng: -60 },
+  'Central America': { lat: 15, lng: -85 },
+  'Caribbean': { lat: 20, lng: -75 },
+  'Europe': { lat: 50, lng: 10 },
+  'Africa': { lat: 0, lng: 20 },
+  'Asia': { lat: 35, lng: 100 },
+  'Oceania': { lat: -25, lng: 135 },
+}
+
+// US state center coordinates
+const usStateCenters: Record<string, { lat: number; lng: number }> = {
+  'alabama': { lat: 32.8, lng: -86.8 }, 'alaska': { lat: 64, lng: -153 },
+  'arizona': { lat: 34.3, lng: -111.7 }, 'arkansas': { lat: 34.9, lng: -92.4 },
+  'california': { lat: 37.2, lng: -119.4 }, 'colorado': { lat: 39, lng: -105.5 },
+  'connecticut': { lat: 41.6, lng: -72.7 }, 'delaware': { lat: 39, lng: -75.5 },
+  'florida': { lat: 28.6, lng: -82.4 }, 'georgia': { lat: 32.6, lng: -83.4 },
+  'hawaii': { lat: 20.8, lng: -156.3 }, 'idaho': { lat: 44.4, lng: -114.6 },
+  'illinois': { lat: 40, lng: -89.2 }, 'indiana': { lat: 39.9, lng: -86.3 },
+  'iowa': { lat: 42, lng: -93.5 }, 'kansas': { lat: 38.5, lng: -98.4 },
+  'kentucky': { lat: 37.5, lng: -85.3 }, 'louisiana': { lat: 31, lng: -92 },
+  'maine': { lat: 45.4, lng: -69 }, 'maryland': { lat: 39.3, lng: -76.6 },
+  'massachusetts': { lat: 42.2, lng: -71.5 }, 'michigan': { lat: 44.2, lng: -85.4 },
+  'minnesota': { lat: 46.3, lng: -94.3 }, 'mississippi': { lat: 32.7, lng: -89.7 },
+  'missouri': { lat: 38.4, lng: -92.5 }, 'montana': { lat: 47, lng: -109.6 },
+  'nebraska': { lat: 41.5, lng: -99.8 }, 'nevada': { lat: 39.3, lng: -116.6 },
+  'new hampshire': { lat: 43.7, lng: -71.6 }, 'new jersey': { lat: 40.2, lng: -74.7 },
+  'new mexico': { lat: 34.4, lng: -106 }, 'new york': { lat: 42.9, lng: -75.5 },
+  'north carolina': { lat: 35.5, lng: -79.4 }, 'north dakota': { lat: 47.4, lng: -100.4 },
+  'ohio': { lat: 40.4, lng: -82.8 }, 'oklahoma': { lat: 35.6, lng: -97.5 },
+  'oregon': { lat: 44, lng: -120.5 }, 'pennsylvania': { lat: 40.9, lng: -77.8 },
+  'rhode island': { lat: 41.7, lng: -71.5 }, 'south carolina': { lat: 33.9, lng: -80.9 },
+  'south dakota': { lat: 44.4, lng: -100.2 }, 'tennessee': { lat: 35.8, lng: -86.3 },
+  'texas': { lat: 31.5, lng: -99.4 }, 'utah': { lat: 39.3, lng: -111.7 },
+  'vermont': { lat: 44, lng: -72.7 }, 'virginia': { lat: 37.5, lng: -78.8 },
+  'washington': { lat: 47.4, lng: -120.5 }, 'west virginia': { lat: 38.9, lng: -80.5 },
+  'wisconsin': { lat: 44.6, lng: -89.7 }, 'wyoming': { lat: 43, lng: -107.5 },
+  'district of columbia': { lat: 38.9, lng: -77 }, 'washington dc': { lat: 38.9, lng: -77 },
+}
 
 interface TravelWidgetProps {
   entries: DailyEntryWithRelations[]
@@ -44,12 +106,64 @@ function extractCityName(fullName: string): string {
   return fullName.split(',')[0].trim()
 }
 
+// Parse location parts from a full address
+function parseLocationParts(fullName: string): { city: string; state: string | null; country: string | null } {
+  if (!fullName) return { city: '', state: null, country: null }
+  const parts = fullName.split(',').map(p => p.trim())
+
+  if (parts.length >= 3) {
+    // Format: "City, State/Region, Country"
+    return { city: parts[0], state: parts[1], country: parts[parts.length - 1] }
+  } else if (parts.length === 2) {
+    // Could be "City, Country" or "City, State" - check if second part is a US state
+    const secondPart = parts[1].toLowerCase()
+    if (usStateCenters[secondPart] || secondPart === 'united states' || secondPart === 'usa') {
+      return { city: parts[0], state: parts[1], country: 'United States' }
+    }
+    return { city: parts[0], state: null, country: parts[1] }
+  }
+  return { city: parts[0], state: null, country: null }
+}
+
+// Get region key (state for US, country for others)
+function getRegionKey(fullName: string): { key: string; displayName: string; isUS: boolean } {
+  const { state, country } = parseLocationParts(fullName)
+  const countryLower = country?.toLowerCase() || ''
+  const isUS = countryLower === 'united states' || countryLower === 'usa'
+
+  if (isUS && state) {
+    return { key: state.toLowerCase(), displayName: state, isUS: true }
+  }
+  if (country) {
+    return { key: countryLower, displayName: country, isUS: false }
+  }
+  return { key: 'unknown', displayName: 'Unknown', isUS: false }
+}
+
+// Get continent from location
+function getContinent(fullName: string): string {
+  const { country } = parseLocationParts(fullName)
+  if (!country) return 'Unknown'
+  const countryLower = country.toLowerCase()
+  return countryToContinent[countryLower] || 'Unknown'
+}
+
 export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
   const [mounted, setMounted] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('regions') // Default to regions (states/countries)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Cycle through zoom levels
+  const cycleZoomLevel = () => {
+    setZoomLevel(prev => {
+      if (prev === 'continents') return 'regions'
+      if (prev === 'regions') return 'cities'
+      return 'continents'
+    })
+  }
 
   // Helper function to group consecutive dates into trips
   const groupDatesIntoTrips = (dates: string[]): Trip[] => {
@@ -244,6 +358,69 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
     }
   }, [allEntries, entries, profile.home_city])
 
+  // Group cities by zoom level
+  const displayCities = useMemo((): CityData[] => {
+    if (zoomLevel === 'cities') {
+      return stats.cities
+    }
+
+    if (zoomLevel === 'regions') {
+      // Group by state (US) or country (non-US)
+      const regionMap = new Map<string, { displayName: string; lat: number; lng: number; days: number; trips: Trip[]; isUS: boolean }>()
+
+      stats.cities.forEach(city => {
+        const { key, displayName, isUS } = getRegionKey(city.name)
+
+        if (regionMap.has(key)) {
+          const existing = regionMap.get(key)!
+          existing.days += city.days
+          existing.trips = [...existing.trips, ...city.trips]
+        } else {
+          // Get center coordinates for the region
+          let lat = city.lat
+          let lng = city.lng
+          if (isUS && usStateCenters[key]) {
+            lat = usStateCenters[key].lat
+            lng = usStateCenters[key].lng
+          }
+          regionMap.set(key, { displayName, lat, lng, days: city.days, trips: [...city.trips], isUS })
+        }
+      })
+
+      return Array.from(regionMap.values()).map(r => ({
+        name: r.displayName,
+        lat: r.lat,
+        lng: r.lng,
+        days: r.days,
+        trips: r.trips,
+      }))
+    }
+
+    // Continents
+    const continentMap = new Map<string, { lat: number; lng: number; days: number; trips: Trip[] }>()
+
+    stats.cities.forEach(city => {
+      const continent = getContinent(city.name)
+
+      if (continentMap.has(continent)) {
+        const existing = continentMap.get(continent)!
+        existing.days += city.days
+        existing.trips = [...existing.trips, ...city.trips]
+      } else {
+        const center = continentCenters[continent] || { lat: city.lat, lng: city.lng }
+        continentMap.set(continent, { lat: center.lat, lng: center.lng, days: city.days, trips: [...city.trips] })
+      }
+    })
+
+    return Array.from(continentMap.entries()).map(([name, data]) => ({
+      name,
+      lat: data.lat,
+      lng: data.lng,
+      days: data.days,
+      trips: data.trips,
+    }))
+  }, [stats.cities, zoomLevel])
+
   // No travel data
   if (stats.nightsAway === 0 && stats.flights === 0 && stats.trains === 0 && stats.cities.length === 0) {
     return (
@@ -376,9 +553,25 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
           </div>
         </div>
 
-        {/* Map */}
+        {/* Map with zoom controls */}
         {mounted && stats.cities.length > 0 && (
-          <TravelMap cities={stats.cities} />
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-gray-500">
+                {zoomLevel === 'cities' ? `${displayCities.length} cities` :
+                 zoomLevel === 'regions' ? `${displayCities.length} states/countries` :
+                 `${displayCities.length} continents`}
+              </span>
+              <button
+                onClick={cycleZoomLevel}
+                className="flex items-center gap-1 text-[10px] text-cyan-600 hover:text-cyan-700 px-2 py-0.5 rounded hover:bg-cyan-50 transition-colors"
+              >
+                {zoomLevel === 'cities' ? <ZoomOut className="h-3 w-3" /> : <ZoomIn className="h-3 w-3" />}
+                {zoomLevel === 'continents' ? 'Regions' : zoomLevel === 'regions' ? 'Cities' : 'Continents'}
+              </button>
+            </div>
+            <TravelMap cities={displayCities} />
+          </div>
         )}
 
         {/* Fallback if no cities with coordinates */}
