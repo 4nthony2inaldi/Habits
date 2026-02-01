@@ -182,7 +182,7 @@ export function YearOverYearSteps({
       <div className="flex-1 min-h-0 relative">
         {/* Daily Average KPI Overlay - shown only in cumulative mode */}
         {cumulative && years.length > 0 && yearlyAverages.size > 0 && (
-          <div className="absolute top-6 left-14 z-10">
+          <div className="absolute top-1 left-14 z-10">
             <div className="text-xs text-gray-400">Daily Avg.</div>
             <div className="text-2xl font-bold text-green-600">
               {(yearlyAverages.get(years[0]) || 0).toLocaleString()}
