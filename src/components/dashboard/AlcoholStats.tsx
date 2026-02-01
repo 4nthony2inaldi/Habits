@@ -268,16 +268,16 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
           <thead>
             <tr className="border-b">
               <th className="text-left py-1.5 font-medium text-gray-500 w-12"></th>
-              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
+              <th className="text-right py-1.5 font-medium text-gray-400 text-[10px] px-1">
                 L30
               </th>
-              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
+              <th className="text-right py-1.5 font-medium text-gray-400 text-[10px] px-1">
                 {stats.twoYearsAgoLabel}
               </th>
-              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
+              <th className="text-right py-1.5 font-medium text-gray-400 text-[10px] px-1">
                 {stats.lastYearLabel}
               </th>
-              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
+              <th className="text-right py-1.5 font-medium text-gray-400 text-[10px] px-1">
                 {stats.currentYearLabel}
               </th>
             </tr>

@@ -196,7 +196,7 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
                     const scaledWidth = percent * scale
 
                     return (
-                      <div key={colIdx} className="flex-1 px-1">
+                      <div key={colIdx} className="flex-1 px-1 flex items-center">
                         <div
                           className={cn(
                             'h-7 rounded-md flex items-center justify-center transition-all',
@@ -213,6 +213,12 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
                             </span>
                           )}
                         </div>
+                        {/* Show percentage after bar if bar is too narrow */}
+                        {isFirstColumn && scaledWidth < 25 && percent > 0 && (
+                          <span className="text-gray-600 text-xs font-medium ml-1">
+                            {percent}%
+                          </span>
+                        )}
                       </div>
                     )
                   })}
