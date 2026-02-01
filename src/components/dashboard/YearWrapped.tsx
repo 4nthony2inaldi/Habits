@@ -181,8 +181,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     let drinkStreakEnd = ''
     let tempDrinkStart = ''
 
+    // Helper to get context for a date
+    const getDateContext = (entry: DailyEntryWithRelations): string | null => {
+      const sleepCity = entry.city_sleep?.split(',')[0].trim() || ''
+      const sleepCityLower = sleepCity.toLowerCase()
+      const wasAway = sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity
+      return wasAway ? sleepCity : null
+    }
+
     // Track biggest drinking day
-    let biggestDrinkingDay = { date: '', drinks: 0 }
+    let biggestDrinkingDay = { date: '', drinks: 0, city: null as string | null }
 
     // Track binge drinking days (5+ drinks)
     let bingeDrinkingDays = 0
@@ -203,7 +211,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       dayCountByDayOfWeek[dayOfWeek]++
 
       if (dayDrinks > biggestDrinkingDay.drinks) {
-        biggestDrinkingDay = { date: entry.entry_date, drinks: dayDrinks }
+        biggestDrinkingDay = { date: entry.entry_date, drinks: dayDrinks, city: getDateContext(entry) }
       }
 
       // Track binge drinking days (5+ drinks)
@@ -406,7 +414,11 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       }
     })
 
-    const sortedCities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])
+    // Filter out home cities (Philadelphia, New York) from top destinations - they're not interesting
+    const homeCityVariants = ['philadelphia', 'new york', 'nyc', 'philly', 'brooklyn', 'manhattan']
+    const sortedCities = Object.entries(cityCounts)
+      .filter(([city]) => !homeCityVariants.some(h => city.toLowerCase().includes(h)))
+      .sort((a, b) => b[1] - a[1])
     const topCities = sortedCities.slice(0, 5)
     const citiesVisited = Object.keys(cityCounts).length
 
@@ -418,10 +430,25 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     const avgMood = moodScores.length > 0
       ? (moodScores.reduce((a, b) => a + b.score, 0) / moodScores.length).toFixed(1)
       : 'N/A'
-    const happyDays = moodScores.filter(m => m.score >= 7).length
+    const happyDays = moodScores.filter(m => m.score >= 8).length
     const sadDays = moodScores.filter(m => m.score <= 3).length
     const bestMoodEntry = moodScores.sort((a, b) => b.score - a.score)[0]?.entry
     const worstMoodEntry = moodScores.sort((a, b) => a.score - b.score)[0]?.entry
+
+    // Track all perfect 10/10 days with context
+    const perfectDays = yearEntries
+      .filter(e => e.mood_score === 10)
+      .map(e => {
+        const sleepCity = e.city_sleep?.split(',')[0].trim() || ''
+        const sleepCityLower = sleepCity.toLowerCase()
+        const wasAway = sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity
+        return {
+          date: e.entry_date,
+          city: wasAway ? sleepCity : null,
+          notes: e.notes?.slice(0, 100) || null,
+          events: e.life_events.map(ev => eventLabels[ev.event_type as EventType] || ev.event_type)
+        }
+      })
 
     // Mood correlations
     const moodWhenExercised = yearEntries
@@ -528,6 +555,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
       avgMood,
       happyDays,
       sadDays,
+      perfectDays,
       bestMoodEntry,
       worstMoodEntry,
       avgMoodExercise,
@@ -632,11 +660,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               </div>
             )}
           </div>
-          {stats.bestStepsEntry && stats.bestStepsEntry.steps && stats.bestStepsEntry.steps > 20000 && (
-            <p className="text-white/50 text-xs mt-3 italic">
-              {format(parseISO(stats.bestStepsEntry.entry_date), 'MMMM d')} - what were you training for?! 🏃
-            </p>
-          )}
+          {stats.bestStepsEntry && stats.bestStepsEntry.steps && stats.bestStepsEntry.steps > 20000 && (() => {
+            const sleepCity = stats.bestStepsEntry.city_sleep?.split(',')[0].trim() || ''
+            const sleepCityLower = sleepCity.toLowerCase()
+            const wasAway = sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown'
+            return (
+              <p className="text-white/50 text-xs mt-3 italic">
+                {format(parseISO(stats.bestStepsEntry.entry_date), 'MMMM d')}{wasAway ? ` in ${sleepCity}` : ''} - what were you training for?! 🏃
+              </p>
+            )
+          })()}
         </div>
       ),
     },
@@ -719,7 +752,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           )}
           {stats.biggestDrinkingDay.drinks >= 6 && (
             <p className="text-white/50 text-xs mt-2 italic">
-              {format(parseISO(stats.biggestDrinkingDay.date), 'MMMM d')}: {stats.biggestDrinkingDay.drinks} drinks. What happened? 🎉
+              {format(parseISO(stats.biggestDrinkingDay.date), 'MMMM d')}{stats.biggestDrinkingDay.city ? ` in ${stats.biggestDrinkingDay.city}` : ''}: {stats.biggestDrinkingDay.drinks} drinks. What happened? 🎉
             </p>
           )}
         </div>
@@ -783,7 +816,10 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
               <p className="text-white/60 text-[10px] mb-1">Most in a day</p>
               <p className="text-2xl font-bold text-white">{stats.biggestDrinkingDay.drinks}</p>
               {stats.biggestDrinkingDay.date && (
-                <p className="text-white/50 text-[9px]">{format(parseISO(stats.biggestDrinkingDay.date), 'MMM d')}</p>
+                <p className="text-white/50 text-[9px]">
+                  {format(parseISO(stats.biggestDrinkingDay.date), 'MMM d')}
+                  {stats.biggestDrinkingDay.city && ` · ${stats.biggestDrinkingDay.city}`}
+                </p>
               )}
             </div>
             <div className="bg-white/15 rounded-xl px-3 py-2 backdrop-blur">
@@ -1095,16 +1131,16 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto mb-4">
             <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.happyDays}</p>
-              <p className="text-white/70 text-xs">great days (7+)</p>
+              <p className="text-white/70 text-xs">great days (8+)</p>
             </div>
             <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.sadDays}</p>
               <p className="text-white/70 text-xs">tough days (3-)</p>
             </div>
           </div>
-          {stats.bestMoodEntry && stats.bestMoodEntry.mood_score && (
+          {stats.perfectDays.length > 0 && (
             <p className="text-white/70 text-sm">
-              Peak happiness: <span className="text-white">{format(parseISO(stats.bestMoodEntry.entry_date), 'MMMM d')}</span> 🌟
+              You had <span className="text-white font-bold">{stats.perfectDays.length}</span> perfect 10/10 days →
             </p>
           )}
           {parseFloat(stats.avgMood) >= 7 && (
@@ -1113,6 +1149,45 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     },
+    // Perfect 10/10 days slide
+    ...(stats.perfectDays.length > 0 ? [{
+      gradient: 'bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500',
+      content: (
+        <div className="text-center">
+          <Sparkles className="h-10 w-10 text-white/80 mb-3 mx-auto" />
+          <p className="text-white/80 text-lg mb-1">Your perfect 10/10 days</p>
+          <p className="text-5xl font-bold text-white mb-4">{stats.perfectDays.length}</p>
+          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur w-full max-w-sm mx-auto max-h-[45vh] overflow-y-auto">
+            <div className="space-y-3">
+              {stats.perfectDays.map((day, i) => (
+                <div key={i} className="bg-white/10 rounded-xl px-4 py-3 text-left">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white font-medium">{format(parseISO(day.date), 'MMMM d')}</p>
+                    {day.city && (
+                      <span className="text-white/60 text-xs flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {day.city}
+                      </span>
+                    )}
+                  </div>
+                  {day.notes && (
+                    <p className="text-white/70 text-xs italic">"{day.notes}{day.notes.length >= 100 ? '...' : ''}"</p>
+                  )}
+                  {!day.notes && day.events.length > 0 && (
+                    <p className="text-white/60 text-xs">{day.events.slice(0, 3).join(' · ')}</p>
+                  )}
+                  {!day.notes && day.events.length === 0 && !day.city && (
+                    <p className="text-white/50 text-xs">A mysteriously perfect day ✨</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-white/50 text-xs mt-3 italic">
+            {stats.perfectDays.length >= 10 ? "You really know how to live! 🌟" : "Cherish these memories! 💫"}
+          </p>
+        </div>
+      ),
+    }] : []),
     // Mood correlations slide
     {
       gradient: 'bg-gradient-to-br from-rose-500 via-pink-500 to-purple-600',
