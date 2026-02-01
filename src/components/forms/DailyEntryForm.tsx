@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
+import { TapCounter } from '@/components/ui/tap-counter'
 import { CityAutocomplete } from '@/components/ui/city-autocomplete'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormSection } from './FormSection'
@@ -728,138 +729,182 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       >
         <div className="space-y-4">
           {/* Simple drink types */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-3">
             {!hiddenFields.includes('beers') && (
-              <div className="space-y-2">
-                <Label htmlFor="beers">Beer</Label>
-                <Input
-                  id="beers"
-                  type="number"
-                  min={0}
-                  {...register('beers', { valueAsNumber: true })}
-                />
-              </div>
+              <Controller
+                name="beers"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Beer"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-amber-500"
+                    max={6}
+                  />
+                )}
+              />
             )}
             {!hiddenFields.includes('seltzers') && (
-              <div className="space-y-2">
-                <Label htmlFor="seltzers">Seltzers</Label>
-                <Input
-                  id="seltzers"
-                  type="number"
-                  min={0}
-                  {...register('seltzers', { valueAsNumber: true })}
-                />
-              </div>
+              <Controller
+                name="seltzers"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Seltzers"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-cyan-500"
+                    max={6}
+                  />
+                )}
+              />
             )}
             {!hiddenFields.includes('shots') && (
-              <div className="space-y-2">
-                <Label htmlFor="shots">Shots</Label>
-                <Input
-                  id="shots"
-                  type="number"
-                  min={0}
-                  {...register('shots', { valueAsNumber: true })}
-                />
-              </div>
+              <Controller
+                name="shots"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Shots"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-red-500"
+                    max={6}
+                  />
+                )}
+              />
             )}
           </div>
 
           {/* Wine breakdown */}
           {!hiddenFields.includes('wine') && (
-            <div className="pt-3 border-t">
-              <Label className="text-sm font-medium text-gray-600 mb-2 block">Wine</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="wine_red" className="text-xs text-gray-500">Red</Label>
-                  <Input
-                    id="wine_red"
-                    type="number"
-                    min={0}
-                    {...register('wine_red', { valueAsNumber: true })}
+            <div className="pt-3 border-t space-y-3">
+              <Label className="text-sm font-medium text-gray-600 block">Wine</Label>
+              <Controller
+                name="wine_red"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Red"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-red-600"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="wine_white" className="text-xs text-gray-500">White</Label>
-                  <Input
-                    id="wine_white"
-                    type="number"
-                    min={0}
-                    {...register('wine_white', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="wine_white"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="White"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-yellow-400"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="wine_sparkling" className="text-xs text-gray-500">Sparkling</Label>
-                  <Input
-                    id="wine_sparkling"
-                    type="number"
-                    min={0}
-                    {...register('wine_sparkling', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="wine_sparkling"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Sparkling"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-pink-400"
+                    max={4}
                   />
-                </div>
-              </div>
+                )}
+              />
             </div>
           )}
 
           {/* Cocktail/Liquor breakdown */}
           {!hiddenFields.includes('liquor') && (
-            <div className="pt-3 border-t">
-              <Label className="text-sm font-medium text-gray-600 mb-2 block">Cocktails (by spirit)</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_vodka" className="text-xs text-gray-500">Vodka</Label>
-                  <Input
-                    id="liquor_vodka"
-                    type="number"
-                    min={0}
-                    {...register('liquor_vodka', { valueAsNumber: true })}
+            <div className="pt-3 border-t space-y-3">
+              <Label className="text-sm font-medium text-gray-600 block">Cocktails (by spirit)</Label>
+              <Controller
+                name="liquor_vodka"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Vodka"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-gray-400"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_gin" className="text-xs text-gray-500">Gin</Label>
-                  <Input
-                    id="liquor_gin"
-                    type="number"
-                    min={0}
-                    {...register('liquor_gin', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="liquor_gin"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Gin"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-teal-500"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_tequila" className="text-xs text-gray-500">Tequila</Label>
-                  <Input
-                    id="liquor_tequila"
-                    type="number"
-                    min={0}
-                    {...register('liquor_tequila', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="liquor_tequila"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Tequila"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-lime-500"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_whiskey" className="text-xs text-gray-500">Whiskey</Label>
-                  <Input
-                    id="liquor_whiskey"
-                    type="number"
-                    min={0}
-                    {...register('liquor_whiskey', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="liquor_whiskey"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Whiskey"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-amber-700"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_rum" className="text-xs text-gray-500">Rum</Label>
-                  <Input
-                    id="liquor_rum"
-                    type="number"
-                    min={0}
-                    {...register('liquor_rum', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="liquor_rum"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Rum"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-amber-600"
+                    max={4}
                   />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="liquor_other" className="text-xs text-gray-500">Other</Label>
-                  <Input
-                    id="liquor_other"
-                    type="number"
-                    min={0}
-                    {...register('liquor_other', { valueAsNumber: true })}
+                )}
+              />
+              <Controller
+                name="liquor_other"
+                control={control}
+                render={({ field }) => (
+                  <TapCounter
+                    label="Other"
+                    value={field.value || 0}
+                    onChange={field.onChange}
+                    color="bg-purple-500"
+                    max={4}
                   />
-                </div>
-              </div>
+                )}
+              />
             </div>
           )}
         </div>
