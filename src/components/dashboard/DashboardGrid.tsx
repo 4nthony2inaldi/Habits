@@ -10,6 +10,7 @@ import { MoodChart } from './MoodChart'
 import { WorkLocationChart } from './WorkLocationChart'
 import { HabitsGrid } from './HabitsGrid'
 import { HabitsScore } from './HabitsScore'
+import { BusyTrend } from './BusyTrend'
 import { AlcoholTracker } from './AlcoholTracker'
 import { AlcoholCalendar } from './AlcoholCalendar'
 import { AlcoholStats } from './AlcoholStats'
@@ -194,6 +195,16 @@ export function DashboardGrid({
             selectedHabits={config.selectedHabits}
             title={titles.title}
             subtitle={titles.subtitle}
+          />
+        )
+      case 'busyTrend':
+        return (
+          <BusyTrend
+            entries={allEntries}
+            dateRange={dateRange}
+            fieldGroupings={profile.field_groupings as import('@/types/forms').FieldGroupings | null}
+            homeCity={profile.home_city}
+            title={titles.title}
           />
         )
       case 'alcoholTracker':
