@@ -555,17 +555,13 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   checked={field.value.includes('vitamin')}
                   onChange={() => field.onChange(toggleHabit('vitamin', field.value as HabitType[]))}
                 />
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="coffee" className="text-sm whitespace-nowrap">Coffee:</Label>
-                  <Input
-                    id="coffee"
-                    type="number"
-                    min={0}
-                    max={10}
-                    {...register('coffee', { valueAsNumber: true })}
-                    className="w-16"
-                  />
-                </div>
+                <Controller
+                  name="coffee"
+                  control={control}
+                  render={({ field }) => (
+                    <TapCounter label="Coffee" value={field.value || 0} onChange={field.onChange} color="bg-amber-800" />
+                  )}
+                />
               </div>
             )}
           />
