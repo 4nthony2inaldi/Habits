@@ -1,17 +1,22 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { format, parseISO, startOfYear, endOfYear, getYear, getDay, differenceInDays } from 'date-fns'
+import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, getYear, getMonth, getQuarter, getDay, differenceInDays, subMonths, subQuarters, subYears } from 'date-fns'
 import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, TrendingUp, Moon, Calendar, MapPin, Zap, Footprints, Sun, CloudRain, Thermometer, Globe2, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { DailyEntryWithRelations, HabitType, EventType, Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
 import { toPng } from 'html-to-image'
 
+export type WrappedPeriod = 'month' | 'quarter' | 'year'
+
 interface YearWrappedProps {
   entries: DailyEntryWithRelations[]
   profile: Profile
   year?: number
+  month?: number // 0-11 (JS month)
+  quarter?: number // 1-4
+  period?: WrappedPeriod
   onClose: () => void
 }
 
@@ -103,43 +108,86 @@ function getNightsAwayComparison(nightsAway: number, totalDays: number): string 
   return `Home sweet home was your vibe this year 🏡`
 }
 
-// Helper to format year-over-year change
-function formatYoYChange(current: number, previous: number | undefined, unit: string = ''): string | null {
+// Helper to format period-over-period change
+function formatPeriodChange(current: number, previous: number | undefined, periodType: WrappedPeriod = 'year'): string | null {
   if (previous === undefined || previous === 0) return null
   const diff = current - previous
   const percentChange = Math.round((diff / previous) * 100)
   if (Math.abs(percentChange) < 5) return null // Ignore tiny changes
   const direction = diff > 0 ? '↑' : '↓'
   const absPercent = Math.abs(percentChange)
-  return `${direction} ${absPercent}% vs last year`
+  const periodLabel = periodType === 'month' ? 'last month' : periodType === 'quarter' ? 'last quarter' : 'last year'
+  return `${direction} ${absPercent}% vs ${periodLabel}`
 }
 
-export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProps) {
-  const targetYear = year || getYear(new Date()) - 1
+// Alias for backwards compatibility
+const formatYoYChange = formatPeriodChange
+
+export function YearWrapped({ entries, profile, year, month, quarter, period = 'year', onClose }: YearWrappedProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
   const [capturedFiles, setCapturedFiles] = useState<File[]>([])
   const slideContainerRef = useRef<HTMLDivElement>(null)
 
-  // Filter entries for the target year and previous year
-  const { yearEntries, prevYearEntries } = useMemo(() => {
-    const yearStart = startOfYear(new Date(targetYear, 0, 1))
-    const yearEnd = endOfYear(new Date(targetYear, 0, 1))
-    const prevYearStart = startOfYear(new Date(targetYear - 1, 0, 1))
-    const prevYearEnd = endOfYear(new Date(targetYear - 1, 0, 1))
+  // Calculate period bounds and labels
+  const { periodStart, periodEnd, prevPeriodStart, prevPeriodEnd, periodLabel, targetYear } = useMemo(() => {
+    const now = new Date()
+    let start: Date, end: Date, prevStart: Date, prevEnd: Date, label: string, yr: number
 
+    if (period === 'month') {
+      const targetDate = month !== undefined && year !== undefined
+        ? new Date(year, month, 1)
+        : subMonths(now, 1) // Default to last month
+      start = startOfMonth(targetDate)
+      end = endOfMonth(targetDate)
+      const prevDate = subMonths(targetDate, 1)
+      prevStart = startOfMonth(prevDate)
+      prevEnd = endOfMonth(prevDate)
+      label = format(targetDate, 'MMMM yyyy')
+      yr = getYear(targetDate)
+    } else if (period === 'quarter') {
+      const targetDate = quarter !== undefined && year !== undefined
+        ? new Date(year, (quarter - 1) * 3, 1)
+        : subQuarters(now, 1) // Default to last quarter
+      start = startOfQuarter(targetDate)
+      end = endOfQuarter(targetDate)
+      const prevDate = subQuarters(targetDate, 1)
+      prevStart = startOfQuarter(prevDate)
+      prevEnd = endOfQuarter(prevDate)
+      const q = getQuarter(targetDate)
+      label = `Q${q} ${getYear(targetDate)}`
+      yr = getYear(targetDate)
+    } else {
+      // Year (default)
+      yr = year || getYear(now) - 1
+      start = startOfYear(new Date(yr, 0, 1))
+      end = endOfYear(new Date(yr, 0, 1))
+      prevStart = startOfYear(new Date(yr - 1, 0, 1))
+      prevEnd = endOfYear(new Date(yr - 1, 0, 1))
+      label = String(yr)
+    }
+
+    return { periodStart: start, periodEnd: end, prevPeriodStart: prevStart, prevPeriodEnd: prevEnd, periodLabel: label, targetYear: yr }
+  }, [period, year, month, quarter])
+
+  // Filter entries for the target period and previous period
+  const { periodEntries, prevPeriodEntries } = useMemo(() => {
     return {
-      yearEntries: entries.filter(entry => {
+      periodEntries: entries.filter(entry => {
         const date = parseISO(entry.entry_date)
-        return date >= yearStart && date <= yearEnd
+        return date >= periodStart && date <= periodEnd
       }).sort((a, b) => a.entry_date.localeCompare(b.entry_date)),
-      prevYearEntries: entries.filter(entry => {
+      prevPeriodEntries: entries.filter(entry => {
         const date = parseISO(entry.entry_date)
-        return date >= prevYearStart && date <= prevYearEnd
+        return date >= prevPeriodStart && date <= prevPeriodEnd
       }).sort((a, b) => a.entry_date.localeCompare(b.entry_date))
     }
-  }, [entries, targetYear])
+  }, [entries, periodStart, periodEnd, prevPeriodStart, prevPeriodEnd])
+
+  // Alias for compatibility with existing code
+  const yearEntries = periodEntries
+  const prevYearEntries = prevPeriodEntries
 
   // Calculate stats for a given set of entries
   const calculateStats = useCallback((yearEntries: DailyEntryWithRelations[]) => {
@@ -758,36 +806,42 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     }
   }, [stats, prevStats])
 
+  // Period-specific labels
+  const periodNoun = period === 'month' ? 'month' : period === 'quarter' ? 'quarter' : 'year'
+  const exploreText = period === 'month' ? 'Tap to explore your month...' : period === 'quarter' ? 'Tap to explore your quarter...' : 'Tap to explore your year...'
+
   if (!stats) {
     return (
       <div className="fixed inset-0 z-[9999] bg-black isolate flex items-center justify-center">
         <div className="text-white text-center">
-          <p className="text-2xl mb-4">No data for {targetYear}</p>
+          <p className="text-2xl mb-4">No data for {periodLabel}</p>
           <button onClick={onClose} className="px-4 py-2 bg-white/20 rounded-lg">Close</button>
         </div>
       </div>
     )
   }
 
-  const slides = [
+  const allSlides = [
     // Intro slide
     {
+      id: 'intro',
       gradient: 'bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400',
       content: (
         <div className="text-center">
           <Sparkles className="h-16 w-16 text-white mb-6 animate-pulse mx-auto" />
-          <h1 className="text-5xl font-bold text-white mb-4">Your {targetYear}</h1>
+          <h1 className="text-5xl font-bold text-white mb-4">{period === 'year' ? `Your ${periodLabel}` : periodLabel}</h1>
           <p className="text-xl text-white/80">Wrapped</p>
           <div className="mt-8 bg-white/20 rounded-2xl px-6 py-4 backdrop-blur mx-auto">
             <p className="text-4xl font-bold text-white">{stats.totalEntries}</p>
-            <p className="text-white/70">days of your life, tracked</p>
+            <p className="text-white/70">days tracked</p>
           </div>
-          <p className="text-white/50 text-sm mt-6">Tap to explore your year...</p>
+          <p className="text-white/50 text-sm mt-6">{exploreText}</p>
         </div>
       ),
     },
     // Steps slide with fun comparisons
     {
+      id: 'steps',
       gradient: 'bg-gradient-to-br from-lime-500 via-green-500 to-emerald-600',
       content: (
         <div className="text-center">
@@ -835,6 +889,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     },
     // Habits slide
     {
+      id: 'habits',
       gradient: 'bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600',
       content: (
         <div className="text-center">
@@ -875,6 +930,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     },
     // Alcohol slide with fun comparisons
     {
+      id: 'alcohol-main',
       gradient: 'bg-gradient-to-br from-purple-700 via-violet-600 to-indigo-700',
       content: (
         <div className="text-center">
@@ -1167,6 +1223,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     }] : []),
     // Travel stats slide
     {
+      id: 'travel-summary',
       gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
       content: (
         <div className="text-center">
@@ -1347,6 +1404,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     },
     // Mood slide
     {
+      id: 'mood',
       gradient: 'bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500',
       content: (
         <div className="text-center">
@@ -1475,6 +1533,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     },
     // Weather slide with scatter plot
     ...(stats.weatherEntries > 0 ? [{
+      id: 'weather',
       gradient: 'bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600',
       content: (
         <div className="text-center">
@@ -1676,10 +1735,11 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
     },
     // Outro slide
     {
+      id: 'outro',
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500',
       content: (
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-6">That's a wrap on {targetYear}!</h1>
+          <h1 className="text-4xl font-bold text-white mb-6">That's a wrap on {periodLabel}!</h1>
           <div className="grid grid-cols-2 gap-3 w-full max-w-xs mx-auto mb-6">
             <div className="bg-white/20 rounded-xl px-4 py-3 backdrop-blur">
               <p className="text-2xl font-bold text-white">{stats.totalEntries}</p>
@@ -1702,15 +1762,28 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             <p className="text-white/90">
               {stats.isHealthNut && stats.isExplorer && "You balanced wellness and wanderlust perfectly! 🌟"}
               {stats.isHealthNut && !stats.isExplorer && "Your dedication to health was inspiring! 💪"}
-              {!stats.isHealthNut && stats.isExplorer && "What an adventurous year you had! 🗺️"}
-              {!stats.isHealthNut && !stats.isExplorer && "Here's to an even better " + (targetYear + 1) + "! 🚀"}
+              {!stats.isHealthNut && stats.isExplorer && `What an adventurous ${periodNoun} you had! 🗺️`}
+              {!stats.isHealthNut && !stats.isExplorer && "Keep up the great work! 🚀"}
             </p>
           </div>
-          <p className="text-white/80 text-lg">See you in {targetYear + 1}! 🎉</p>
+          {period === 'year' && <p className="text-white/80 text-lg">See you in {targetYear + 1}! 🎉</p>}
+          {period !== 'year' && <p className="text-white/80 text-lg">Until next time! 🎉</p>}
         </div>
       ),
     },
   ]
+
+  // Filter slides based on period type - monthly/quarterly get a subset
+  const slides = period === 'year' ? allSlides : allSlides.filter(slide => {
+    // Always include intro and outro
+    if (slide.id === 'intro' || slide.id === 'outro') return true
+    // For monthly: show core slides only
+    if (period === 'month') {
+      return ['steps', 'habits', 'alcohol-main', 'mood', 'travel-summary', 'weather'].includes(slide.id || '')
+    }
+    // For quarterly: show most slides except detailed streaks
+    return !['alcohol-streaks', 'alcohol-heavy-weeks', 'travel-days-since'].includes(slide.id || '')
+  })
 
   const nextSlide = useCallback(() => {
     if (currentSlide < slides.length - 1) {

@@ -15,7 +15,16 @@ import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/
 import type { Profile } from '@/types/database'
 import { Loader2, Lock, Unlock, Sparkles } from 'lucide-react'
 import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
-import { YearWrapped } from '@/components/dashboard/YearWrapped'
+import { YearWrapped, WrappedPeriod } from '@/components/dashboard/YearWrapped'
+import { getYear, getMonth, getQuarter, subMonths, subQuarters } from 'date-fns'
+
+interface WrappedConfig {
+  show: boolean
+  period: WrappedPeriod
+  year?: number
+  month?: number
+  quarter?: number
+}
 
 interface DashboardClientProps {
   currentUser: Profile
@@ -32,8 +41,15 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     getWidgetConfig(currentUser)
   )
   const [gridLocked, setGridLocked] = useState(true)
-  const [showWrapped, setShowWrapped] = useState(false)
+  const [showWrappedPicker, setShowWrappedPicker] = useState(false)
+  const [wrappedConfig, setWrappedConfig] = useState<WrappedConfig>({ show: false, period: 'year' })
   const { controlsCollapsed } = useDashboardControls()
+
+  // Helper to launch wrapped with specific config
+  const launchWrapped = (period: WrappedPeriod, year?: number, month?: number, quarter?: number) => {
+    setWrappedConfig({ show: true, period, year, month, quarter })
+    setShowWrappedPicker(false)
+  }
 
   const { data: entries, isLoading } = useEntries({
     userId: selectedUserId,
@@ -113,9 +129,9 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             )}
           </button>
           <button
-            onClick={() => setShowWrapped(true)}
+            onClick={() => setShowWrappedPicker(true)}
             className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
-            title="View your year wrapped"
+            title="View your wrapped"
           >
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline ml-1.5">Wrapped</span>
@@ -156,12 +172,63 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         </>
       )}
 
-      {/* Year Wrapped Modal */}
-      {showWrapped && (
+      {/* Wrapped Period Picker Modal */}
+      {showWrappedPicker && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              View Wrapped
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+              Choose a time period to review:
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => launchWrapped('year', getYear(new Date()) - 1)}
+                className="w-full p-3 text-left rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                📅 {getYear(new Date()) - 1} Year in Review
+              </button>
+              <button
+                onClick={() => {
+                  const lastQuarter = subQuarters(new Date(), 1)
+                  launchWrapped('quarter', getYear(lastQuarter), undefined, getQuarter(lastQuarter))
+                }}
+                className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                📊 Q{getQuarter(subQuarters(new Date(), 1))} {getYear(subQuarters(new Date(), 1))} Quarterly Review
+              </button>
+              <button
+                onClick={() => {
+                  const lastMonth = subMonths(new Date(), 1)
+                  launchWrapped('month', getYear(lastMonth), getMonth(lastMonth))
+                }}
+                className="w-full p-3 text-left rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                📆 {new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(subMonths(new Date(), 1))} Monthly Review
+              </button>
+            </div>
+            <button
+              onClick={() => setShowWrappedPicker(false)}
+              className="w-full mt-4 p-2 text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Wrapped Modal */}
+      {wrappedConfig.show && (
         <YearWrapped
           entries={allEntries || []}
           profile={currentUser}
-          onClose={() => setShowWrapped(false)}
+          period={wrappedConfig.period}
+          year={wrappedConfig.year}
+          month={wrappedConfig.month}
+          quarter={wrappedConfig.quarter}
+          onClose={() => setWrappedConfig({ ...wrappedConfig, show: false })}
         />
       )}
     </div>
