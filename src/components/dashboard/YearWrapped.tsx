@@ -1032,47 +1032,7 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     },
-    // Travel slide with comparisons
-    {
-      gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
-      content: (
-        <div className="text-center">
-          <Plane className="h-12 w-12 text-white/80 mb-4 mx-auto" />
-          <p className="text-white/80 text-lg mb-2">You spent</p>
-          <p className="text-7xl font-bold text-white mb-2">
-            <AnimatedNumber value={stats.nightsAway} />
-          </p>
-          <p className="text-2xl text-white/90 mb-2">nights away from home</p>
-          {yoy?.nightsAway && (
-            <p className={cn('text-sm mb-2', yoy.nightsAwayRaw && yoy.nightsAwayRaw > 0 ? 'text-cyan-200' : 'text-white/60')}>
-              {yoy.nightsAway}
-            </p>
-          )}
-          <p className="text-white/60 text-lg mb-4">{getNightsAwayComparison(stats.nightsAway, stats.totalEntries)}</p>
-          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mx-auto mb-4">
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
-              <p className="text-xl font-bold text-white">{stats.flights}</p>
-              <p className="text-white/70 text-[10px]">flights</p>
-            </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
-              <p className="text-xl font-bold text-white">{stats.trains}</p>
-              <p className="text-white/70 text-[10px]">trains</p>
-            </div>
-            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
-              <p className="text-xl font-bold text-white">{stats.citiesVisited}</p>
-              <p className="text-white/70 text-[10px]">cities</p>
-            </div>
-          </div>
-          {stats.longestTrip > 0 && (
-            <p className="text-white/70 text-sm">
-              Longest adventure: <span className="text-white font-medium">{stats.longestTrip} nights</span>
-              <span className="text-white/50"> across {stats.longestTripItinerary.length} cities →</span>
-            </p>
-          )}
-        </div>
-      ),
-    },
-    // Radial year travel visualization
+    // Radial year travel visualization (overview first)
     ...(stats.nightsAway > 0 ? [{
       gradient: 'bg-gradient-to-br from-slate-800 via-slate-900 to-black',
       content: (
@@ -1137,6 +1097,46 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
         </div>
       ),
     }] : []),
+    // Travel stats slide
+    {
+      gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
+      content: (
+        <div className="text-center">
+          <Plane className="h-12 w-12 text-white/80 mb-4 mx-auto" />
+          <p className="text-white/80 text-lg mb-2">You spent</p>
+          <p className="text-7xl font-bold text-white mb-2">
+            <AnimatedNumber value={stats.nightsAway} />
+          </p>
+          <p className="text-2xl text-white/90 mb-2">nights away from home</p>
+          {yoy?.nightsAway && (
+            <p className={cn('text-sm mb-2', yoy.nightsAwayRaw && yoy.nightsAwayRaw > 0 ? 'text-cyan-200' : 'text-white/60')}>
+              {yoy.nightsAway}
+            </p>
+          )}
+          <p className="text-white/60 text-lg mb-4">{getNightsAwayComparison(stats.nightsAway, stats.totalEntries)}</p>
+          <div className="grid grid-cols-3 gap-2 w-full max-w-sm mx-auto mb-4">
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-xl font-bold text-white">{stats.flights}</p>
+              <p className="text-white/70 text-[10px]">flights</p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-xl font-bold text-white">{stats.trains}</p>
+              <p className="text-white/70 text-[10px]">trains</p>
+            </div>
+            <div className="bg-white/20 rounded-xl px-3 py-2 backdrop-blur">
+              <p className="text-xl font-bold text-white">{stats.citiesVisited}</p>
+              <p className="text-white/70 text-[10px]">cities</p>
+            </div>
+          </div>
+          {stats.longestTrip > 0 && (
+            <p className="text-white/70 text-sm">
+              Longest adventure: <span className="text-white font-medium">{stats.longestTrip} nights</span>
+              <span className="text-white/50"> across {stats.longestTripItinerary.length} cities →</span>
+            </p>
+          )}
+        </div>
+      ),
+    },
     // Longest Trip Journey slide
     ...(stats.longestTrip > 3 && stats.longestTripItinerary.length > 1 ? [{
       gradient: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600',
