@@ -96,13 +96,10 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
       shots: Math.round((totalBreakdown.shots / totalSum) * 100),
     } : { beers: 0, seltzers: 0, wine: 0, liquor: 0, shots: 0 }
 
-    // Determine type order based on current year (or total) - sorted by percentage descending
+    // Determine type order - always sorted by first column's percentage descending
+    // Show all 5 types always (even if 0) so layout is consistent
     const referencePercentages = yearData.length > 0 ? yearData[0].percentages : totalPercentages
     const typeOrder = (Object.keys(TYPE_COLORS) as DrinkType[])
-      .filter((type) => {
-        // Include type if it has any data in total
-        return totalBreakdown[type] > 0
-      })
       .sort((a, b) => referencePercentages[b] - referencePercentages[a])
 
     return {
