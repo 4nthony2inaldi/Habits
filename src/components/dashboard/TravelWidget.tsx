@@ -149,14 +149,22 @@ function getContinent(fullName: string): string {
   return countryToContinent[countryLower] || 'Unknown'
 }
 
+type TooltipId = 'away' | 'flights' | 'trains' | 'cities' | null
+
 export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
   const [mounted, setMounted] = useState(false)
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('regions') // Default to regions (states/countries)
   const [hasAutoAdjusted, setHasAutoAdjusted] = useState(false)
+  const [activeTooltip, setActiveTooltip] = useState<TooltipId>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Toggle tooltip on tap (for mobile)
+  const toggleTooltip = (id: TooltipId) => {
+    setActiveTooltip(prev => prev === id ? null : id)
+  }
 
   // Cycle through zoom levels
   const cycleZoomLevel = () => {
@@ -489,7 +497,11 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
           {/* Away */}
-          <div className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-default">
+          <button
+            type="button"
+            onClick={() => toggleTooltip('away')}
+            className="relative group text-center p-2 bg-indigo-50 rounded-lg cursor-pointer active:bg-indigo-100 transition-colors"
+          >
             <div className="flex items-center justify-center mb-1">
               <Moon className="h-4 w-4 text-indigo-500" />
             </div>
@@ -500,8 +512,8 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
                 {daysSince.away.daysSince}d ago
               </p>
             )}
-            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+            <div className={`absolute left-0 bottom-full mb-2 z-50 pointer-events-none ${activeTooltip === 'away' ? 'block' : 'hidden group-hover:block'}`}>
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap text-left">
                 {daysSince.away.lastCity && daysSince.away.lastDate && (
                   <div className="font-medium text-gray-900 mb-1">
                     Last: {extractCityName(daysSince.away.lastCity)} {format(parseISO(daysSince.away.lastDate), 'M/d')}
@@ -519,10 +531,14 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
                 )}
               </div>
             </div>
-          </div>
+          </button>
 
           {/* Flights */}
-          <div className="relative group text-center p-2 bg-cyan-50 rounded-lg cursor-default">
+          <button
+            type="button"
+            onClick={() => toggleTooltip('flights')}
+            className="relative group text-center p-2 bg-cyan-50 rounded-lg cursor-pointer active:bg-cyan-100 transition-colors"
+          >
             <div className="flex items-center justify-center mb-1">
               <Plane className="h-4 w-4 text-cyan-500" />
             </div>
@@ -534,18 +550,22 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
               </p>
             )}
             {daysSince.flight.lastCity && daysSince.flight.lastDate && (
-              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+              <div className={`absolute left-0 bottom-full mb-2 z-50 pointer-events-none ${activeTooltip === 'flights' ? 'block' : 'hidden group-hover:block'}`}>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap text-left">
                   <div className="font-medium text-gray-900">
                     Last: {extractCityName(daysSince.flight.lastCity)} {format(parseISO(daysSince.flight.lastDate), 'M/d')}
                   </div>
                 </div>
               </div>
             )}
-          </div>
+          </button>
 
           {/* Trains */}
-          <div className="relative group text-center p-2 bg-amber-50 rounded-lg cursor-default">
+          <button
+            type="button"
+            onClick={() => toggleTooltip('trains')}
+            className="relative group text-center p-2 bg-amber-50 rounded-lg cursor-pointer active:bg-amber-100 transition-colors"
+          >
             <div className="flex items-center justify-center mb-1">
               <Train className="h-4 w-4 text-amber-500" />
             </div>
@@ -557,26 +577,30 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
               </p>
             )}
             {daysSince.train.lastCity && daysSince.train.lastDate && (
-              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+              <div className={`absolute left-0 bottom-full mb-2 z-50 pointer-events-none ${activeTooltip === 'trains' ? 'block' : 'hidden group-hover:block'}`}>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap text-left">
                   <div className="font-medium text-gray-900">
                     Last: {extractCityName(daysSince.train.lastCity)} {format(parseISO(daysSince.train.lastDate), 'M/d')}
                   </div>
                 </div>
               </div>
             )}
-          </div>
+          </button>
 
           {/* Cities */}
-          <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-default">
+          <button
+            type="button"
+            onClick={() => toggleTooltip('cities')}
+            className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-pointer active:bg-emerald-100 transition-colors"
+          >
             <div className="flex items-center justify-center mb-1">
               <MapPin className="h-4 w-4 text-emerald-500" />
             </div>
             <p className="text-lg font-bold text-emerald-700">{stats.uniqueCityCount}</p>
             <p className="text-[10px] text-emerald-600">Cities</p>
             {stats.cities.length > 0 && (
-              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+              <div className={`absolute right-0 bottom-full mb-2 z-50 pointer-events-none ${activeTooltip === 'cities' ? 'block' : 'hidden group-hover:block'}`}>
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap text-left">
                   <div className="font-medium text-gray-900 mb-1">Top cities</div>
                   <div className="text-gray-500 space-y-0.5">
                     {[...stats.cities].sort((a, b) => b.days - a.days).slice(0, 5).map((c, i) => (
@@ -586,7 +610,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
                 </div>
               </div>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Map with zoom controls */}
