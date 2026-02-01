@@ -1492,84 +1492,147 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
             </div>
           </div>
 
-          {/* Scatter plot: Temperature vs Humidity, colored by nice score */}
-          <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3 relative">
-            {/* Corner axis labels - Oura style */}
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">Humid</div>
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">Dry</div>
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/50">Cold</div>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/50">Hot</div>
+          {/* Bar chart: Temperature bins with humidity bars - Oura style */}
+          <div className="bg-white/10 rounded-xl p-3 backdrop-blur w-full max-w-sm mx-auto mb-3">
+            {(() => {
+              // Bin by temperature, track avg humidity deviation from 50%
+              const tempBins: Record<number, { count: number; totalHumDev: number; totalScore: number; rainDays: number }> = {}
+              const tempBinSize = 5
 
-            <svg viewBox="0 0 200 140" className="w-full h-36">
-              {/* Subtle grid lines */}
-              <line x1="20" y1="120" x2="180" y2="120" className="stroke-white/10" strokeWidth="0.5" />
-              <line x1="20" y1="70" x2="180" y2="70" className="stroke-white/10" strokeWidth="0.5" strokeDasharray="2,2" />
-              <line x1="20" y1="20" x2="180" y2="20" className="stroke-white/10" strokeWidth="0.5" />
-              <line x1="20" y1="20" x2="20" y2="120" className="stroke-white/10" strokeWidth="0.5" />
-              <line x1="100" y1="20" x2="100" y2="120" className="stroke-white/10" strokeWidth="0.5" strokeDasharray="2,2" />
-              <line x1="180" y1="20" x2="180" y2="120" className="stroke-white/10" strokeWidth="0.5" />
+              // Find temperature range from data
+              let minTemp = Infinity, maxTemp = -Infinity
+              stats.weatherDataPoints.forEach(d => {
+                minTemp = Math.min(minTemp, d.temp)
+                maxTemp = Math.max(maxTemp, d.temp)
+              })
+              // Round to nice bin boundaries
+              minTemp = Math.floor(minTemp / tempBinSize) * tempBinSize
+              maxTemp = Math.ceil(maxTemp / tempBinSize) * tempBinSize
 
-              {/* Data points - binned for density */}
-              {(() => {
-                // Bin data into buckets (5°F temp x 5% humidity)
-                const bins: Record<string, { count: number; totalScore: number; hasRain: boolean; x: number; y: number }> = {}
-                const minTemp = 20, maxTemp = 100, minHum = 20, maxHum = 80
-                const tempBinSize = 5, humBinSize = 5
+              stats.weatherDataPoints.forEach(d => {
+                const tempBin = Math.floor(d.temp / tempBinSize) * tempBinSize
+                if (!tempBins[tempBin]) {
+                  tempBins[tempBin] = { count: 0, totalHumDev: 0, totalScore: 0, rainDays: 0 }
+                }
+                tempBins[tempBin].count++
+                tempBins[tempBin].totalHumDev += (50 - d.humidity) // positive = dry, negative = humid
+                tempBins[tempBin].totalScore += d.niceScore
+                if (d.precip > 0) tempBins[tempBin].rainDays++
+              })
 
-                stats.weatherDataPoints.forEach(d => {
-                  const tempBin = Math.floor((Math.max(minTemp, Math.min(maxTemp, d.temp)) - minTemp) / tempBinSize)
-                  const humBin = Math.floor((Math.max(minHum, Math.min(maxHum, d.humidity)) - minHum) / humBinSize)
-                  const key = `${tempBin},${humBin}`
+              // Find max deviation for scale
+              let maxDev = 0
+              Object.values(tempBins).forEach(bin => {
+                const avgDev = Math.abs(bin.totalHumDev / bin.count)
+                maxDev = Math.max(maxDev, avgDev)
+              })
+              maxDev = Math.ceil(maxDev / 5) * 5 + 5 // Round up and add padding
 
-                  if (!bins[key]) {
-                    const binTempCenter = minTemp + (tempBin + 0.5) * tempBinSize
-                    const binHumCenter = minHum + (humBin + 0.5) * humBinSize
-                    const x = 20 + ((binTempCenter - minTemp) / (maxTemp - minTemp)) * 160
-                    const y = 120 - ((binHumCenter - minHum) / (maxHum - minHum)) * 100
-                    bins[key] = { count: 0, totalScore: 0, hasRain: false, x, y }
-                  }
-                  bins[key].count++
-                  bins[key].totalScore += d.niceScore
-                  if (d.precip > 0) bins[key].hasRain = true
-                })
+              const bins = Object.entries(tempBins).sort((a, b) => Number(a[0]) - Number(b[0]))
+              const barWidth = 160 / bins.length
+              const centerY = 70
+              const maxBarHeight = 45
 
-                const maxCount = Math.max(...Object.values(bins).map(b => b.count))
+              return (
+                <>
+                  <svg viewBox="0 0 200 140" className="w-full h-32">
+                    {/* Center line (50% humidity) */}
+                    <line x1="20" y1={centerY} x2="180" y2={centerY} className="stroke-white/30" strokeWidth="1" />
 
-                return Object.values(bins).map((bin, i) => {
-                  const avgScore = bin.totalScore / bin.count
-                  const hue = (avgScore / 100) * 120
-                  const color = `hsl(${hue}, 70%, 55%)`
-                  // Size: 3-10 based on count
-                  const size = 3 + (bin.count / maxCount) * 7
-                  return (
-                    <g key={i}>
-                      {bin.hasRain && (
-                        <circle cx={bin.x} cy={bin.y} r={size + 3} fill="none" stroke="#60a5fa" strokeWidth="1.5" opacity={0.5} />
-                      )}
-                      <circle cx={bin.x} cy={bin.y} r={size} fill={color} opacity={0.85} />
-                      {bin.count > 5 && (
-                        <text x={bin.x} y={bin.y + 1} className="fill-white text-[6px] font-medium" textAnchor="middle" dominantBaseline="middle">
-                          {bin.count}
+                    {/* Y-axis labels */}
+                    <text x="12" y="28" className="fill-white/50 text-[8px]" textAnchor="middle">Dry</text>
+                    <text x="12" y={centerY + 2} className="fill-white/40 text-[7px]" textAnchor="middle">50%</text>
+                    <text x="12" y="118" className="fill-white/50 text-[8px]" textAnchor="middle">Humid</text>
+
+                    {/* Bars */}
+                    {bins.map(([tempStr, bin], i) => {
+                      const temp = Number(tempStr)
+                      const avgHumDev = bin.totalHumDev / bin.count // positive = dry (up), negative = humid (down)
+                      const avgScore = bin.totalScore / bin.count
+                      const barHeight = (Math.abs(avgHumDev) / maxDev) * maxBarHeight
+                      const x = 20 + i * barWidth + barWidth * 0.15
+                      const width = barWidth * 0.7
+
+                      // Color based on nice score
+                      const hue = (avgScore / 100) * 120
+                      const color = `hsl(${hue}, 65%, 55%)`
+                      const brightColor = `hsl(${hue}, 75%, 65%)`
+
+                      // Highlight bar if most days
+                      const isMax = bin.count === Math.max(...Object.values(tempBins).map(b => b.count))
+
+                      if (avgHumDev >= 0) {
+                        // Dry - bar goes up
+                        return (
+                          <g key={temp}>
+                            <rect
+                              x={x}
+                              y={centerY - barHeight}
+                              width={width}
+                              height={barHeight}
+                              fill={isMax ? brightColor : color}
+                              rx="2"
+                            />
+                            {isMax && (
+                              <text x={x + width/2} y={centerY - barHeight - 4} className="fill-white text-[7px] font-medium" textAnchor="middle">
+                                {bin.count}d
+                              </text>
+                            )}
+                          </g>
+                        )
+                      } else {
+                        // Humid - bar goes down
+                        return (
+                          <g key={temp}>
+                            <rect
+                              x={x}
+                              y={centerY}
+                              width={width}
+                              height={barHeight}
+                              fill={isMax ? brightColor : color}
+                              rx="2"
+                            />
+                            {isMax && (
+                              <text x={x + width/2} y={centerY + barHeight + 10} className="fill-white text-[7px] font-medium" textAnchor="middle">
+                                {bin.count}d
+                              </text>
+                            )}
+                          </g>
+                        )
+                      }
+                    })}
+
+                    {/* X-axis temp labels */}
+                    {bins.filter((_, i) => i % 2 === 0 || bins.length <= 8).map(([tempStr], i) => {
+                      const actualIndex = bins.findIndex(b => b[0] === tempStr)
+                      return (
+                        <text
+                          key={tempStr}
+                          x={20 + actualIndex * barWidth + barWidth/2}
+                          y="135"
+                          className="fill-white/50 text-[7px]"
+                          textAnchor="middle"
+                        >
+                          {tempStr}°
                         </text>
-                      )}
-                    </g>
-                  )
-                })
-              })()}
-            </svg>
+                      )
+                    })}
+                  </svg>
 
-            {/* Bottom legend */}
-            <div className="flex justify-center gap-4 mt-1">
-              <span className="text-[9px] text-white/40 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span> comfy
-              </span>
-              <span className="text-[9px] text-white/40 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-500"></span> harsh
-              </span>
-              <span className="text-[9px] text-white/40 flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full border border-blue-400"></span> rain
-              </span>
-            </div>
+                  {/* Legend */}
+                  <div className="flex justify-center gap-3 -mt-1">
+                    <span className="text-[9px] text-white/50">Cold → Hot</span>
+                    <span className="text-[9px] text-white/40">|</span>
+                    <span className="text-[9px] text-white/40 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-sm bg-green-500"></span> comfy
+                    </span>
+                    <span className="text-[9px] text-white/40 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-sm bg-red-500"></span> harsh
+                    </span>
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* Best/Worst and Temp extremes */}
