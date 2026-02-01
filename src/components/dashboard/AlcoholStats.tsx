@@ -267,17 +267,17 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
         <table className="w-full text-sm h-full table-fixed">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-1.5 font-medium text-gray-500 w-16"></th>
-              <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
+              <th className="text-left py-1.5 font-medium text-gray-500 w-12"></th>
+              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
                 L30
               </th>
-              <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
+              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
                 {stats.twoYearsAgoLabel}
               </th>
-              <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
+              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
                 {stats.lastYearLabel}
               </th>
-              <th className="text-center py-1.5 font-medium text-gray-500 text-xs truncate">
+              <th className="text-right py-1.5 font-medium text-gray-500 text-xs truncate px-1">
                 {stats.currentYearLabel}
               </th>
             </tr>
@@ -295,16 +295,16 @@ export function AlcoholStats({ entries, selectedMetrics = defaultMetrics, title 
                 <td className="text-gray-700 font-medium text-xs align-middle truncate">
                   {row.label}
                 </td>
-                <td className="text-center text-gray-900 text-xs align-middle">
+                <td className="text-right text-gray-900 text-xs align-middle px-1">
                   {row.last30 || '-'}
                 </td>
-                <td className="text-center text-gray-900 text-xs align-middle">
+                <td className="text-right text-gray-900 text-xs align-middle px-1">
                   {row.twoYearsAgo || '-'}
                 </td>
-                <td className="text-center text-gray-900 text-xs align-middle">
+                <td className="text-right text-gray-900 text-xs align-middle px-1">
                   {row.lastYear || '-'}
                 </td>
-                <td className="text-center text-gray-900 text-xs align-middle">
+                <td className="text-right text-gray-900 text-xs align-middle px-1">
                   {row.currentYear || '-'}
                 </td>
               </tr>
