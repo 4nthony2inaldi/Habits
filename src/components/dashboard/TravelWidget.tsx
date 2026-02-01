@@ -591,7 +591,7 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
 
         {/* Map with zoom controls */}
         {mounted && stats.cities.length > 0 && (
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col overflow-visible">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-gray-500">
                 {zoomLevel === 'cities' ? `${displayCities.length} cities` :

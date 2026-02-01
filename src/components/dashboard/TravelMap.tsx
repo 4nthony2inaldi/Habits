@@ -99,14 +99,16 @@ export default function TravelMap({ cities }: TravelMapProps) {
         icon: createIcon(city.days),
       }).addTo(map)
 
-      // Build trip list for popup
-      const tripLines = city.trips.map((trip) => formatTrip(trip)).join('<br/>')
+      // Build trip list for popup - limit to 5 most recent trips
+      const recentTrips = city.trips.slice(-5)
+      const tripLines = recentTrips.map((trip) => formatTrip(trip)).join('<br/>')
+      const moreTrips = city.trips.length > 5 ? `<br/><span style="color: #999; font-size: 10px;">+${city.trips.length - 5} more</span>` : ''
 
       marker.bindPopup(`
         <div style="text-align: center; min-width: 120px;">
           <strong>${city.name}</strong>
           <br/>
-          <span style="color: #666; font-size: 12px;">${tripLines}</span>
+          <span style="color: #666; font-size: 12px;">${tripLines}${moreTrips}</span>
         </div>
       `)
     })
@@ -125,7 +127,7 @@ export default function TravelMap({ cities }: TravelMapProps) {
   return (
     <div
       ref={mapContainerRef}
-      className="flex-1 min-h-0 rounded-lg overflow-hidden"
+      className="flex-1 min-h-0 rounded-lg relative"
       style={{ minHeight: '150px' }}
     />
   )

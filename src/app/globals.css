@@ -240,3 +240,22 @@ input[type="checkbox"].peer:checked + div {
 .grid-locked .widget-drag-handle {
   display: none !important;
 }
+
+/* Leaflet map z-index fixes - ensure dropdowns appear above map */
+.leaflet-container {
+  z-index: 10 !important;
+}
+.leaflet-pane {
+  z-index: 10 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+/* Allow popup to have higher z-index when visible */
+.leaflet-popup {
+  z-index: 20 !important;
+}
+.leaflet-popup-pane {
+  z-index: 20 !important;
+}
