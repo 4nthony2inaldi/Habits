@@ -164,18 +164,20 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col">
-        {/* Header row with year labels */}
-        <div className="flex mb-2">
-          <div className="w-16 flex-shrink-0" /> {/* Spacer for row labels */}
-          {columns.map((col, idx) => (
-            <div key={idx} className="flex-1 text-center text-sm font-medium text-gray-700">
-              {col.label}
-            </div>
-          ))}
-        </div>
+        {/* Header row with year labels - only show in byYear mode */}
+        {viewMode === 'byYear' && (
+          <div className="flex mb-2">
+            <div className="w-14 flex-shrink-0" /> {/* Spacer for row labels */}
+            {columns.map((col, idx) => (
+              <div key={idx} className="flex-1 text-center text-sm font-medium text-gray-700">
+                {col.label}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Grid of bars */}
-        <div className="flex-1 flex flex-col justify-evenly gap-1">
+        <div className="flex-1 flex flex-col justify-evenly">
           {data.typeOrder.map((type) => (
             <div key={type} className="flex items-center">
               {/* Row label */}
@@ -192,7 +194,7 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
                   <div key={colIdx} className="flex-1 px-1">
                     <div
                       className={cn(
-                        'h-6 rounded-md flex items-center justify-center transition-all',
+                        'h-7 rounded-md flex items-center justify-center transition-all',
                         TYPE_COLORS[type].bg
                       )}
                       style={{
@@ -200,8 +202,8 @@ export function AlcoholByType({ entries, title = 'Types', subtitle }: AlcoholByT
                       }}
                     >
                       {/* Show percentage inside bar for first column if wide enough */}
-                      {isFirstColumn && percent >= 15 && (
-                        <span className="text-white text-[10px] font-medium">
+                      {isFirstColumn && percent >= 12 && (
+                        <span className="text-white text-xs font-medium">
                           {percent}%
                         </span>
                       )}
