@@ -230,6 +230,7 @@ export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings
 
         {/* Sparkline - 12 week trend */}
         <div className="mt-3 flex flex-col items-center">
+          <div className="text-[10px] text-gray-400 mb-1">12 week trend</div>
           <svg
             width={sparklineWidth}
             height={sparklineHeight}
@@ -266,11 +267,10 @@ export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings
               )
             })}
           </svg>
-          <div className="text-[10px] text-gray-400 mt-1">12 week trend</div>
         </div>
 
-        {/* Events this week - mini bar chart */}
-        <div className="mt-4 flex flex-col items-center w-full">
+        {/* Events this week - mini bar chart (pushed to bottom) */}
+        <div className="mt-auto pt-4 flex flex-col items-center w-full">
           <div className="text-[10px] text-gray-500 mb-1">
             events this week: <span className="font-medium text-gray-700">{currentWeekEvents}</span>
           </div>
