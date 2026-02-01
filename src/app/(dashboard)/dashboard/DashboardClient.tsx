@@ -150,9 +150,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     <div className="space-y-4">
       {/* Mobile: render controls in header via portal */}
       {mobilePortalContainer && dashboardControls && createPortal(
-        <div className="py-2 px-4 border-t border-gray-100">
-          {dashboardControls}
-        </div>,
+        dashboardControls,
         mobilePortalContainer
       )}
 

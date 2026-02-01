@@ -57,7 +57,7 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center space-x-2">
+          <Link href="/dashboard" className="flex items-center space-x-2 flex-shrink-0">
             <div className="h-8 w-8 rounded-lg bg-purple-600 flex items-center justify-center">
               <span className="text-white font-bold text-lg">H</span>
             </div>
@@ -65,6 +65,11 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
               Healthy Habits
             </span>
           </Link>
+
+          {/* Mobile dashboard controls slot - in main header bar */}
+          {isDashboard && (
+            <div id="mobile-dashboard-controls" className="md:hidden flex-1 flex justify-center" />
+          )}
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
@@ -152,11 +157,6 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
             </button>
           </div>
         </div>
-
-        {/* Mobile dashboard controls slot - portal target */}
-        {isDashboard && (
-          <div id="mobile-dashboard-controls" className="md:hidden" />
-        )}
       </div>
 
       {/* Mobile menu */}
