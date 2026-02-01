@@ -200,7 +200,14 @@ export async function refreshWhoopToken(connection: HealthConnection): Promise<{
 // Fetch sleep and activity data from Oura for a specific date
 export async function fetchOuraData(accessToken: string, date: string): Promise<NormalizedSleepData | null> {
   try {
-    // Fetch daily sleep score
+    // Calculate the day before for sleep period lookup
+    // Sleep periods are indexed by bedtime date, so a Jan 31 wake-up might be under Jan 30
+    const targetDate = new Date(date)
+    const prevDate = new Date(targetDate)
+    prevDate.setDate(prevDate.getDate() - 1)
+    const prevDateStr = prevDate.toISOString().split('T')[0]
+
+    // Fetch daily sleep score for the target date
     const sleepResponse = await fetch(
       `https://api.ouraring.com/v2/usercollection/daily_sleep?start_date=${date}&end_date=${date}`,
       {
@@ -208,15 +215,15 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods
+    // Fetch detailed sleep periods - query both prev day and target day to catch the right sleep session
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${date}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${date}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     )
 
-    // Fetch daily activity (for steps)
+    // Fetch daily activity (for steps) for the target date
     const activityResponse = await fetch(
       `https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${date}&end_date=${date}`,
       {
@@ -234,8 +241,15 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
     const activityData = await activityResponse.json()
 
     const dailySleep: OuraDailySleep | undefined = sleepData.data?.[0]
-    const sleepPeriod: OuraSleepPeriod | undefined = sleepPeriodsData.data?.[0]
     const dailyActivity: OuraDailyActivity | undefined = activityData.data?.[0]
+
+    // Find the sleep period that ended on the target date (main overnight sleep)
+    // Sleep periods have bedtime_end which is the wake-up time
+    const sleepPeriods: OuraSleepPeriod[] = sleepPeriodsData.data || []
+    const sleepPeriod: OuraSleepPeriod | undefined = sleepPeriods.find((sp) => {
+      const endDate = new Date(sp.bedtime_end).toISOString().split('T')[0]
+      return endDate === date
+    }) || sleepPeriods[sleepPeriods.length - 1] // Fallback to most recent if no exact match
 
     // Extract sleep times from the longest sleep period
     let sleepStart: string | null = null
