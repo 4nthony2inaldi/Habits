@@ -6,7 +6,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Target, Wine, Plane, Heart, Tre
 import { cn } from '@/lib/utils/cn'
 import type { DailyEntryWithRelations, HabitType, EventType, Profile } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
-import html2canvas from 'html2canvas'
+import { toPng } from 'html-to-image'
 
 interface YearWrappedProps {
   entries: DailyEntryWithRelations[]
@@ -1597,20 +1597,14 @@ export function YearWrapped({ entries, profile, year, onClose }: YearWrappedProp
           throw new Error('Slide container lost')
         }
 
-        // Capture the slide
+        // Capture the slide using html-to-image
         console.log(`Capturing slide ${i + 1}/${slides.length}...`)
-        const canvas = await html2canvas(slideContainerRef.current, {
+        const dataUrl = await toPng(slideContainerRef.current, {
           backgroundColor: '#000000',
-          scale: 2,
-          useCORS: true,
-          logging: true, // Enable logging for debugging
-          allowTaint: true,
-          width: slideContainerRef.current.offsetWidth,
-          height: slideContainerRef.current.offsetHeight,
+          pixelRatio: 2, // Higher quality
+          cacheBust: true,
         })
 
-        // Convert to data URL
-        const dataUrl = canvas.toDataURL('image/png')
         savedImages.push(dataUrl)
         console.log(`Slide ${i + 1} captured successfully`)
 
