@@ -18,6 +18,7 @@ const TravelMap = dynamic(() => import('./TravelMap'), {
 
 interface TravelWidgetProps {
   entries: DailyEntryWithRelations[]
+  allEntries?: DailyEntryWithRelations[] // All-time entries for "days since" (ignores date filters)
   profile: Profile
   title?: string
   subtitle?: string
@@ -36,7 +37,7 @@ interface CityData {
   trips: Trip[]
 }
 
-export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
+export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -78,19 +79,14 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
     return trips
   }
 
-  // Calculate travel stats
+  // Calculate travel stats (respects date filters)
   const stats = useMemo(() => {
     const homeCity = profile.home_city?.toLowerCase() || ''
-    const today = new Date()
 
     // Count nights away (city_sleep is not home or unknown/empty)
     let nightsAway = 0
     let flights = 0
     let trains = 0
-    // Track dates for "days since" calculations
-    const awayDates: string[] = []
-    const flightDates: string[] = []
-    const trainDates: string[] = []
     // Track unique dates per location coordinate key
     const cityDatesMap = new Map<string, { name: string; lat: number; lng: number; dates: Set<string> }>()
     // Track sleep cities for tooltip
@@ -100,11 +96,9 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       // Count flights and trains from life_events
       if (entry.life_events?.some((e) => e.event_type === 'flight')) {
         flights++
-        flightDates.push(entry.entry_date)
       }
       if (entry.life_events?.some((e) => e.event_type === 'train')) {
         trains++
-        trainDates.push(entry.entry_date)
       }
 
       // Check if slept away from home
@@ -112,7 +106,6 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       const sleepCityLower = sleepCity.toLowerCase()
       if (sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity) {
         nightsAway++
-        awayDates.push(entry.entry_date)
         // Track sleep city with original casing
         const existingCount = sleepCitiesMap.get(sleepCity) || 0
         sleepCitiesMap.set(sleepCity, existingCount + 1)
@@ -161,13 +154,6 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       .map(([name, nights]) => ({ name, nights }))
       .sort((a, b) => b.nights - a.nights)
 
-    // Calculate days since last occurrence for each metric
-    const getDaysSince = (dates: string[]): number | null => {
-      if (dates.length === 0) return null
-      const sorted = [...dates].sort((a, b) => b.localeCompare(a)) // Sort descending
-      return differenceInDays(today, parseISO(sorted[0]))
-    }
-
     return {
       nightsAway,
       flights,
@@ -175,11 +161,47 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
       cities,
       uniqueCityCount: cities.length,
       sleepCities,
-      daysSinceAway: getDaysSince(awayDates),
-      daysSinceFlight: getDaysSince(flightDates),
-      daysSinceTrain: getDaysSince(trainDates),
     }
   }, [entries, profile.home_city])
+
+  // Calculate "days since" from all-time data (ignores date filters)
+  const daysSince = useMemo(() => {
+    const homeCity = profile.home_city?.toLowerCase() || ''
+    const today = new Date()
+    const sourceEntries = allEntries || entries
+
+    // Track dates for "days since" calculations
+    const awayDates: string[] = []
+    const flightDates: string[] = []
+    const trainDates: string[] = []
+
+    sourceEntries.forEach((entry) => {
+      if (entry.life_events?.some((e) => e.event_type === 'flight')) {
+        flightDates.push(entry.entry_date)
+      }
+      if (entry.life_events?.some((e) => e.event_type === 'train')) {
+        trainDates.push(entry.entry_date)
+      }
+
+      const sleepCity = entry.city_sleep || ''
+      const sleepCityLower = sleepCity.toLowerCase()
+      if (sleepCityLower && sleepCityLower !== 'home' && sleepCityLower !== 'unknown' && sleepCityLower !== homeCity) {
+        awayDates.push(entry.entry_date)
+      }
+    })
+
+    const getDaysSince = (dates: string[]): number | null => {
+      if (dates.length === 0) return null
+      const sorted = [...dates].sort((a, b) => b.localeCompare(a)) // Sort descending
+      return differenceInDays(today, parseISO(sorted[0]))
+    }
+
+    return {
+      away: getDaysSince(awayDates),
+      flight: getDaysSince(flightDates),
+      train: getDaysSince(trainDates),
+    }
+  }, [allEntries, entries, profile.home_city])
 
   // No travel data
   if (stats.nightsAway === 0 && stats.flights === 0 && stats.trains === 0 && stats.cities.length === 0) {
@@ -218,8 +240,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             </div>
             <p className="text-lg font-bold text-indigo-700">{stats.nightsAway}</p>
             <p className="text-[10px] text-indigo-600">Away</p>
-            {stats.daysSinceAway !== null && (
-              <p className="text-[9px] text-indigo-400">{stats.daysSinceAway}d ago</p>
+            {daysSince.away !== null && (
+              <p className="text-[9px] text-indigo-400">{daysSince.away}d ago</p>
             )}
             {stats.sleepCities.length > 0 && (
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50 pointer-events-none">
@@ -240,8 +262,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             </div>
             <p className="text-lg font-bold text-cyan-700">{stats.flights}</p>
             <p className="text-[10px] text-cyan-600">Flights</p>
-            {stats.daysSinceFlight !== null && (
-              <p className="text-[9px] text-cyan-400">{stats.daysSinceFlight}d ago</p>
+            {daysSince.flight !== null && (
+              <p className="text-[9px] text-cyan-400">{daysSince.flight}d ago</p>
             )}
           </div>
           <div className="text-center p-2 bg-amber-50 rounded-lg">
@@ -250,8 +272,8 @@ export function TravelWidget({ entries, profile, title = 'Travel', subtitle }: T
             </div>
             <p className="text-lg font-bold text-amber-700">{stats.trains}</p>
             <p className="text-[10px] text-amber-600">Trains</p>
-            {stats.daysSinceTrain !== null && (
-              <p className="text-[9px] text-amber-400">{stats.daysSinceTrain}d ago</p>
+            {daysSince.train !== null && (
+              <p className="text-[9px] text-amber-400">{daysSince.train}d ago</p>
             )}
           </div>
           <div className="relative group text-center p-2 bg-emerald-50 rounded-lg cursor-help">
