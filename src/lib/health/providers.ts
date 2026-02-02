@@ -229,11 +229,14 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods - query PREVIOUS day (bedtime date)
-    // daily_sleep uses wake-up date, but sleep periods use bedtime date
-    // So Jan 24 wake-up = sleep period with day Jan 23 (went to bed Jan 23 night)
+    // Fetch detailed sleep periods - query a wider range to find the data
+    // We'll query from 2 days before to the target date to see what comes back
+    const twoDaysAgo = new Date(targetDate)
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0]
+
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${prevDateStr}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${twoDaysAgoStr}&end_date=${date}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
@@ -328,7 +331,7 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       steps: dailyActivity?.steps ?? null,
       source: 'oura',
       _debug: {
-        queriedDate: `sleep:${prevDateStr}, activity:${prevDateStr}-${nextDateStr}`,
+        queriedDate: `sleep:${twoDaysAgoStr}-${date}, activity:${prevDateStr}-${nextDateStr}`,
         sleepPeriodsCount: sleepPeriods.length,
         sleepPeriods: sleepPeriods.map(sp => ({
           day: sp.day,
