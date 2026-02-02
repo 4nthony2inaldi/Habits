@@ -98,7 +98,11 @@ export function HomeCityHistory({
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       console.error('Failed to add home city history:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add entry')
+      // Handle both native Error and Supabase PostgrestError objects
+      const errorMessage = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message || 'Failed to add entry'
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -117,7 +121,10 @@ export function HomeCityHistory({
       setHistory(prev => prev.filter(h => h.id !== id))
     } catch (err) {
       console.error('Failed to delete home city history:', err)
-      setError(err instanceof Error ? err.message : 'Failed to delete entry')
+      const errorMessage = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message || 'Failed to delete entry'
+      setError(errorMessage)
     }
   }
 
