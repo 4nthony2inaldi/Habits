@@ -306,16 +306,9 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       total_sleep_hrs: Math.round(sleepPeriod.total_sleep_duration / 3600 * 100) / 100,
     } : null)
 
-    // Extract sleep times from the longest sleep period
-    let sleepStart: string | null = null
-    let sleepEnd: string | null = null
-
-    if (sleepPeriod) {
-      const startDate = new Date(sleepPeriod.bedtime_start)
-      const endDate = new Date(sleepPeriod.bedtime_end)
-      sleepStart = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`
-      sleepEnd = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
-    }
+    // Store raw ISO timestamps - client will format in browser timezone
+    const sleepStart: string | null = sleepPeriod?.bedtime_start ?? null
+    const sleepEnd: string | null = sleepPeriod?.bedtime_end ?? null
 
     return {
       date,
