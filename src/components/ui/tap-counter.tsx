@@ -36,16 +36,16 @@ export function TapCounter({
   }
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex flex-col items-center gap-1', className)}>
       {label && (
-        <span className="text-sm text-gray-700 dark:text-gray-300 min-w-[70px]">{label}</span>
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{label}</span>
       )}
       <button
         type="button"
         onClick={handleTap}
         className={cn(
           'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg transition-all active:scale-95 shadow-sm select-none',
-          value > 0 ? color : 'bg-gray-300 dark:bg-gray-600'
+          value > 0 ? color : 'bg-gray-500 dark:bg-gray-600'
         )}
       >
         {value}

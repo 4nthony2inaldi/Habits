@@ -605,7 +605,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
               control={control}
               render={({ field }) => (
                 <PillButton
-                  label="Had Sex"
+                  label="Sex"
                   checked={(field.value || 0) > 0}
                   onChange={(checked) => field.onChange(checked ? 1 : 0)}
                   color="purple"
@@ -812,7 +812,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         <div className="space-y-3">
           <p className="text-xs text-gray-400">tap to add · double-tap to subtract</p>
           {/* Simple drink types - grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {!hiddenFields.includes('beers') && (
               <Controller
                 name="beers"
@@ -845,8 +845,8 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           {/* Wine breakdown */}
           {!hiddenFields.includes('wine') && (
             <div className="pt-2 border-t">
-              <Label className="text-xs font-medium text-gray-500 mb-1 block">Wine</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Label className="text-xs font-medium text-gray-600 mb-2 block">Wine</Label>
+              <div className="grid grid-cols-3 gap-2">
                 <Controller
                   name="wine_red"
                   control={control}
@@ -875,8 +875,8 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
           {/* Cocktail/Liquor breakdown */}
           {!hiddenFields.includes('liquor') && (
             <div className="pt-2 border-t">
-              <Label className="text-xs font-medium text-gray-500 mb-1 block">Cocktails</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Label className="text-xs font-medium text-gray-600 mb-2 block">Cocktails</Label>
+              <div className="grid grid-cols-3 gap-2">
                 <Controller
                   name="liquor_vodka"
                   control={control}
