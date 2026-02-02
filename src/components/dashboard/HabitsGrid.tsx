@@ -229,12 +229,39 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     }
   }, [entries, dateRange.end])
 
-  const data = useMemo(() => {
-    // Get last N days from end of date range (most recent first)
-    const dates: string[] = []
+  // Determine which dates to display - either recent calendar days OR most recent logged days
+  const displayDates = useMemo(() => {
+    // First try: get last N calendar days from end of date range (most recent first)
+    const calendarDates: string[] = []
     for (let i = 0; i < showDays; i++) {
-      dates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
+      calendarDates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
     }
+
+    // Check if there are any entries in these recent calendar days
+    const hasRecentEntries = entries.some((entry) =>
+      calendarDates.includes(entry.entry_date)
+    )
+
+    if (hasRecentEntries) {
+      return calendarDates
+    }
+
+    // No recent entries - use the most recent N logged days instead
+    if (entries.length === 0) {
+      return calendarDates // No entries at all, fall back to calendar dates
+    }
+
+    // Sort entries by date descending and take the most recent N unique dates
+    const sortedDates = [...new Set(entries.map((e) => e.entry_date))]
+      .sort((a, b) => b.localeCompare(a)) // Descending order (most recent first)
+      .slice(0, showDays)
+
+    return sortedDates
+  }, [entries, showDays, dateRange.end])
+
+  const data = useMemo(() => {
+    // Use the pre-computed display dates
+    const dates = displayDates
 
     // Create map of entries by date
     const entriesByDate = new Map<string, DailyEntryWithRelations>()
@@ -312,27 +339,20 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
         trackedDays,
       }
     })
-  }, [entries, showDays, selectedHabits, dateRange.end])
+  }, [entries, selectedHabits, displayDates])
 
   const dateHeaders = useMemo(() => {
-    const headers: { day: string; date: string }[] = []
-    for (let i = 0; i < showDays; i++) {
-      const d = subDays(dateRange.end, i)
-      headers.push({
+    return displayDates.map((dateStr) => {
+      const d = parseISO(dateStr)
+      return {
         day: format(d, 'EEE'),
         date: format(d, 'M/d'),
-      })
-    }
-    return headers
-  }, [showDays, dateRange.end])
+      }
+    })
+  }, [displayDates])
 
   // Compute status indicator data for each day (not included in habits score)
   const statusIndicatorData = useMemo(() => {
-    const dates: string[] = []
-    for (let i = 0; i < showDays; i++) {
-      dates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
-    }
-
     const entriesByDate = new Map<string, DailyEntryWithRelations>()
     entries.forEach((entry) => {
       entriesByDate.set(entry.entry_date, entry)
@@ -347,7 +367,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
       : allIndicators
 
     return indicators.map((indicator) => {
-      const dayData = dates.map((date) => {
+      const dayData = displayDates.map((date) => {
         const entry = entriesByDate.get(date) || null
         const dateObj = parseISO(date)
 
@@ -379,7 +399,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
         days: dayData,
       }
     })
-  }, [entries, showDays, dateRange.end, selectedStatusIndicators])
+  }, [entries, displayDates, selectedStatusIndicators])
 
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
     if (status === null) {
