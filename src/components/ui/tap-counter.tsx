@@ -38,7 +38,7 @@ export function TapCounter({
   return (
     <div className={cn('flex flex-col items-center gap-1', className)}>
       {label && (
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{label}</span>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{label}</span>
       )}
       <button
         type="button"

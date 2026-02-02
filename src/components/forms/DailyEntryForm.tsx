@@ -902,7 +902,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                   name="liquor_whiskey"
                   control={control}
                   render={({ field }) => (
-                    <TapCounter label="Whiskey" value={field.value || 0} onChange={field.onChange} color="bg-amber-700" />
+                    <TapCounter label="Brown" value={field.value || 0} onChange={field.onChange} color="bg-amber-700" />
                   )}
                 />
                 <Controller
