@@ -121,6 +121,34 @@ export function CityAutocomplete({
       // Filter to prioritize populated places (cities, towns, villages, etc.)
       // class=place or class=boundary with type=administrative are what we want
       const placeTypes = ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb', 'neighbourhood', 'administrative']
+
+      // Score function to prioritize specific cities over generic administrative boundaries
+      const getResultScore = (result: NominatimResult): number => {
+        let score = result.importance || 0
+
+        // Strongly prioritize results that have a specific city/town/village in address
+        const hasSpecificPlace = result.address && (result.address.city || result.address.town || result.address.village)
+        if (hasSpecificPlace) {
+          score += 10 // Big boost for having a specific place name
+        }
+
+        // Prioritize place class items (actual places vs boundaries)
+        if (result.class === 'place') {
+          score += 5
+        }
+
+        // Deprioritize state/country level administrative boundaries
+        // These are usually what we DON'T want when searching for a specific city
+        if (result.class === 'boundary' && result.type === 'administrative') {
+          // Check if it's a state/region level boundary (no city in address = likely state/country level)
+          if (!result.address?.city && !result.address?.town && !result.address?.village) {
+            score -= 10 // Penalize generic administrative boundaries
+          }
+        }
+
+        return score
+      }
+
       const filtered = data
         .filter(result => {
           // Include if it's a place class or boundary/administrative
@@ -130,7 +158,7 @@ export function CityAutocomplete({
           const hasPlace = result.address && (result.address.city || result.address.town || result.address.village)
           return isPlaceClass || isBoundary || isPlaceType || hasPlace
         })
-        .sort((a, b) => (b.importance || 0) - (a.importance || 0))
+        .sort((a, b) => getResultScore(b) - getResultScore(a))
         .slice(0, 5)
 
       // If no filtered results, show first 5 of any results as fallback
