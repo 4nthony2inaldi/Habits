@@ -11,6 +11,7 @@ import {
   XCircle,
   Clock,
   ExternalLink,
+  History,
 } from 'lucide-react'
 import type { HealthProvider } from '@/types/database'
 
@@ -29,6 +30,7 @@ export function HealthConnectionsSettings() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState<HealthProvider | null>(null)
   const [disconnecting, setDisconnecting] = useState<HealthProvider | null>(null)
+  const [historicalSyncing, setHistoricalSyncing] = useState(false)
 
   // Fetch connections on mount
   useEffect(() => {
@@ -121,6 +123,43 @@ export function HealthConnectionsSettings() {
       alert('Failed to sync data')
     } finally {
       setSyncing(null)
+    }
+  }
+
+  const handleHistoricalSync = async (days: number) => {
+    if (!confirm(`This will sync the last ${days} days of Oura data. This may take a moment. Continue?`)) {
+      return
+    }
+
+    setHistoricalSyncing(true)
+    try {
+      const response = await fetch('/api/health/historical-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        await fetchConnections()
+        alert(
+          `Historical sync complete!\n\n` +
+          `Total days: ${data.total}\n` +
+          `Synced: ${data.synced}\n` +
+          `Created: ${data.created}\n` +
+          `Updated: ${data.updated}\n` +
+          `Skipped (no data): ${data.skipped}\n` +
+          `Errors: ${data.errors}`
+        )
+      } else {
+        alert(data.error || 'Historical sync failed')
+      }
+    } catch (error) {
+      console.error('Failed to historical sync:', error)
+      alert('Failed to sync historical data')
+    } finally {
+      setHistoricalSyncing(false)
     }
   }
 
@@ -256,6 +295,40 @@ export function HealthConnectionsSettings() {
           <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
           <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" strokeWidth="2" />
         </svg>
+      )}
+
+      {/* Historical sync for Oura */}
+      {getConnection('oura') && (
+        <div className="p-4 border rounded-lg bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <History className="h-5 w-5 text-gray-500" />
+              <div>
+                <h4 className="font-medium text-gray-900 text-sm">Historical Sync</h4>
+                <p className="text-xs text-gray-500">One-time import of past Oura data</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleHistoricalSync(30)}
+                disabled={historicalSyncing}
+              >
+                {historicalSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                30 days
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleHistoricalSync(90)}
+                disabled={historicalSyncing}
+              >
+                90 days
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {renderConnectionCard(
