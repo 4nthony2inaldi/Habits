@@ -87,7 +87,10 @@ export function HealthConnectionsSettings() {
       const response = await fetch('/api/health/provider-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({
+          provider,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
       })
 
       const data = await response.json()
@@ -144,7 +147,11 @@ export function HealthConnectionsSettings() {
       const response = await fetch('/api/health/historical-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days, offset }),
+        body: JSON.stringify({
+          days,
+          offset,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
       })
 
       const data = await response.json()

@@ -270,7 +270,11 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         const syncRes = await fetch('/api/health/provider-sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider, date: selectedDate }),
+          body: JSON.stringify({
+            provider,
+            date: selectedDate,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }),
         })
 
         const syncData = await syncRes.json()

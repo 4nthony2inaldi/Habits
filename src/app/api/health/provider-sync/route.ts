@@ -9,6 +9,30 @@ import {
 } from '@/lib/health/providers'
 import type { HealthProvider, HealthConnection } from '@/types/database'
 
+// Convert an ISO timestamp to local time string (HH:MM:00) in the specified timezone
+function isoToLocalTime(isoString: string, timezone: string): string | null {
+  try {
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return null
+
+    // Format in the user's timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+
+    const parts = formatter.formatToParts(date)
+    const hour = parts.find(p => p.type === 'hour')?.value || '00'
+    const minute = parts.find(p => p.type === 'minute')?.value || '00'
+
+    return `${hour}:${minute}:00`
+  } catch {
+    return null
+  }
+}
+
 // Sync data from a health provider for the authenticated user
 // Optionally specify a date (defaults to yesterday)
 
@@ -26,6 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const provider = body.provider as HealthProvider | undefined
     let date = body.date as string | undefined
+    const timezone = (body.timezone as string) || 'UTC'
 
     if (!provider || !['oura', 'whoop'].includes(provider)) {
       return NextResponse.json({ error: 'Invalid provider. Must be "oura" or "whoop"' }, { status: 400 })
@@ -135,18 +160,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (healthData.sleepScore !== null) updateData.sleep_score = healthData.sleepScore
-    // Extract local time from ISO timestamps (format: YYYY-MM-DDTHH:MM:SS...)
-    // This preserves the original local time without server timezone conversion
+    // Convert ISO timestamps to local time in user's timezone
     if (healthData.sleepStart !== null) {
-      const timeMatch = healthData.sleepStart.match(/T(\d{2}:\d{2})/)
-      if (timeMatch) {
-        updateData.sleep_start = `${timeMatch[1]}:00`
+      const localTime = isoToLocalTime(healthData.sleepStart, timezone)
+      if (localTime) {
+        updateData.sleep_start = localTime
       }
     }
     if (healthData.sleepEnd !== null) {
-      const timeMatch = healthData.sleepEnd.match(/T(\d{2}:\d{2})/)
-      if (timeMatch) {
-        updateData.sleep_end = `${timeMatch[1]}:00`
+      const localTime = isoToLocalTime(healthData.sleepEnd, timezone)
+      if (localTime) {
+        updateData.sleep_end = localTime
       }
     }
     if (healthData.sleepHours !== null) updateData.sleep_hours = healthData.sleepHours
