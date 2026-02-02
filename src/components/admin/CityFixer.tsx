@@ -151,6 +151,7 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
       const user = users.find(u => u.id === selectedUser)
       let successCount = 0
       let failCount = 0
+      let firstError: string | null = null
 
       // Update all entries that have this city name
       for (const entry of distinctCity.entries) {
@@ -177,6 +178,10 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
         if (error || !data) {
           console.error('Failed to fix entry:', entry.id, error)
           failCount++
+          // Store the first error for display
+          if (!firstError && error) {
+            firstError = error.message || error.code || 'Unknown error'
+          }
         } else {
           successCount++
         }
@@ -184,7 +189,10 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
 
       if (failCount > 0) {
         console.warn(`City fix completed: ${successCount} succeeded, ${failCount} failed`)
-        alert(`Warning: ${failCount} entries failed to update. This may be a permissions issue.`)
+        const errorDetail = firstError
+          ? `\n\nError: ${firstError}`
+          : '\n\nThis may require running the admin_update_policies migration.'
+        alert(`Warning: ${failCount} entries failed to update.${errorDetail}`)
       }
 
       // Remove this distinct city from the list if all succeeded
@@ -367,6 +375,9 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
 
   const selectedUserProfile = users.find(u => u.id === selectedUser)
 
+  const isEditingOtherUser = selectedUser !== currentUser.id
+  const hasAdminPermission = currentUser.is_admin
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -388,6 +399,18 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
           ))}
         </select>
       </div>
+
+      {isEditingOtherUser && !hasAdminPermission && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-yellow-800">Admin permissions required</p>
+            <p className="text-yellow-700 mt-1">
+              You need admin privileges to edit other users' entries. Contact an administrator or ensure the admin_update_policies migration has been applied.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Backfill Section */}
       <Card>
