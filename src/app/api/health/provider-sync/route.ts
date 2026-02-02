@@ -217,6 +217,7 @@ export async function POST(request: NextRequest) {
       date,
       ...result,
       data: healthData,
+      debug: healthData?._debug,
     })
   } catch (error) {
     console.error('Error in provider sync:', error)

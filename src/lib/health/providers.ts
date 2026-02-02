@@ -89,6 +89,14 @@ interface WhoopRecoveryData {
   }
 }
 
+// Debug info for troubleshooting API responses
+export interface HealthSyncDebug {
+  queriedDate: string
+  sleepPeriodsCount: number
+  sleepPeriods: Array<{ day: string; hrs: number }>
+  activityDataCount: number
+}
+
 // Normalized sleep data that we store
 export interface NormalizedSleepData {
   date: string // YYYY-MM-DD
@@ -106,6 +114,7 @@ export interface NormalizedSleepData {
   respiratoryRate: number | null
   steps: number | null // Only from Oura
   source: HealthProvider
+  _debug?: HealthSyncDebug // Optional debug info
 }
 
 // Refresh an Oura access token
@@ -318,6 +327,15 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       respiratoryRate: sleepPeriod ? Math.round(sleepPeriod.respiratory_rate * 10) / 10 : null,
       steps: dailyActivity?.steps ?? null,
       source: 'oura',
+      _debug: {
+        queriedDate: `sleep:${prevDateStr}, activity:${prevDateStr}-${nextDateStr}`,
+        sleepPeriodsCount: sleepPeriods.length,
+        sleepPeriods: sleepPeriods.map(sp => ({
+          day: sp.day,
+          hrs: Math.round(sp.total_sleep_duration / 3600 * 100) / 100,
+        })),
+        activityDataCount: activities.length,
+      },
     }
   } catch (error) {
     console.error('Error fetching Oura data:', error)

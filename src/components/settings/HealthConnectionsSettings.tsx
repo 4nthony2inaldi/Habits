@@ -91,7 +91,7 @@ export function HealthConnectionsSettings() {
       if (response.ok) {
         // Refresh connections to get updated sync status
         await fetchConnections()
-        // Show success feedback with synced data details
+        // Show success feedback with synced data details AND debug info
         const syncedData = data.data
         const details = []
         if (syncedData?.steps !== null) details.push(`${syncedData.steps.toLocaleString()} steps`)
@@ -99,8 +99,20 @@ export function HealthConnectionsSettings() {
         if (syncedData?.sleepScore !== null) details.push(`score: ${syncedData.sleepScore}`)
         if (syncedData?.hrv !== null) details.push(`HRV: ${syncedData.hrv}`)
 
-        const detailsStr = details.length > 0 ? `\n${details.join(', ')}` : '\nNo data available'
-        alert(`Successfully synced ${provider === 'oura' ? 'Oura' : 'Whoop'} data for ${data.date}${detailsStr}`)
+        const detailsStr = details.length > 0 ? details.join(', ') : 'No data'
+
+        // Debug info from API response
+        const debug = data.debug
+        let debugStr = ''
+        if (debug) {
+          debugStr = `\n\n[Debug]\nQueried: ${debug.queriedDate}\nSleep periods: ${debug.sleepPeriodsCount}`
+          if (debug.sleepPeriods?.length > 0) {
+            debugStr += `\n  ${debug.sleepPeriods.map((p: { day: string; hrs: number }) => `${p.day}: ${p.hrs}h`).join('\n  ')}`
+          }
+          debugStr += `\nActivities: ${debug.activityDataCount}`
+        }
+
+        alert(`Synced ${provider === 'oura' ? 'Oura' : 'Whoop'} for ${data.date}\n${detailsStr}${debugStr}`)
       } else {
         alert(data.error || 'Sync failed')
       }
