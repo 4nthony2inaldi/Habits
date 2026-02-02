@@ -684,6 +684,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      home_city_history: {
+        Row: {
+          id: string
+          user_id: string
+          city: string
+          lat: number
+          lng: number
+          effective_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          city: string
+          lat: number
+          lng: number
+          effective_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          city?: string
+          lat?: number
+          lng?: number
+          effective_date?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -719,6 +748,10 @@ export type HealthConnectionUpdate = Database['public']['Tables']['health_connec
 export type SavedReport = Database['public']['Tables']['saved_reports']['Row']
 export type SavedReportInsert = Database['public']['Tables']['saved_reports']['Insert']
 export type SavedReportUpdate = Database['public']['Tables']['saved_reports']['Update']
+
+export type HomeCityHistory = Database['public']['Tables']['home_city_history']['Row']
+export type HomeCityHistoryInsert = Database['public']['Tables']['home_city_history']['Insert']
+export type HomeCityHistoryUpdate = Database['public']['Tables']['home_city_history']['Update']
 
 // Extended types for API responses
 export type DailyEntryWithRelations = DailyEntry & {

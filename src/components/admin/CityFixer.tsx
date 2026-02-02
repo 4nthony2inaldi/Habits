@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { calculateDistanceMiles } from '@/lib/utils/calculations'
 import { fetchWeather, fetchWeatherBatch } from '@/lib/utils/weather'
-import type { Profile, DailyEntry } from '@/types/database'
+import type { Profile, DailyEntry, HomeCityHistory } from '@/types/database'
 import { MapPin, RefreshCw, Check, AlertCircle, Loader2, Cloud } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -149,6 +149,8 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
 
     try {
       const user = users.find(u => u.id === selectedUser)
+      let successCount = 0
+      let failCount = 0
 
       // Update all entries that have this city name
       for (const entry of distinctCity.entries) {
@@ -165,27 +167,69 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
           updateData[milesField] = miles
         }
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('daily_entries')
           .update(updateData)
           .eq('id', entry.id)
+          .select('id')
+          .single()
 
-        if (error) {
+        if (error || !data) {
           console.error('Failed to fix entry:', entry.id, error)
+          failCount++
+        } else {
+          successCount++
         }
       }
 
-      // Remove this distinct city from the list
-      setDistinctCities(prev => prev.filter(dc => dc.city_name_lower !== distinctCity.city_name_lower))
-      // Also remove the individual entries
-      setCityEntries(prev => prev.filter(e =>
-        e.city_name.toLowerCase().trim() !== distinctCity.city_name_lower
-      ))
+      if (failCount > 0) {
+        console.warn(`City fix completed: ${successCount} succeeded, ${failCount} failed`)
+        alert(`Warning: ${failCount} entries failed to update. This may be a permissions issue.`)
+      }
+
+      // Remove this distinct city from the list if all succeeded
+      if (failCount === 0) {
+        setDistinctCities(prev => prev.filter(dc => dc.city_name_lower !== distinctCity.city_name_lower))
+        setCityEntries(prev => prev.filter(e =>
+          e.city_name.toLowerCase().trim() !== distinctCity.city_name_lower
+        ))
+      } else {
+        // Reload to see what actually changed
+        loadCityEntries()
+      }
     } catch (error) {
       console.error('Failed to fix city:', error)
+      alert('Failed to fix city: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setFixing(null)
     }
+  }
+
+  // Helper function to get home coordinates for a specific date
+  const getHomeForDate = (
+    entryDate: string,
+    homeHistory: HomeCityHistory[],
+    user: Profile
+  ): { lat: number; lng: number; city: string } => {
+    // Sort history by effective_date descending to find the most recent one before or on the entry date
+    const sortedHistory = [...homeHistory].sort(
+      (a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime()
+    )
+
+    // Find the first history entry that is on or before the entry date
+    for (const history of sortedHistory) {
+      if (history.effective_date <= entryDate) {
+        return { lat: history.lat, lng: history.lng, city: history.city }
+      }
+    }
+
+    // If no history matches (entry is before all history records), use current home
+    if (user.home_lat && user.home_lng && user.home_city) {
+      return { lat: user.home_lat, lng: user.home_lng, city: user.home_city }
+    }
+
+    // Fallback to a default (should not happen in practice)
+    return { lat: 0, lng: 0, city: 'Unknown' }
   }
 
   // Backfill weather and miles for all entries
@@ -193,21 +237,25 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
     const user = users.find(u => u.id === selectedUser)
     if (!user) return
 
-    // For backfill, we need the user's home city history
-    // Before Aug 1, 2025 = New York, NY (40.7128, -74.0060)
-    // After Aug 1, 2025 = current home city
-    const NYC_LAT = 40.7128
-    const NYC_LNG = -74.0060
-    const AUG_2025 = '2025-08-01'
-
     setBackfillProgress({
       total: 0,
       processed: 0,
       status: 'running',
-      message: 'Loading entries...',
+      message: 'Loading entries and home city history...',
     })
 
     try {
+      // Get user's home city history
+      const { data: homeHistory, error: historyError } = await supabase
+        .from('home_city_history')
+        .select('*')
+        .eq('user_id', selectedUser)
+        .order('effective_date', { ascending: false })
+
+      if (historyError) {
+        console.error('Failed to load home city history:', historyError)
+      }
+
       // Get all entries for this user
       const { data: entries, error } = await supabase
         .from('daily_entries')
@@ -238,10 +286,10 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
         const entry = entries[i]
         const updateData: Record<string, unknown> = {}
 
-        // Determine home coordinates for this date
-        const isBeforeAug2025 = entry.entry_date < AUG_2025
-        const homeLat = isBeforeAug2025 ? NYC_LAT : (user.home_lat || NYC_LAT)
-        const homeLng = isBeforeAug2025 ? NYC_LNG : (user.home_lng || NYC_LNG)
+        // Determine home coordinates for this date using history
+        const home = getHomeForDate(entry.entry_date, homeHistory || [], user)
+        const homeLat = home.lat
+        const homeLng = home.lng
 
         // Recalculate miles if we have city coordinates
         if (entry.city_wake_lat && entry.city_wake_lng) {
@@ -257,9 +305,9 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
         // Fetch weather if we don't have it yet
         if (!entry.weather_temperature_high) {
           // Determine weather location - use noon city coords, or home city
-          let weatherLat = entry.city_noon_lat || homeLat
-          let weatherLng = entry.city_noon_lng || homeLng
-          let weatherLocation = entry.city_noon || (isBeforeAug2025 ? 'New York, NY' : (user.home_city || 'Home'))
+          const weatherLat = entry.city_noon_lat || homeLat
+          const weatherLng = entry.city_noon_lng || homeLng
+          const weatherLocation = entry.city_noon || home.city
 
           const weather = await fetchWeather(weatherLat, weatherLng, entry.entry_date)
           if (weather) {
@@ -274,12 +322,14 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
 
         // Update the entry if we have changes
         if (Object.keys(updateData).length > 0) {
-          const { error: updateError } = await supabase
+          const { data: updateResult, error: updateError } = await supabase
             .from('daily_entries')
             .update(updateData)
             .eq('id', entry.id)
+            .select('id')
+            .single()
 
-          if (updateError) {
+          if (updateError || !updateResult) {
             console.error('Failed to update entry:', entry.id, updateError)
           }
         }
@@ -356,8 +406,8 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
                 )}
               </span>
             )}
-            <span className="block mt-1 text-amber-600">
-              Note: Home before Aug 1, 2025 was New York, NY
+            <span className="block mt-1 text-gray-500">
+              Uses home city history for accurate distance calculations.
             </span>
           </CardDescription>
         </CardHeader>

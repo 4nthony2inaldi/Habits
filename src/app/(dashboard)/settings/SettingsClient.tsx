@@ -37,7 +37,8 @@ import {
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 import { AppleHealthSyncSettings } from '@/components/settings/AppleHealthSyncSettings'
 import { HealthConnectionsSettings } from '@/components/settings/HealthConnectionsSettings'
-import { Watch } from 'lucide-react'
+import { HomeCityHistory } from '@/components/settings/HomeCityHistory'
+import { Watch, History } from 'lucide-react'
 
 interface SettingsClientProps {
   profile: Profile
@@ -335,6 +336,26 @@ export function SettingsClient({ profile }: SettingsClientProps) {
               </label>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Home City History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <History className="h-5 w-5" />
+            Home City History
+          </CardTitle>
+          <CardDescription>
+            Track when you moved to different cities for accurate historical distance calculations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <HomeCityHistory
+            currentHomeCity={profile.home_city}
+            currentHomeLat={profile.home_lat}
+            currentHomeLng={profile.home_lng}
+          />
         </CardContent>
       </Card>
 
