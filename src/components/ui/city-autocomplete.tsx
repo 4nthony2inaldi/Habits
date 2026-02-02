@@ -17,6 +17,9 @@ interface NominatimResult {
     city?: string
     town?: string
     village?: string
+    suburb?: string
+    hamlet?: string
+    municipality?: string
     state?: string
     country?: string
   }
@@ -35,7 +38,7 @@ function formatDisplayName(result: NominatimResult): string {
   // Try to format a cleaner display name from address components
   const addr = result.address
   if (addr) {
-    const city = addr.city || addr.town || addr.village
+    const city = addr.city || addr.town || addr.village || addr.suburb || addr.hamlet || addr.municipality
     const parts = [city, addr.state, addr.country].filter(Boolean)
     if (parts.length > 0) {
       return parts.join(', ')
@@ -126,8 +129,9 @@ export function CityAutocomplete({
       const getResultScore = (result: NominatimResult): number => {
         let score = result.importance || 0
 
-        // Strongly prioritize results that have a specific city/town/village in address
-        const hasSpecificPlace = result.address && (result.address.city || result.address.town || result.address.village)
+        // Strongly prioritize results that have a specific city/town/village/suburb in address
+        const addr = result.address
+        const hasSpecificPlace = addr && (addr.city || addr.town || addr.village || addr.suburb || addr.hamlet || addr.municipality)
         if (hasSpecificPlace) {
           score += 10 // Big boost for having a specific place name
         }
@@ -140,8 +144,8 @@ export function CityAutocomplete({
         // Deprioritize state/country level administrative boundaries
         // These are usually what we DON'T want when searching for a specific city
         if (result.class === 'boundary' && result.type === 'administrative') {
-          // Check if it's a state/region level boundary (no city in address = likely state/country level)
-          if (!result.address?.city && !result.address?.town && !result.address?.village) {
+          // Check if it's a state/region level boundary (no specific place in address = likely state/country level)
+          if (!hasSpecificPlace) {
             score -= 10 // Penalize generic administrative boundaries
           }
         }
@@ -155,7 +159,8 @@ export function CityAutocomplete({
           const isPlaceClass = result.class === 'place'
           const isBoundary = result.class === 'boundary' && result.type === 'administrative'
           const isPlaceType = placeTypes.includes(result.type)
-          const hasPlace = result.address && (result.address.city || result.address.town || result.address.village)
+          const addr = result.address
+          const hasPlace = addr && (addr.city || addr.town || addr.village || addr.suburb || addr.hamlet || addr.municipality)
           return isPlaceClass || isBoundary || isPlaceType || hasPlace
         })
         .sort((a, b) => getResultScore(b) - getResultScore(a))
