@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json().catch(() => ({}))
     const days = body.days as number | undefined
+    const offset = (body.offset as number | undefined) || 0 // How many days back to start from
 
     if (!days || days < 1 || days > 1000) {
       return NextResponse.json({ error: 'Invalid days. Must be between 1 and 1000' }, { status: 400 })
@@ -66,9 +67,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate date range (from `days` ago to yesterday)
+    // Generate date range (from `days + offset` ago to `offset + 1` days ago)
+    // offset=0, days=90: sync days 90-1 (most recent 90)
+    // offset=90, days=90: sync days 180-91 (next batch of 90)
     const dates: string[] = []
-    for (let i = days; i >= 1; i--) {
+    for (let i = days + offset; i >= offset + 1; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
       dates.push(date.toISOString().split('T')[0])
@@ -199,6 +202,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      offset,
+      nextOffset: offset + days,
+      dateRange: dates.length > 0 ? { start: dates[0], end: dates[dates.length - 1] } : null,
       ...results,
     })
   } catch (error) {

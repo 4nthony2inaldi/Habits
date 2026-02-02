@@ -31,6 +31,8 @@ export function HealthConnectionsSettings() {
   const [syncing, setSyncing] = useState<HealthProvider | null>(null)
   const [disconnecting, setDisconnecting] = useState<HealthProvider | null>(null)
   const [historicalSyncing, setHistoricalSyncing] = useState(false)
+  const [historicalOffset, setHistoricalOffset] = useState(0)
+  const [lastSyncedRange, setLastSyncedRange] = useState<{ start: string; end: string } | null>(null)
 
   // Fetch connections on mount
   useEffect(() => {
@@ -126,8 +128,14 @@ export function HealthConnectionsSettings() {
     }
   }
 
-  const handleHistoricalSync = async (days: number) => {
-    if (!confirm(`This will sync the last ${days} days of Oura data. This may take a moment. Continue?`)) {
+  const handleHistoricalSync = async (days: number, offset: number = 0) => {
+    const startDay = days + offset
+    const endDay = offset + 1
+    const rangeText = offset === 0
+      ? `the last ${days} days`
+      : `days ${startDay} to ${endDay} ago`
+
+    if (!confirm(`This will sync ${rangeText} of Oura data. This may take a moment. Continue?`)) {
       return
     }
 
@@ -136,21 +144,25 @@ export function HealthConnectionsSettings() {
       const response = await fetch('/api/health/historical-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days }),
+        body: JSON.stringify({ days, offset }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
         await fetchConnections()
+        setHistoricalOffset(data.nextOffset)
+        setLastSyncedRange(data.dateRange)
         alert(
           `Historical sync complete!\n\n` +
+          `Range: ${data.dateRange?.start} to ${data.dateRange?.end}\n` +
           `Total days: ${data.total}\n` +
           `Synced: ${data.synced}\n` +
           `Created: ${data.created}\n` +
           `Updated: ${data.updated}\n` +
           `Skipped (no data): ${data.skipped}\n` +
-          `Errors: ${data.errors}`
+          `Errors: ${data.errors}\n\n` +
+          `Click "Next 90d" to continue syncing older data.`
         )
       } else {
         alert(data.error || 'Historical sync failed')
@@ -299,50 +311,59 @@ export function HealthConnectionsSettings() {
 
       {/* Historical sync for Oura */}
       {getConnection('oura') && (
-        <div className="p-4 border rounded-lg bg-gray-50">
+        <div className="p-4 border rounded-lg bg-gray-50 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <History className="h-5 w-5 text-gray-500" />
               <div>
                 <h4 className="font-medium text-gray-900 text-sm">Historical Sync</h4>
-                <p className="text-xs text-gray-500">One-time import of past Oura data</p>
+                <p className="text-xs text-gray-500">
+                  {historicalOffset > 0
+                    ? `Synced up to ${historicalOffset} days ago. Click "Next" to continue.`
+                    : 'One-time import of past Oura data (in 90-day batches)'}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleHistoricalSync(30)}
-                disabled={historicalSyncing}
-              >
-                {historicalSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                30d
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleHistoricalSync(90)}
-                disabled={historicalSyncing}
-              >
-                90d
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleHistoricalSync(365)}
-                disabled={historicalSyncing}
-              >
-                1yr
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleHistoricalSync(730)}
-                disabled={historicalSyncing}
-              >
-                2yr
-              </Button>
-            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {historicalOffset > 0 ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => handleHistoricalSync(90, historicalOffset)}
+                  disabled={historicalSyncing}
+                >
+                  {historicalSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  Next 90d
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setHistoricalOffset(0); setLastSyncedRange(null) }}
+                  disabled={historicalSyncing}
+                >
+                  Reset
+                </Button>
+                <span className="text-xs text-gray-500">
+                  (will sync days {historicalOffset + 90} to {historicalOffset + 1})
+                </span>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleHistoricalSync(90, 0)}
+                  disabled={historicalSyncing}
+                >
+                  {historicalSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  Start (90d)
+                </Button>
+                <span className="text-xs text-gray-500">
+                  Sync in 90-day batches to avoid timeout
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
