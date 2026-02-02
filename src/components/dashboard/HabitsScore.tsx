@@ -30,6 +30,15 @@ function calculateScoreForPeriod(
     dates.unshift(format(subDays(endDate, i), 'yyyy-MM-dd'))
   }
 
+  return calculateScoreForDates(entries, dates, habitsToCount)
+}
+
+function calculateScoreForDates(
+  entries: DailyEntryWithRelations[],
+  dates: string[],
+  habitsToCount: SelectableHabitType[]
+): { completed: number; possible: number; percentage: number } {
+
   // Create map of entries by date
   const entriesByDate = new Map<string, DailyEntryWithRelations>()
   entries.forEach((entry) => {
@@ -37,7 +46,7 @@ function calculateScoreForPeriod(
   })
 
   let completedCount = 0
-  const possibleCount = habitsToCount.length * days
+  const possibleCount = habitsToCount.length * dates.length
 
   // Count completed habits for each day
   for (const date of dates) {
@@ -125,12 +134,50 @@ function countEventsForWeek(
 }
 
 export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings, homeCity, title = 'Habits Score' }: HabitsScoreProps) {
-  // Generate dynamic subtitle showing actual date range
+  // Determine which dates to display - either recent calendar days OR most recent logged days
+  // Same logic as HabitsGrid to ensure consistency
+  const displayDates = useMemo(() => {
+    const days = 7
+    // First try: get last 7 calendar days from end of date range (most recent first)
+    const calendarDates: string[] = []
+    for (let i = 0; i < days; i++) {
+      calendarDates.push(format(subDays(dateRange.end, i), 'yyyy-MM-dd'))
+    }
+
+    // Check if there are any entries in these recent calendar days
+    const hasRecentEntries = entries.some((entry) =>
+      calendarDates.includes(entry.entry_date)
+    )
+
+    if (hasRecentEntries) {
+      return calendarDates
+    }
+
+    // No recent entries - use the most recent 7 logged days instead
+    if (entries.length === 0) {
+      return calendarDates // No entries at all, fall back to calendar dates
+    }
+
+    // Sort entries by date descending and take the most recent 7 unique dates
+    const sortedDates = [...new Set(entries.map((e) => e.entry_date))]
+      .sort((a, b) => b.localeCompare(a)) // Descending order (most recent first)
+      .slice(0, days)
+
+    return sortedDates
+  }, [entries, dateRange.end])
+
+  // Generate dynamic subtitle showing actual date range from displayDates
   const dateRangeLabel = useMemo(() => {
-    const endDate = dateRange.end
-    const startDate = subDays(endDate, 6)
-    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
-  }, [dateRange.end])
+    if (displayDates.length === 0) {
+      const endDate = dateRange.end
+      const startDate = subDays(endDate, 6)
+      return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
+    }
+    // displayDates are in descending order (most recent first)
+    const mostRecentDate = parseISO(displayDates[0])
+    const oldestDate = parseISO(displayDates[displayDates.length - 1])
+    return `${format(oldestDate, 'MMM d')} - ${format(mostRecentDate, 'MMM d')}`
+  }, [displayDates, dateRange.end])
 
   // Get habits to count
   const habitsToCount = useMemo(() => {
@@ -159,10 +206,10 @@ export function HabitsScore({ entries, selectedHabits, dateRange, fieldGroupings
     return [...eventsGroupEvents, ...selfCareGroupEvents]
   }, [fieldGroupings])
 
-  // Current score (most recent 7 days from end of date range)
+  // Current score using displayDates (either recent calendar days or most recent logged days)
   const currentScore = useMemo(() => {
-    return calculateScoreForPeriod(entries, dateRange.end, 7, habitsToCount)
-  }, [entries, dateRange.end, habitsToCount])
+    return calculateScoreForDates(entries, displayDates, habitsToCount)
+  }, [entries, displayDates, habitsToCount])
 
   // Sparkline data: 12 weeks of rolling 7-day scores
   const sparklineData = useMemo(() => {
