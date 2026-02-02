@@ -79,7 +79,7 @@ function PillButton({
 export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState(getYesterdayString())
-  const [openSection, setOpenSection] = useState<string | null>('mood')
+  const [openSection, setOpenSection] = useState<string | null>(null) // All collapsed by default
   const [saveError, setSaveError] = useState<string | null>(null)
 
   // Health sync state
@@ -546,23 +546,28 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
         summary={summaries.mood}
       >
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>How was your day? (0-10)</Label>
+          <div className="space-y-3">
+            <Label>How was your day?</Label>
             <Controller
               name="mood_score"
               control={control}
               render={({ field }) => (
-                <div className="flex items-center gap-4">
-                  <Slider
-                    min={0}
-                    max={10}
-                    value={field.value ?? 5}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-2xl font-bold text-purple-600 w-8 text-center">
-                    {field.value ?? 5}
-                  </span>
+                <div className="flex items-center justify-between gap-1">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => field.onChange(num)}
+                      className={cn(
+                        'w-8 h-10 rounded-lg text-sm font-medium transition-all',
+                        field.value === num
+                          ? 'bg-purple-600 text-white shadow-md scale-110'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      )}
+                    >
+                      {num}
+                    </button>
+                  ))}
                 </div>
               )}
             />

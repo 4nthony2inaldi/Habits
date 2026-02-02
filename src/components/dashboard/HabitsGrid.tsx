@@ -7,7 +7,8 @@ import {
   // Status indicator icons
   Smile, Meh, Frown, CircleHelp,
   Sun, Cloud, CloudRain, CloudSnow, CloudSun, Thermometer,
-  Home, Building2, Briefcase, Calendar, Palmtree
+  Home, Building2, Briefcase, Calendar, Palmtree,
+  Moon, BedDouble
 } from 'lucide-react'
 import { format, subDays, parseISO, isWithinInterval, isWeekend } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
@@ -21,7 +22,7 @@ import { shortHabitLabels } from './DashboardCustomizer'
 type DayStatus = boolean | 'gold' | 'green' | null
 
 // Status indicator types (not counted in habits score)
-type StatusIndicatorType = 'mood' | 'weather' | 'work_location'
+type StatusIndicatorType = 'mood' | 'sleep' | 'weather' | 'work_location'
 
 interface TooltipData {
   habit: SelectableHabitType
@@ -56,6 +57,7 @@ interface HabitsGridProps {
 
 const statusIndicatorLabels: Record<StatusIndicatorType, string> = {
   mood: 'Mood',
+  sleep: 'Sleep',
   weather: 'Weather',
   work_location: 'Location',
 }
@@ -124,6 +126,34 @@ function getWorkLocationIcon(workLocation: string | null, date: Date) {
   }
   // Unknown on weekday = PTO
   return { icon: Calendar, color: 'text-teal-500', bg: 'bg-teal-100', label: 'PTO' }
+}
+
+// Helper to get sleep icon based on sleep score and hours
+function getSleepIcon(sleepScore: number | null, sleepHours: number | null) {
+  if (sleepScore === null && sleepHours === null) {
+    return { icon: Moon, color: 'text-gray-300', bg: 'bg-gray-50', label: null }
+  }
+
+  // Use sleep score for color coding (0-100 scale)
+  const score = sleepScore ?? 0
+  let color = 'text-purple-500'
+  let bg = 'bg-purple-100'
+
+  if (score >= 85) {
+    color = 'text-green-500'
+    bg = 'bg-green-100'
+  } else if (score >= 70) {
+    color = 'text-blue-500'
+    bg = 'bg-blue-100'
+  } else if (score < 60 && score > 0) {
+    color = 'text-orange-500'
+    bg = 'bg-orange-100'
+  }
+
+  // Show hours as label if available
+  const label = sleepHours !== null ? `${sleepHours.toFixed(1)}h` : (sleepScore !== null ? `${sleepScore}` : null)
+
+  return { icon: Moon, color, bg, label }
 }
 
 export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
@@ -303,7 +333,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
       entriesByDate.set(entry.entry_date, entry)
     })
 
-    const indicators: StatusIndicatorType[] = ['mood', 'weather', 'work_location']
+    const indicators: StatusIndicatorType[] = ['mood', 'sleep', 'weather', 'work_location']
 
     return indicators.map((indicator) => {
       const dayData = dates.map((date) => {
@@ -313,6 +343,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
         let iconData
         if (indicator === 'mood') {
           iconData = getMoodIcon(entry?.mood_score ?? null)
+        } else if (indicator === 'sleep') {
+          iconData = getSleepIcon(entry?.sleep_score ?? null, entry?.sleep_hours ?? null)
         } else if (indicator === 'weather') {
           iconData = getWeatherIcon(
             entry?.weather_conditions ?? null,
@@ -609,6 +641,52 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                 )}
               </div>
             )}
+
+            {/* Sleep tooltip content */}
+            {statusTooltip.type === 'sleep' && (() => {
+              const entry = statusTooltip.entry
+              const hasSleepData = entry && (entry.sleep_score !== null || entry.sleep_hours !== null)
+              return (
+                <div className="space-y-1">
+                  {hasSleepData && entry ? (
+                    <>
+                      {entry.sleep_score !== null && (
+                        <div className="text-purple-600 font-medium">
+                          Score: {entry.sleep_score}
+                        </div>
+                      )}
+                      {entry.sleep_hours !== null && (
+                        <div className="text-gray-600">
+                          {entry.sleep_hours.toFixed(1)} hours asleep
+                        </div>
+                      )}
+                      {entry.sleep_start && entry.sleep_end && (
+                        <div className="text-gray-500 text-[10px]">
+                          {format(parseISO(entry.sleep_start), 'h:mm a')} → {format(parseISO(entry.sleep_end), 'h:mm a')}
+                        </div>
+                      )}
+                      {(entry.hrv !== null || entry.resting_hr !== null) && (
+                        <div className="flex items-center gap-2 text-gray-600 border-t pt-1 mt-1">
+                          {entry.hrv !== null && (
+                            <span>HRV: {entry.hrv}ms</span>
+                          )}
+                          {entry.resting_hr !== null && (
+                            <span>RHR: {entry.resting_hr}bpm</span>
+                          )}
+                        </div>
+                      )}
+                      {entry.respiratory_rate !== null && (
+                        <div className="text-gray-500">
+                          Resp: {entry.respiratory_rate}/min
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-gray-400">No sleep data</div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Weather tooltip content */}
             {statusTooltip.type === 'weather' && (() => {
