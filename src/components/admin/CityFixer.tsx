@@ -173,14 +173,19 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
           .update(updateData)
           .eq('id', entry.id)
           .select('id')
-          .single()
 
-        if (error || !data) {
+        if (error) {
           console.error('Failed to fix entry:', entry.id, error)
           failCount++
-          // Store the first error for display
-          if (!firstError && error) {
+          if (!firstError) {
             firstError = error.message || error.code || 'Unknown error'
+          }
+        } else if (!data || data.length === 0) {
+          // Update returned no rows - likely RLS blocking the update
+          console.error('Failed to fix entry (no rows updated):', entry.id)
+          failCount++
+          if (!firstError) {
+            firstError = 'Update blocked - admin permissions may be missing. Run the admin_update_policies migration.'
           }
         } else {
           successCount++
@@ -335,9 +340,8 @@ export function CityFixer({ currentUser, users }: CityFixerProps) {
             .update(updateData)
             .eq('id', entry.id)
             .select('id')
-            .single()
 
-          if (updateError || !updateResult) {
+          if (updateError || !updateResult || updateResult.length === 0) {
             console.error('Failed to update entry:', entry.id, updateError)
           }
         }
