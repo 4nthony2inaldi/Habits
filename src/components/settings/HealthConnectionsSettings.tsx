@@ -316,7 +316,7 @@ export function HealthConnectionsSettings() {
                 disabled={historicalSyncing}
               >
                 {historicalSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                30 days
+                30d
               </Button>
               <Button
                 size="sm"
@@ -324,7 +324,23 @@ export function HealthConnectionsSettings() {
                 onClick={() => handleHistoricalSync(90)}
                 disabled={historicalSyncing}
               >
-                90 days
+                90d
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleHistoricalSync(365)}
+                disabled={historicalSyncing}
+              >
+                1yr
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleHistoricalSync(730)}
+                disabled={historicalSyncing}
+              >
+                2yr
               </Button>
             </div>
           </div>

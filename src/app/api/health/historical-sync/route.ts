@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const days = body.days as number | undefined
 
-    if (!days || days < 1 || days > 365) {
-      return NextResponse.json({ error: 'Invalid days. Must be between 1 and 365' }, { status: 400 })
+    if (!days || days < 1 || days > 1000) {
+      return NextResponse.json({ error: 'Invalid days. Must be between 1 and 1000' }, { status: 400 })
     }
 
     // Get the user's Oura connection
