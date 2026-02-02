@@ -82,6 +82,10 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
   const [openSection, setOpenSection] = useState<string | null>('mood')
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // Health sync state
+  const [healthSyncing, setHealthSyncing] = useState(false)
+  const [healthSyncMessage, setHealthSyncMessage] = useState<string | null>(null)
+
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
@@ -238,6 +242,70 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
       })
     }
   }, [existingEntry, loadingEntry, selectedDate, reset])
+
+  // Auto-sync health data when date changes (if user has a connected device)
+  useEffect(() => {
+    const syncHealthData = async () => {
+      // Don't sync if we're still loading the entry
+      if (loadingEntry) return
+
+      // Check if user has any health connections
+      try {
+        const connectionsRes = await fetch('/api/health/provider-sync')
+        if (!connectionsRes.ok) return
+
+        const { connections } = await connectionsRes.json()
+        if (!connections || connections.length === 0) return
+
+        // Find the first connected provider (prefer Oura for steps)
+        const ouraConnection = connections.find((c: { provider: string }) => c.provider === 'oura')
+        const provider = ouraConnection?.provider || connections[0]?.provider
+
+        if (!provider) return
+
+        setHealthSyncing(true)
+        setHealthSyncMessage(`Syncing ${provider === 'oura' ? 'Oura' : 'Whoop'} data...`)
+
+        // Sync data for the selected date
+        const syncRes = await fetch('/api/health/provider-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, date: selectedDate }),
+        })
+
+        const syncData = await syncRes.json()
+
+        if (syncRes.ok && syncData.data) {
+          // Update form fields with synced data
+          if (syncData.data.steps !== null) {
+            setValue('steps', syncData.data.steps)
+          }
+
+          // Build sync message
+          const details = []
+          if (syncData.data.steps !== null) details.push(`${syncData.data.steps.toLocaleString()} steps`)
+          if (syncData.data.sleepHours !== null) details.push(`${syncData.data.sleepHours.toFixed(1)}h sleep`)
+
+          if (details.length > 0) {
+            setHealthSyncMessage(`Synced: ${details.join(', ')}`)
+          } else {
+            setHealthSyncMessage('No health data available for this date')
+          }
+        } else if (syncData.error) {
+          setHealthSyncMessage(null) // Don't show error, just silently fail
+        }
+      } catch (error) {
+        console.error('Health sync error:', error)
+        setHealthSyncMessage(null)
+      } finally {
+        setHealthSyncing(false)
+        // Clear message after 3 seconds
+        setTimeout(() => setHealthSyncMessage(null), 3000)
+      }
+    }
+
+    syncHealthData()
+  }, [selectedDate, loadingEntry, setValue])
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value
@@ -440,7 +508,16 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 Updating existing
               </span>
             )}
+            {healthSyncing && (
+              <span className="text-sm text-purple-600 flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Syncing...
+              </span>
+            )}
           </div>
+          {healthSyncMessage && !healthSyncing && (
+            <p className="text-xs text-green-600 mt-2">{healthSyncMessage}</p>
+          )}
         </CardContent>
       </Card>
 
