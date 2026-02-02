@@ -112,14 +112,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (healthData.sleepScore !== null) updateData.sleep_score = healthData.sleepScore
-        // Convert ISO timestamps to time format for database (HH:MM:SS)
+        // Extract local time from ISO timestamps (format: YYYY-MM-DDTHH:MM:SS...)
+        // This preserves the original local time without server timezone conversion
         if (healthData.sleepStart !== null) {
-          const startDate = new Date(healthData.sleepStart)
-          updateData.sleep_start = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}:00`
+          const timeMatch = healthData.sleepStart.match(/T(\d{2}:\d{2})/)
+          if (timeMatch) {
+            updateData.sleep_start = `${timeMatch[1]}:00`
+          }
         }
         if (healthData.sleepEnd !== null) {
-          const endDate = new Date(healthData.sleepEnd)
-          updateData.sleep_end = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:00`
+          const timeMatch = healthData.sleepEnd.match(/T(\d{2}:\d{2})/)
+          if (timeMatch) {
+            updateData.sleep_end = `${timeMatch[1]}:00`
+          }
         }
         if (healthData.sleepHours !== null) updateData.sleep_hours = healthData.sleepHours
         if (healthData.sleepInBedMinutes !== null) updateData.sleep_in_bed_minutes = healthData.sleepInBedMinutes

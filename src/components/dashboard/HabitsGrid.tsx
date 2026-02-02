@@ -456,6 +456,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
     entry: DailyEntryWithRelations | null,
     event: React.MouseEvent
   ) => {
+    // Clear the row tooltip to prevent double popup
+    setTooltip(null)
     const rect = event.currentTarget.getBoundingClientRect()
     setHabitDayTooltip({
       habit,
