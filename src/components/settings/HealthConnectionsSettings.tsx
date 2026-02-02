@@ -157,7 +157,7 @@ export function HealthConnectionsSettings() {
       }
     } catch (error) {
       console.error('Failed to historical sync:', error)
-      alert('Failed to sync historical data')
+      alert(`Failed to sync historical data: ${error instanceof Error ? error.message : 'Request timeout - try a smaller range'}`)
     } finally {
       setHistoricalSyncing(false)
     }

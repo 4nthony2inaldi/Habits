@@ -7,6 +7,9 @@ import {
 } from '@/lib/health/providers'
 import type { HealthConnection } from '@/types/database'
 
+// Increase timeout for this long-running function
+export const maxDuration = 300 // 5 minutes (requires Vercel Pro)
+
 // Sync historical data from Oura for a range of dates
 export async function POST(request: NextRequest) {
   try {
@@ -176,9 +179,6 @@ export async function POST(request: NextRequest) {
           sleepHours: healthData.sleepHours ?? undefined,
           steps: healthData.steps ?? undefined,
         })
-
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100))
       } catch (err) {
         console.error(`Error syncing ${date}:`, err)
         results.errors++
