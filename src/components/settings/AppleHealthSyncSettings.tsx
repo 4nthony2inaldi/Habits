@@ -30,15 +30,24 @@ export function AppleHealthSyncSettings({
   const generateToken = async () => {
     setGenerating(true)
     try {
+      // Get the current user to ensure we're updating our own profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
       // Generate a random token
       const newToken = crypto.randomUUID()
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({ health_sync_token: newToken })
-        .eq('id', profileId)
+        .eq('id', user.id)
+        .select('health_sync_token')
+        .single()
 
       if (error) throw error
+      if (!data) throw new Error('Failed to save token')
       setToken(newToken)
     } catch (error) {
       console.error('Failed to generate token:', error)
@@ -72,12 +81,21 @@ export function AppleHealthSyncSettings({
   const revokeToken = async () => {
     setGenerating(true)
     try {
-      const { error } = await supabase
+      // Get the current user to ensure we're updating our own profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({ health_sync_token: null })
-        .eq('id', profileId)
+        .eq('id', user.id)
+        .select('health_sync_token')
+        .single()
 
       if (error) throw error
+      if (!data) throw new Error('Failed to revoke token')
       setToken(null)
     } catch (error) {
       console.error('Failed to revoke token:', error)

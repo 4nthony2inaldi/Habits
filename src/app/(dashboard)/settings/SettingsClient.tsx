@@ -88,6 +88,10 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
 
+  // Save status
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
   const toggleHiddenField = (field: string) => {
     setHiddenFields((prev) =>
       prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
@@ -179,8 +183,17 @@ export function SettingsClient({ profile }: SettingsClientProps) {
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
+    setSaveSuccess(false)
     try {
-      const { error } = await supabase
+      // Get the current user to ensure we're updating our own profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
+      // Use the authenticated user's ID instead of the prop to ensure RLS works
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           display_name: displayName,
@@ -198,12 +211,22 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           streak_warnings_enabled: streakWarnings,
           weekly_digest_enabled: weeklyDigest,
         })
-        .eq('id', profile.id)
+        .eq('id', user.id)
+        .select()
+        .single()
 
       if (error) throw error
+
+      if (!data) {
+        throw new Error('Failed to save settings - no data returned')
+      }
+
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
       router.refresh()
     } catch (error) {
       console.error('Failed to save settings:', error)
+      setSaveError(error instanceof Error ? error.message : 'Failed to save settings')
     }
     setSaving(false)
   }
@@ -620,7 +643,16 @@ export function SettingsClient({ profile }: SettingsClientProps) {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-2">
+        {saveError && (
+          <p className="text-sm text-red-600">{saveError}</p>
+        )}
+        {saveSuccess && (
+          <p className="text-sm text-green-600 flex items-center gap-1">
+            <Check className="h-4 w-4" />
+            Settings saved successfully
+          </p>
+        )}
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
