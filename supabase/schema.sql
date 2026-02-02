@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   -- Field visibility preferences
   hidden_fields JSONB DEFAULT '[]'::jsonb,
 
+  -- Field groupings for customizable form organization
+  field_groupings JSONB DEFAULT NULL,
+
   -- Custom tracking fields (future)
   custom_habits JSONB DEFAULT '[]'::jsonb,
   custom_metrics JSONB DEFAULT '[]'::jsonb,

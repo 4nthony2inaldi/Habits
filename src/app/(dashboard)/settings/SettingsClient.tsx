@@ -227,7 +227,11 @@ export function SettingsClient({ profile }: SettingsClientProps) {
       router.refresh()
     } catch (error) {
       console.error('Failed to save settings:', error)
-      setSaveError(error instanceof Error ? error.message : 'Failed to save settings')
+      // Handle both native Error and Supabase PostgrestError objects
+      const errorMessage = error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message || 'Failed to save settings'
+      setSaveError(errorMessage)
     }
     setSaving(false)
   }
