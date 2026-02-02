@@ -220,10 +220,11 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods - query target date only
-    // Oura's 'day' field appears to match daily_sleep (wake-up date)
+    // Fetch detailed sleep periods - query PREVIOUS day (bedtime date)
+    // daily_sleep uses wake-up date, but sleep periods use bedtime date
+    // So Jan 24 wake-up = sleep period with day Jan 23 (went to bed Jan 23 night)
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${date}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${prevDateStr}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
