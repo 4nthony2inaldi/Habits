@@ -13,16 +13,13 @@ import {
 import { format, subDays, parseISO, isWithinInterval, isWeekend } from 'date-fns'
 import type { DailyEntryWithRelations, HabitType } from '@/types/database'
 import { habitLabels, eventLabels, workLocationLabels } from '@/types/forms'
-import type { SelectableHabitType } from './DashboardCustomizer'
-import { shortHabitLabels } from './DashboardCustomizer'
+import type { SelectableHabitType, StatusIndicatorType } from './DashboardCustomizer'
+import { shortHabitLabels, statusIndicatorLabels } from './DashboardCustomizer'
 
 // Type for day completion status
 // For regular habits: true/false/null
 // For was_active: 'gold' (10k+) | 'green' (7.5k+) | false | null
 type DayStatus = boolean | 'gold' | 'green' | null
-
-// Status indicator types (not counted in habits score)
-type StatusIndicatorType = 'mood' | 'sleep' | 'weather' | 'work_location'
 
 interface TooltipData {
   habit: SelectableHabitType
@@ -33,6 +30,15 @@ interface TooltipData {
 
 interface StatusTooltipData {
   type: StatusIndicatorType
+  date: string
+  entry: DailyEntryWithRelations | null
+  x: number
+  y: number
+}
+
+// Tooltip for individual day cells in habit rows (e.g., sleep_8hrs showing sleep details)
+interface HabitDayTooltipData {
+  habit: SelectableHabitType
   date: string
   entry: DailyEntryWithRelations | null
   x: number
@@ -53,13 +59,7 @@ interface HabitsGridProps {
   dateRange: { start: Date; end: Date }
   title?: string
   subtitle?: string
-}
-
-const statusIndicatorLabels: Record<StatusIndicatorType, string> = {
-  mood: 'Mood',
-  sleep: 'Sleep',
-  weather: 'Weather',
-  work_location: 'Location',
+  selectedStatusIndicators?: StatusIndicatorType[]
 }
 
 // Helper to get mood icon based on score (0-10 scale)
@@ -156,9 +156,10 @@ function getSleepIcon(sleepScore: number | null, sleepHours: number | null) {
   return { icon: Moon, color, bg, label }
 }
 
-export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle }: HabitsGridProps) {
+export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, title = 'Healthy Habits', subtitle, selectedStatusIndicators }: HabitsGridProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
   const [statusTooltip, setStatusTooltip] = useState<StatusTooltipData | null>(null)
+  const [habitDayTooltip, setHabitDayTooltip] = useState<HabitDayTooltipData | null>(null)
 
   // Helper to check if a habit is completed for a given entry
   const isHabitCompleted = (entry: DailyEntryWithRelations, habit: SelectableHabitType): boolean => {
@@ -297,11 +298,15 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
       const trackedDays = daysCompleted.filter((d) => d !== null).length
       const completionRate = trackedDays > 0 ? Math.round((completedCount / trackedDays) * 100) : 0
 
+      // Get entries for each date (for tooltips)
+      const dayEntries = dates.map((date) => entriesByDate.get(date) || null)
+
       return {
         habit,
         label: shortHabitLabels[habit],
         days: daysCompleted,
         dates,
+        dayEntries,
         completionRate,
         completedCount,
         trackedDays,
@@ -333,7 +338,13 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
       entriesByDate.set(entry.entry_date, entry)
     })
 
-    const indicators: StatusIndicatorType[] = ['mood', 'sleep', 'weather', 'work_location']
+    // All available status indicators
+    const allIndicators: StatusIndicatorType[] = ['mood', 'sleep', 'weather', 'work_location']
+
+    // Filter based on selectedStatusIndicators (show all if not specified)
+    const indicators = selectedStatusIndicators && selectedStatusIndicators.length > 0
+      ? allIndicators.filter(i => selectedStatusIndicators.includes(i))
+      : allIndicators
 
     return indicators.map((indicator) => {
       const dayData = dates.map((date) => {
@@ -368,7 +379,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
         days: dayData,
       }
     })
-  }, [entries, showDays, dateRange.end])
+  }, [entries, showDays, dateRange.end, selectedStatusIndicators])
 
   const renderDayCell = (status: DayStatus, habit: SelectableHabitType) => {
     if (status === null) {
@@ -437,6 +448,26 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
 
   const handleStatusLeave = () => {
     setStatusTooltip(null)
+  }
+
+  const handleHabitDayHover = (
+    habit: SelectableHabitType,
+    date: string,
+    entry: DailyEntryWithRelations | null,
+    event: React.MouseEvent
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    setHabitDayTooltip({
+      habit,
+      date,
+      entry,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+    })
+  }
+
+  const handleHabitDayLeave = () => {
+    setHabitDayTooltip(null)
   }
 
   // Helper to render comparison with trend icon
@@ -552,6 +583,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
             {/* Habit rows */}
             {data.map((row, idx) => {
               const totalRows = statusIndicatorData.length + data.length
+              const isSleepHabit = row.habit === 'sleep_8hrs'
               return (
                 <tr
                   key={row.habit}
@@ -567,7 +599,23 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                 </td>
                 {row.days.map((status, i) => (
                   <td key={i} className="text-center align-middle">
-                    {renderDayCell(status, row.habit)}
+                    {isSleepHabit ? (
+                      <div
+                        className="inline-block"
+                        onMouseEnter={(e) => {
+                          e.stopPropagation()
+                          handleHabitDayHover(row.habit, row.dates[i], row.dayEntries[i], e)
+                        }}
+                        onMouseLeave={(e) => {
+                          e.stopPropagation()
+                          handleHabitDayLeave()
+                        }}
+                      >
+                        {renderDayCell(status, row.habit)}
+                      </div>
+                    ) : (
+                      renderDayCell(status, row.habit)
+                    )}
                   </td>
                 ))}
               </tr>
@@ -747,6 +795,68 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Habit day tooltip (for sleep_8hrs showing sleep details) */}
+      {habitDayTooltip && habitDayTooltip.habit === 'sleep_8hrs' && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: habitDayTooltip.x,
+            top: habitDayTooltip.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs min-w-[140px] max-w-[280px]">
+            <div className="font-medium text-gray-900 mb-1">
+              {format(parseISO(habitDayTooltip.date), 'MMM d, yyyy')}
+            </div>
+            {(() => {
+              const entry = habitDayTooltip.entry
+              const hasSleepData = entry && (entry.sleep_score !== null || entry.sleep_hours !== null)
+              return (
+                <div className="space-y-1">
+                  {hasSleepData && entry ? (
+                    <>
+                      {entry.sleep_score !== null && (
+                        <div className="text-purple-600 font-medium">
+                          Score: {entry.sleep_score}
+                        </div>
+                      )}
+                      {entry.sleep_hours !== null && (
+                        <div className="text-gray-600">
+                          {entry.sleep_hours.toFixed(1)} hours asleep
+                        </div>
+                      )}
+                      {entry.sleep_start && entry.sleep_end && (
+                        <div className="text-gray-500 text-[10px]">
+                          {entry.sleep_start.slice(0, 5)} → {entry.sleep_end.slice(0, 5)}
+                        </div>
+                      )}
+                      {(entry.hrv !== null || entry.resting_hr !== null) && (
+                        <div className="flex items-center gap-2 text-gray-600 border-t pt-1 mt-1">
+                          {entry.hrv !== null && (
+                            <span>HRV: {entry.hrv}ms</span>
+                          )}
+                          {entry.resting_hr !== null && (
+                            <span>RHR: {entry.resting_hr}bpm</span>
+                          )}
+                        </div>
+                      )}
+                      {entry.respiratory_rate !== null && (
+                        <div className="text-gray-500">
+                          Resp: {entry.respiratory_rate}/min
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-gray-400">No sleep data</div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

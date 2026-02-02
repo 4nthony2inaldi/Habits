@@ -183,6 +183,7 @@ export function DashboardGrid({
             dateRange={dateRange}
             showDays={7}
             selectedHabits={config.selectedHabits}
+            selectedStatusIndicators={config.selectedStatusIndicators}
             title={titles.title}
             subtitle={titles.subtitle}
           />

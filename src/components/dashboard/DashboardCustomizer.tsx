@@ -14,6 +14,16 @@ export type ComputedHabitType = 'no_alcohol' | 'was_active' | 'breakfast_at_home
 // All selectable habits (regular + computed)
 export type SelectableHabitType = HabitType | ComputedHabitType
 
+// Status indicator types that can be toggled in the habits grid
+export type StatusIndicatorType = 'mood' | 'sleep' | 'weather' | 'work_location'
+
+export const statusIndicatorLabels: Record<StatusIndicatorType, string> = {
+  mood: 'Mood',
+  sleep: 'Sleep',
+  weather: 'Weather',
+  work_location: 'Location',
+}
+
 export const computedHabitLabels: Record<ComputedHabitType, string> = {
   no_alcohol: "Didn't drink",
   was_active: 'Was active (7.5k+ steps)',
@@ -127,6 +137,7 @@ export interface DashboardWidgetConfig {
   eventsTracker: WidgetSettings
   travelWidget: WidgetSettings
   selectedHabits: SelectableHabitType[]
+  selectedStatusIndicators: StatusIndicatorType[]
   selectedEvents: EventType[]
   selectedAlcoholMetrics: AlcoholMetricType[]
   kpiVisibility: KpiVisibility
@@ -134,11 +145,12 @@ export interface DashboardWidgetConfig {
   widgetTitles: WidgetTitles
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts' | 'widgetTitles'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedStatusIndicators' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts' | 'widgetTitles'>
 export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
 const allEvents = Object.keys(eventLabels) as EventType[]
+const allStatusIndicators = Object.keys(statusIndicatorLabels) as StatusIndicatorType[]
 
 const defaultKpiVisibility: KpiVisibility = {
   happyKpi: true,
@@ -233,6 +245,7 @@ const defaultConfig: DashboardWidgetConfig = {
   eventsTracker: { visible: true },
   travelWidget: { visible: true },
   selectedHabits: allHabits,
+  selectedStatusIndicators: allStatusIndicators,
   selectedEvents: allEvents,
   selectedAlcoholMetrics: allAlcoholMetrics,
   kpiVisibility: defaultKpiVisibility,
@@ -278,6 +291,7 @@ export function DashboardCustomizer({
   const [saving, setSaving] = useState(false)
   const [localConfig, setLocalConfig] = useState(config)
   const [habitsExpanded, setHabitsExpanded] = useState(false)
+  const [statusIndicatorsExpanded, setStatusIndicatorsExpanded] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const [alcoholStatsExpanded, setAlcoholStatsExpanded] = useState(false)
   const [titleEditingWidget, setTitleEditingWidget] = useState<WidgetKey | null>(null)
@@ -322,6 +336,15 @@ export function DashboardCustomizer({
       selectedHabits: prev.selectedHabits.includes(habit)
         ? prev.selectedHabits.filter((h) => h !== habit)
         : [...prev.selectedHabits, habit],
+    }))
+  }
+
+  const toggleStatusIndicator = (indicator: StatusIndicatorType) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      selectedStatusIndicators: prev.selectedStatusIndicators.includes(indicator)
+        ? prev.selectedStatusIndicators.filter((i) => i !== indicator)
+        : [...prev.selectedStatusIndicators, indicator],
     }))
   }
 
@@ -531,39 +554,97 @@ export function DashboardCustomizer({
 
                   {/* Habits selection dropdown */}
                   {isHabits && habitsExpanded && localConfig[key].visible && (
-                    <div className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium text-gray-600">Select habits:</span>
-                        <div className="flex gap-1">
+                    <div className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg space-y-4">
+                      {/* Status indicators section */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <button
                             type="button"
-                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [...allHabits] }))}
-                            className="text-xs text-purple-600 hover:underline"
+                            onClick={() => setStatusIndicatorsExpanded(!statusIndicatorsExpanded)}
+                            className="flex items-center gap-1 text-xs font-medium text-gray-600"
                           >
-                            All
+                            {statusIndicatorsExpanded ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            Status indicators:
+                            <span className="text-gray-400 font-normal">
+                              ({localConfig.selectedStatusIndicators.length}/{allStatusIndicators.length})
+                            </span>
                           </button>
-                          <span className="text-gray-300">|</span>
-                          <button
-                            type="button"
-                            onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [] }))}
-                            className="text-xs text-purple-600 hover:underline"
-                          >
-                            None
-                          </button>
+                          {statusIndicatorsExpanded && (
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setLocalConfig(prev => ({ ...prev, selectedStatusIndicators: [...allStatusIndicators] }))}
+                                className="text-xs text-purple-600 hover:underline"
+                              >
+                                All
+                              </button>
+                              <span className="text-gray-300">|</span>
+                              <button
+                                type="button"
+                                onClick={() => setLocalConfig(prev => ({ ...prev, selectedStatusIndicators: [] }))}
+                                className="text-xs text-purple-600 hover:underline"
+                              >
+                                None
+                              </button>
+                            </div>
+                          )}
                         </div>
+                        {statusIndicatorsExpanded && (
+                          <div className="grid grid-cols-2 gap-1 ml-4">
+                            {allStatusIndicators.map((indicator) => (
+                              <label key={indicator} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={localConfig.selectedStatusIndicators.includes(indicator)}
+                                  onChange={() => toggleStatusIndicator(indicator)}
+                                  className="w-4 h-4 accent-purple-600 rounded"
+                                />
+                                <span className="text-xs text-gray-700">{statusIndicatorLabels[indicator]}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
-                        {allHabits.map((habit) => (
-                          <label key={habit} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={localConfig.selectedHabits.includes(habit)}
-                              onChange={() => toggleHabit(habit)}
-                              className="w-4 h-4 accent-purple-600 rounded"
-                            />
-                            <span className="text-xs text-gray-700">{allHabitLabels[habit]}</span>
-                          </label>
-                        ))}
+
+                      {/* Habits section */}
+                      <div className="space-y-2 border-t border-gray-200 pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-gray-600">Select habits:</span>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [...allHabits] }))}
+                              className="text-xs text-purple-600 hover:underline"
+                            >
+                              All
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                              type="button"
+                              onClick={() => setLocalConfig(prev => ({ ...prev, selectedHabits: [] }))}
+                              className="text-xs text-purple-600 hover:underline"
+                            >
+                              None
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
+                          {allHabits.map((habit) => (
+                            <label key={habit} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={localConfig.selectedHabits.includes(habit)}
+                                onChange={() => toggleHabit(habit)}
+                                className="w-4 h-4 accent-purple-600 rounded"
+                              />
+                              <span className="text-xs text-gray-700">{allHabitLabels[habit]}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -695,6 +776,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Migrate selectedHabits
   if ('selectedHabits' in config && Array.isArray(config.selectedHabits)) {
     result.selectedHabits = config.selectedHabits as SelectableHabitType[]
+  }
+
+  // Migrate selectedStatusIndicators
+  if ('selectedStatusIndicators' in config && Array.isArray(config.selectedStatusIndicators)) {
+    result.selectedStatusIndicators = config.selectedStatusIndicators as StatusIndicatorType[]
   }
 
   // Migrate selectedEvents
