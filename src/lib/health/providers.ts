@@ -220,10 +220,10 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       }
     )
 
-    // Fetch detailed sleep periods - query both prev day and target day
-    // Oura filters by bedtime_start, so overnight sleep (started prev day, ended target day) needs prev day query
+    // Fetch detailed sleep periods - query target date only
+    // Oura's 'day' field appears to match daily_sleep (wake-up date)
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${prevDateStr}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${date}&end_date=${date}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
@@ -277,13 +277,13 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       total_sleep_hrs: Math.round(sp.total_sleep_duration / 3600 * 100) / 100,
     })))
 
-    // Find sleep period where day matches OR bedtime_end is on target date
-    // Don't use fallback - if no match, data isn't available yet
-    const sleepPeriod: OuraSleepPeriod | undefined = sleepPeriods.find((sp) => {
-      if (sp.day === date) return true
-      const endDate = new Date(sp.bedtime_end).toISOString().split('T')[0]
-      return endDate === date
-    })
+    // Take the first sleep period - we're querying for the exact target date now
+    // Filter for the longest period if multiple (to get main sleep, not naps)
+    const sleepPeriod: OuraSleepPeriod | undefined = sleepPeriods.length > 0
+      ? sleepPeriods.reduce((longest, current) =>
+          (current.total_sleep_duration > longest.total_sleep_duration) ? current : longest
+        )
+      : undefined
 
     console.log('Selected sleep period:', sleepPeriod ? {
       day: sleepPeriod.day,
