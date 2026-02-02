@@ -662,7 +662,7 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
                       )}
                       {entry.sleep_start && entry.sleep_end && (
                         <div className="text-gray-500 text-[10px]">
-                          {format(parseISO(entry.sleep_start), 'h:mm a')} → {format(parseISO(entry.sleep_end), 'h:mm a')}
+                          {entry.sleep_start.slice(0, 5)} → {entry.sleep_end.slice(0, 5)}
                         </div>
                       )}
                       {(entry.hrv !== null || entry.resting_hr !== null) && (

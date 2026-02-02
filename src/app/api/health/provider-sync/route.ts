@@ -135,8 +135,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (healthData.sleepScore !== null) updateData.sleep_score = healthData.sleepScore
-    if (healthData.sleepStart !== null) updateData.sleep_start = healthData.sleepStart
-    if (healthData.sleepEnd !== null) updateData.sleep_end = healthData.sleepEnd
+    // Convert ISO timestamps to time format for database (HH:MM:SS)
+    if (healthData.sleepStart !== null) {
+      const startDate = new Date(healthData.sleepStart)
+      updateData.sleep_start = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}:00`
+    }
+    if (healthData.sleepEnd !== null) {
+      const endDate = new Date(healthData.sleepEnd)
+      updateData.sleep_end = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:00`
+    }
     if (healthData.sleepHours !== null) updateData.sleep_hours = healthData.sleepHours
     if (healthData.sleepInBedMinutes !== null) updateData.sleep_in_bed_minutes = healthData.sleepInBedMinutes
     if (healthData.sleepAwakeMinutes !== null) updateData.sleep_awake_minutes = healthData.sleepAwakeMinutes

@@ -185,7 +185,7 @@ function EntryCard({ entry, onDelete }: { entry: DailyEntryWithRelations; onDele
                     <div>
                       <p className="text-gray-400 text-xs">Bed/Wake</p>
                       <p className="font-medium">
-                        {format(parseISO(entry.sleep_start), 'HH:mm')} - {format(parseISO(entry.sleep_end), 'HH:mm')}
+                        {entry.sleep_start.slice(0, 5)} - {entry.sleep_end.slice(0, 5)}
                       </p>
                     </div>
                   )}
