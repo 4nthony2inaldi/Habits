@@ -149,7 +149,7 @@ function getContinent(fullName: string): string {
   return countryToContinent[countryLower] || 'Unknown'
 }
 
-type TooltipId = 'away' | 'flights' | 'trains' | 'cities' | null
+type TooltipId = 'away' | 'flights' | 'trains' | 'cities' | 'daysSinceTravel' | null
 
 export function TravelWidget({ entries, allEntries, profile, title = 'Travel', subtitle }: TravelWidgetProps) {
   const [mounted, setMounted] = useState(false)
@@ -362,10 +362,77 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
       return { daysSince: daysSinceVal, lastDate, lastCity, medianGap, isOverdue }
     }
 
+    const awayStats = calculateStats(awayData)
+    const flightStats = calculateStats(flightData)
+    const trainStats = calculateStats(trainData)
+
+    // Calculate combined "days since any travel" - minimum of all travel types
+    const allTravelStats = [awayStats, flightStats, trainStats].filter(s => s.daysSince !== null)
+    let combined: { daysSince: number | null; lastDate: string | null; lastCity: string | null; travelType: string | null; medianGap: number | null; isOverdue: boolean } = {
+      daysSince: null,
+      lastDate: null,
+      lastCity: null,
+      travelType: null,
+      medianGap: null,
+      isOverdue: false,
+    }
+
+    if (allTravelStats.length > 0) {
+      // Find the most recent travel (minimum daysSince)
+      const mostRecent = allTravelStats.reduce((min, curr) =>
+        (curr.daysSince !== null && (min.daysSince === null || curr.daysSince < min.daysSince)) ? curr : min
+      )
+
+      // Determine which type of travel was most recent
+      let travelType = 'away'
+      if (mostRecent === flightStats) travelType = 'flight'
+      else if (mostRecent === trainStats) travelType = 'train'
+
+      // Calculate combined median gap using all travel data
+      const allTravelData = [...awayData, ...flightData, ...trainData]
+      let combinedMedianGap: number | null = null
+      if (allTravelData.length >= 2) {
+        const sortedDates = allTravelData
+          .map((d) => parseISO(d.date))
+          .sort((a, b) => a.getTime() - b.getTime())
+
+        // Remove duplicate dates
+        const uniqueDates: Date[] = []
+        sortedDates.forEach(date => {
+          if (uniqueDates.length === 0 || date.getTime() !== uniqueDates[uniqueDates.length - 1].getTime()) {
+            uniqueDates.push(date)
+          }
+        })
+
+        if (uniqueDates.length >= 2) {
+          const gaps: number[] = []
+          for (let i = 1; i < uniqueDates.length; i++) {
+            gaps.push(differenceInDays(uniqueDates[i], uniqueDates[i - 1]))
+          }
+          gaps.sort((a, b) => a - b)
+
+          const mid = Math.floor(gaps.length / 2)
+          combinedMedianGap = gaps.length % 2 === 0
+            ? Math.round((gaps[mid - 1] + gaps[mid]) / 2)
+            : gaps[mid]
+        }
+      }
+
+      combined = {
+        daysSince: mostRecent.daysSince,
+        lastDate: mostRecent.lastDate,
+        lastCity: mostRecent.lastCity,
+        travelType,
+        medianGap: combinedMedianGap,
+        isOverdue: mostRecent.daysSince !== null && combinedMedianGap !== null && mostRecent.daysSince > combinedMedianGap,
+      }
+    }
+
     return {
-      away: calculateStats(awayData),
-      flight: calculateStats(flightData),
-      train: calculateStats(trainData),
+      away: awayStats,
+      flight: flightStats,
+      train: trainStats,
+      combined,
     }
   }, [allEntries, entries, profile.home_city])
 
@@ -494,6 +561,65 @@ export function TravelWidget({ entries, allEntries, profile, title = 'Travel', s
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-3">
+        {/* Days Since Travel Banner */}
+        {daysSince.combined.daysSince !== null && (
+          <button
+            type="button"
+            onClick={() => toggleTooltip('daysSinceTravel')}
+            className={`relative group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+              daysSince.combined.isOverdue
+                ? 'bg-gradient-to-r from-red-50 to-orange-50 active:from-red-100 active:to-orange-100'
+                : 'bg-gradient-to-r from-cyan-50 to-indigo-50 active:from-cyan-100 active:to-indigo-100'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                daysSince.combined.isOverdue ? 'bg-red-100' : 'bg-cyan-100'
+              }`}>
+                {daysSince.combined.travelType === 'flight' ? (
+                  <Plane className={`h-5 w-5 ${daysSince.combined.isOverdue ? 'text-red-500' : 'text-cyan-500'}`} />
+                ) : daysSince.combined.travelType === 'train' ? (
+                  <Train className={`h-5 w-5 ${daysSince.combined.isOverdue ? 'text-red-500' : 'text-amber-500'}`} />
+                ) : (
+                  <Moon className={`h-5 w-5 ${daysSince.combined.isOverdue ? 'text-red-500' : 'text-indigo-500'}`} />
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Days Since Travel</p>
+                <p className={`text-2xl font-bold ${daysSince.combined.isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                  {daysSince.combined.daysSince}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              {daysSince.combined.lastCity && (
+                <p className="text-xs text-gray-600">{extractCityName(daysSince.combined.lastCity)}</p>
+              )}
+              {daysSince.combined.lastDate && (
+                <p className="text-[10px] text-gray-400">{format(parseISO(daysSince.combined.lastDate), 'MMM d, yyyy')}</p>
+              )}
+              {daysSince.combined.medianGap !== null && (
+                <p className={`text-[9px] ${daysSince.combined.isOverdue ? 'text-red-400' : 'text-gray-400'}`}>
+                  typical: {daysSince.combined.medianGap}d
+                </p>
+              )}
+            </div>
+            {/* Tooltip */}
+            <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 pointer-events-none ${activeTooltip === 'daysSinceTravel' ? 'block' : 'hidden group-hover:block'}`}>
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs whitespace-nowrap">
+                <div className="font-medium text-gray-900 mb-1">
+                  Last travel: {daysSince.combined.travelType === 'flight' ? 'Flight' : daysSince.combined.travelType === 'train' ? 'Train' : 'Night away'}
+                </div>
+                {daysSince.combined.isOverdue && (
+                  <div className="text-red-500 text-[10px]">
+                    Overdue by {daysSince.combined.daysSince! - daysSince.combined.medianGap!} days
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-2">
           {/* Away */}
