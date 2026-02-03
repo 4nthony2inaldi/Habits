@@ -407,7 +407,7 @@ export function DashboardCustomizer({
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className="gap-2"
+        className="h-9 gap-2"
       >
         <Settings2 className="h-4 w-4" />
         <span className="hidden sm:inline">Customize</span>

@@ -141,7 +141,7 @@ export function DateRangePicker({
     <div className={cn('relative', className)}>
       <Button
         variant="outline"
-        className="justify-center text-left font-normal px-2 sm:px-3 sm:min-w-[200px]"
+        className="h-9 justify-center text-left font-normal px-2 sm:px-3 sm:min-w-[200px]"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Calendar className="h-4 w-4 sm:mr-2" />

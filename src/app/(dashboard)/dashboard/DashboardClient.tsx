@@ -14,7 +14,8 @@ import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
 import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, Plus } from 'lucide-react'
+import Link from 'next/link'
 import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 import { YearWrapped, WrappedPeriod } from '@/components/dashboard/YearWrapped'
 import { getYear, getMonth, getQuarter, subMonths, subQuarters, parseISO } from 'date-fns'
@@ -117,9 +118,17 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
           users={users}
           selectedUserId={selectedUserId}
           onUserChange={setSelectedUserId}
-          className="w-24 sm:w-28"
+          className="w-24 sm:w-28 h-9"
         />
       )}
+      <Link
+        href="/entry"
+        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors"
+        title="Log entry"
+      >
+        <Plus className="h-4 w-4" />
+        <span className="hidden sm:inline ml-1.5">Log</span>
+      </Link>
       <DateRangePicker
         startDate={dateRange.start}
         endDate={dateRange.end}
