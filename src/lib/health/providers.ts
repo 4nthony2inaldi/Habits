@@ -93,7 +93,8 @@ interface WhoopRecoveryData {
 export interface HealthSyncDebug {
   queriedDate: string
   sleepPeriodsCount: number
-  sleepPeriods: Array<{ day: string; hrs: number }>
+  sleepPeriods: Array<{ day: string; endDate?: string | null; hrs: number }>
+  matchingPeriodsCount?: number
   activityDataCount: number
 }
 
@@ -230,13 +231,14 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
     )
 
     // Fetch detailed sleep periods - query a wider range to find the data
-    // We'll query from 2 days before to the target date to see what comes back
+    // We need to include sleep that started on previous days but ended on target date
+    // Also include the next day in case Oura's API end_date is exclusive
     const twoDaysAgo = new Date(targetDate)
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
     const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0]
 
     const sleepPeriodsResponse = await fetch(
-      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${twoDaysAgoStr}&end_date=${date}`,
+      `https://api.ouraring.com/v2/usercollection/sleep?start_date=${twoDaysAgoStr}&end_date=${nextDateStr}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
@@ -331,12 +333,14 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       steps: dailyActivity?.steps ?? null,
       source: 'oura',
       _debug: {
-        queriedDate: `sleep:${twoDaysAgoStr}-${date}, activity:${prevDateStr}-${nextDateStr}`,
+        queriedDate: `sleep:${twoDaysAgoStr}-${nextDateStr}, activity:${prevDateStr}-${nextDateStr}`,
         sleepPeriodsCount: sleepPeriods.length,
         sleepPeriods: sleepPeriods.map(sp => ({
           day: sp.day,
+          endDate: sp.bedtime_end?.split('T')[0] ?? null,
           hrs: Math.round(sp.total_sleep_duration / 3600 * 100) / 100,
         })),
+        matchingPeriodsCount: matchingPeriods.length,
         activityDataCount: activities.length,
       },
     }
