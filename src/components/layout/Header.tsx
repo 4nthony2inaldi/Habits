@@ -48,13 +48,10 @@ export function Header({ profile }: HeaderProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center space-x-2 flex-shrink-0">
+          <Link href="/dashboard" className="flex items-center flex-shrink-0">
             <div className="h-8 w-8 rounded-lg bg-purple-600 flex items-center justify-center">
               <span className="text-white font-bold text-lg">H</span>
             </div>
-            <span className="hidden sm:block font-semibold text-gray-900">
-              Healthy Habits
-            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -66,13 +63,13 @@ export function Header({ profile }: HeaderProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                    'flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                     isActive
                       ? 'bg-purple-100 text-purple-700'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-5 w-5" />
                   <span>{item.name}</span>
                 </Link>
               )
