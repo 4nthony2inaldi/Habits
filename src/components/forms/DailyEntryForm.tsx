@@ -1127,7 +1127,7 @@ export function DailyEntryForm({ profile }: DailyEntryFormProps) {
                 color="purple"
               />
               <PillButton
-                label="Guys Night"
+                label="Saw Friends"
                 checked={field.value.includes('guys_night')}
                 onChange={() => field.onChange(toggleEvent('guys_night', field.value as EventType[]))}
                 color="purple"

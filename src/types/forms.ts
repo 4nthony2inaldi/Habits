@@ -83,7 +83,7 @@ export const eventLabels: Record<EventType, string> = {
   stage_production: 'Went to a stage production',
   movies: 'Went to the movies',
   museum: 'Went to a museum',
-  guys_night: 'Guys Night',
+  guys_night: 'Saw Friends',
   massage: 'Massage',
   facial: 'Facial',
   pedicure: 'Pedicure',

@@ -138,7 +138,7 @@ const metricOptions: { value: ReportMetric; label: string; category: string }[] 
   { value: 'event_stage_production', label: 'Stage Production', category: 'Events' },
   { value: 'event_movies', label: 'Went to Movies', category: 'Events' },
   { value: 'event_museum', label: 'Went to Museum', category: 'Events' },
-  { value: 'event_guys_night', label: 'Guys Night', category: 'Events' },
+  { value: 'event_guys_night', label: 'Saw Friends', category: 'Events' },
   { value: 'event_massage', label: 'Massage', category: 'Events' },
   { value: 'event_facial', label: 'Facial', category: 'Events' },
   { value: 'event_pedicure', label: 'Pedicure', category: 'Events' },
