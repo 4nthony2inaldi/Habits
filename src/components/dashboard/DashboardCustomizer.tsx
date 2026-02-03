@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { Settings2, X, Check, Loader2, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
+import { Settings2, X, Check, Loader2, ChevronDown, ChevronRight, Pencil, Lock, Unlock } from 'lucide-react'
 import type { Profile, HabitType, EventType } from '@/types/database'
 import { habitLabels, eventLabels } from '@/types/forms'
 
@@ -143,9 +143,10 @@ export interface DashboardWidgetConfig {
   kpiVisibility: KpiVisibility
   gridLayouts: GridLayouts
   widgetTitles: WidgetTitles
+  gridLocked: boolean
 }
 
-export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedStatusIndicators' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts' | 'widgetTitles'>
+export type WidgetKey = keyof Omit<DashboardWidgetConfig, 'selectedHabits' | 'selectedStatusIndicators' | 'selectedEvents' | 'selectedAlcoholMetrics' | 'kpiVisibility' | 'gridLayouts' | 'widgetTitles' | 'gridLocked'>
 export type KpiKey = keyof KpiVisibility
 
 const allHabits = Object.keys(allHabitLabels) as SelectableHabitType[]
@@ -251,6 +252,7 @@ const defaultConfig: DashboardWidgetConfig = {
   kpiVisibility: defaultKpiVisibility,
   gridLayouts: defaultGridLayouts,
   widgetTitles: defaultWidgetTitles,
+  gridLocked: true,
 }
 
 const kpiLabels: Record<KpiKey, string> = {
@@ -424,6 +426,38 @@ export function DashboardCustomizer({
           </div>
 
           <div className="p-4 space-y-1 max-h-96 overflow-y-auto">
+            {/* Layout Lock Toggle */}
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 mb-3">
+              <div className="flex items-center gap-2">
+                {localConfig.gridLocked ? (
+                  <Lock className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <Unlock className="h-4 w-4 text-purple-600" />
+                )}
+                <div>
+                  <span className="text-sm text-gray-700 font-medium">Layout Lock</span>
+                  <p className="text-xs text-gray-500">
+                    {localConfig.gridLocked ? 'Widgets are locked' : 'Drag to reposition'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLocalConfig(prev => ({ ...prev, gridLocked: !prev.gridLocked }))}
+                className={cn(
+                  'w-9 h-5 rounded-full transition-colors relative flex-shrink-0',
+                  !localConfig.gridLocked ? 'bg-purple-600' : 'bg-gray-300'
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                    !localConfig.gridLocked ? 'translate-x-4' : 'translate-x-0.5'
+                  )}
+                />
+              </button>
+            </div>
+
             {/* KPI Cards Section */}
             <p className="text-xs text-gray-500 mb-2">Summary Cards</p>
             {(Object.keys(kpiLabels) as KpiKey[]).map((key) => (
@@ -454,9 +488,7 @@ export function DashboardCustomizer({
             ))}
 
             {/* Widgets Section */}
-            <p className="text-xs text-gray-500 mt-4 mb-2">
-              Widgets (drag on dashboard to reposition/resize)
-            </p>
+            <p className="text-xs text-gray-500 mt-4 mb-2">Widgets</p>
             {widgetKeys.map((key) => {
               const isHabits = key === 'habitsGrid'
               const isEvents = key === 'eventsTracker'
@@ -811,6 +843,11 @@ function migrateConfig(oldConfig: unknown): DashboardWidgetConfig {
   // Migrate widgetTitles - merge to preserve new widget defaults
   if ('widgetTitles' in config && typeof config.widgetTitles === 'object') {
     result.widgetTitles = { ...defaultWidgetTitles, ...(config.widgetTitles as WidgetTitles) }
+  }
+
+  // Migrate gridLocked - defaults to true if not present
+  if ('gridLocked' in config && typeof config.gridLocked === 'boolean') {
+    result.gridLocked = config.gridLocked
   }
 
   return result

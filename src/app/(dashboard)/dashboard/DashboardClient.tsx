@@ -14,7 +14,7 @@ import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
 import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
-import { Loader2, Lock, Unlock, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 import { YearWrapped, WrappedPeriod } from '@/components/dashboard/YearWrapped'
 import { getYear, getMonth, getQuarter, subMonths, subQuarters, parseISO } from 'date-fns'
@@ -41,7 +41,6 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [widgetConfig, setWidgetConfig] = useState<DashboardWidgetConfig>(() =>
     getWidgetConfig(currentUser)
   )
-  const [gridLocked, setGridLocked] = useState(true)
   const [showWrappedPicker, setShowWrappedPicker] = useState(false)
   const [wrappedConfig, setWrappedConfig] = useState<WrappedConfig>({ show: false, period: 'year' })
   const [pickerPeriodType, setPickerPeriodType] = useState<WrappedPeriod>('year')
@@ -135,23 +134,6 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         onConfigChange={setWidgetConfig}
       />
       <button
-        onClick={() => setGridLocked(!gridLocked)}
-        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-        title={gridLocked ? 'Unlock widgets to drag/resize' : 'Lock widgets in place'}
-      >
-        {gridLocked ? (
-          <>
-            <Lock className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1.5">Locked</span>
-          </>
-        ) : (
-          <>
-            <Unlock className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1.5">Unlocked</span>
-          </>
-        )}
-      </button>
-      <button
         onClick={() => setShowWrappedPicker(true)}
         className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
         title="View your wrapped"
@@ -203,7 +185,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
             config={widgetConfig}
             profile={currentUser}
             onLayoutChange={handleLayoutChange}
-            locked={gridLocked}
+            locked={widgetConfig.gridLocked}
           />
         </>
       )}
