@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Upload, FileText, AlertCircle, CheckCircle, Download, Loader2 } from 'lucide-react'
 import type { Profile, HabitType, EventType, WorkLocation, MealLocation } from '@/types/database'
@@ -669,7 +670,8 @@ function normalizeDate(value: string): string {
   // Try to parse as a date string
   const date = new Date(dateOnly)
   if (!isNaN(date.getTime())) {
-    return date.toISOString().split('T')[0]
+    // Use date-fns format to avoid UTC conversion issues
+    return format(date, 'yyyy-MM-dd')
   }
 
   return dateOnly

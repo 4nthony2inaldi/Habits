@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getTodayInEST } from '@/lib/utils/dates'
 
 // Raw sleep sample from Apple Health via iOS Shortcuts
 interface SleepSample {
@@ -185,8 +186,8 @@ export async function POST(request: NextRequest) {
       }
       entryDate = body.date
     } else {
-      // Default to today in UTC
-      entryDate = new Date().toISOString().split('T')[0]
+      // Default to today in EST
+      entryDate = getTodayInEST()
     }
 
     // Use service client to bypass RLS
@@ -447,7 +448,8 @@ export async function GET(request: NextRequest) {
     }
     entryDate = body.date
   } else {
-    entryDate = new Date().toISOString().split('T')[0]
+    // Default to today in EST
+    entryDate = getTodayInEST()
   }
 
   try {

@@ -14,6 +14,17 @@ import {
   isAfter,
   eachDayOfInterval,
 } from 'date-fns'
+import { toZonedTime, format as formatTz } from 'date-fns-tz'
+
+// App-wide timezone constant (Eastern Time)
+export const APP_TIMEZONE = 'America/New_York'
+
+// Get current date string in EST/EDT timezone (YYYY-MM-DD format)
+export function getTodayInEST(): string {
+  const now = new Date()
+  const estDate = toZonedTime(now, APP_TIMEZONE)
+  return formatTz(estDate, 'yyyy-MM-dd', { timeZone: APP_TIMEZONE })
+}
 
 export function getYesterday(): Date {
   return subDays(new Date(), 1)

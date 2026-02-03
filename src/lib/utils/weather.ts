@@ -1,6 +1,8 @@
 // Weather service using Open-Meteo API (free, no API key required)
 // Supports both current and historical weather data
 
+import { getTodayInEST } from './dates'
+
 export interface WeatherData {
   temperatureHigh: number // in Fahrenheit
   temperatureLow: number // in Fahrenheit
@@ -77,7 +79,7 @@ export async function fetchWeather(
     })
 
     // Use archive API for dates before today, forecast API for recent/future dates
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayInEST()
     const dateObj = new Date(date)
     const daysAgo = Math.floor((new Date(today).getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -141,7 +143,7 @@ export async function fetchWeatherBatch(
     })
 
     // Determine which API to use based on date range
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayInEST()
     const endDateObj = new Date(endDate)
     const daysAgo = Math.floor((new Date(today).getTime() - endDateObj.getTime()) / (1000 * 60 * 60 * 24))
 
