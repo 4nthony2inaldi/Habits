@@ -290,11 +290,15 @@ export async function fetchOuraData(accessToken: string, date: string): Promise<
       total_sleep_hrs: Math.round(sp.total_sleep_duration / 3600 * 100) / 100,
     })))
 
-    // Filter sleep periods to find the one for the night BEFORE the target date
-    // (i.e., went to bed on prevDate, woke up on targetDate)
-    const matchingPeriods = sleepPeriods.filter(sp => sp.day === prevDateStr)
+    // Filter sleep periods to find the one that ENDED on the target date
+    // This is the sleep you woke up from on that day (regardless of when you went to bed)
+    const matchingPeriods = sleepPeriods.filter(sp => {
+      if (!sp.bedtime_end) return false
+      const endDate = sp.bedtime_end.split('T')[0]
+      return endDate === date
+    })
 
-    // If multiple periods on that day (naps), take the longest one (main sleep)
+    // If multiple periods ended on that day (naps + main sleep), take the longest one
     const sleepPeriod: OuraSleepPeriod | undefined = matchingPeriods.length > 0
       ? matchingPeriods.reduce((longest, current) =>
           (current.total_sleep_duration > longest.total_sleep_duration) ? current : longest
