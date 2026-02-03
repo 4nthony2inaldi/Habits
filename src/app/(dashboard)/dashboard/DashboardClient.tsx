@@ -123,7 +123,7 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
       )}
       <Link
         href="/entry"
-        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors"
+        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 rounded-md transition-colors"
         title="Log entry"
       >
         <Plus className="h-4 w-4" />
