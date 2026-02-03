@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { subDays, startOfYear } from 'date-fns'
 import { useEntries } from '@/lib/hooks/useEntries'
 import { useStats } from '@/lib/hooks/useStats'
-import { formatDateForInput } from '@/lib/utils/dates'
+import { formatDateForInput, getAvailableYears, getAvailableMonths, getEarliestDate } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { DateRangePicker } from '@/components/layout/DateRangePicker'
 import { UserSelector } from '@/components/layout/UserSelector'
@@ -75,6 +75,19 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const stats = useStats(entries)
   const selectedUser = users.find((u) => u.id === selectedUserId)
 
+  // Compute available years, months, and earliest date from all entries
+  const { availableYears, availableMonths, earliestDate } = useMemo(() => {
+    if (!allEntries || allEntries.length === 0) {
+      return { availableYears: [], availableMonths: [], earliestDate: null }
+    }
+    const entryDates = allEntries.map(e => e.entry_date)
+    return {
+      availableYears: getAvailableYears(entryDates),
+      availableMonths: getAvailableMonths(entryDates),
+      earliestDate: getEarliestDate(entryDates),
+    }
+  }, [allEntries])
+
   // Handle layout changes from drag/resize
   const handleLayoutChange = useCallback(
     async (newLayouts: GridLayouts) => {
@@ -112,6 +125,9 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         startDate={dateRange.start}
         endDate={dateRange.end}
         onRangeChange={(start, end) => setDateRange({ start, end })}
+        availableYears={availableYears}
+        availableMonths={availableMonths}
+        earliestDate={earliestDate}
       />
       <DashboardCustomizer
         profile={currentUser}
