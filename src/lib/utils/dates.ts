@@ -57,11 +57,11 @@ export type DateRange = {
   label: string
 }
 
-export function getQuickPresets(): DateRange[] {
+export function getQuickPresets(earliestDate?: Date | null): DateRange[] {
   const today = new Date()
   const yesterday = subDays(today, 1)
 
-  return [
+  const presets: DateRange[] = [
     {
       label: 'Last 30 days',
       start: subDays(today, 30),
@@ -73,6 +73,17 @@ export function getQuickPresets(): DateRange[] {
       end: yesterday,
     },
   ]
+
+  // Add "All Time" option if we have an earliest date
+  if (earliestDate) {
+    presets.push({
+      label: 'All Time',
+      start: earliestDate,
+      end: yesterday,
+    })
+  }
+
+  return presets
 }
 
 // Legacy function for backwards compatibility

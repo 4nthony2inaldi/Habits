@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, subDays, isAfter } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils/cn'
-import { Calendar, ChevronDown, Check } from 'lucide-react'
+import { Filter, ChevronDown, Check } from 'lucide-react'
 import {
   getQuickPresets,
   formatDateForInput,
@@ -37,7 +37,7 @@ export function DateRangePicker({
   const [isOpen, setIsOpen] = useState(false)
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'quick' | 'months' | 'custom'>('quick')
-  const quickPresets = getQuickPresets()
+  const quickPresets = getQuickPresets(earliestDate)
   const yesterday = subDays(new Date(), 1)
 
   // Group months by year for display
@@ -141,10 +141,10 @@ export function DateRangePicker({
     <div className={cn('relative', className)}>
       <Button
         variant="outline"
-        className="h-9 justify-center text-left font-normal px-2 sm:px-3 sm:min-w-[200px]"
+        className="h-9 justify-center text-left font-normal px-2 sm:px-3"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Calendar className="h-4 w-4 sm:mr-2" />
+        <Filter className="h-4 w-4 sm:mr-2" />
         <span className="hidden sm:inline text-sm">
           {format(startDate, 'M/d/yy')} - {format(endDate, 'M/d/yy')}
         </span>

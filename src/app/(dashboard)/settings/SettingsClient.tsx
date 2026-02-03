@@ -33,7 +33,11 @@ import {
   Heart,
   GripVertical,
   RotateCcw,
+  Shield,
+  Target,
+  ChevronRight,
 } from 'lucide-react'
+import Link from 'next/link'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 import { AppleHealthSyncSettings } from '@/components/settings/AppleHealthSyncSettings'
 import { HealthConnectionsSettings } from '@/components/settings/HealthConnectionsSettings'
@@ -273,6 +277,46 @@ export function SettingsClient({ profile }: SettingsClientProps) {
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600">Manage your profile and preferences</p>
       </div>
+
+      {/* Quick Links */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            {profile.is_admin && (
+              <Link
+                href="/admin"
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                    <Shield className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-900">Admin Panel</span>
+                    <p className="text-sm text-gray-500">Manage users and system settings</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+              </Link>
+            )}
+            <Link
+              href="/goals"
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="font-medium text-gray-900">Goals</span>
+                  <p className="text-sm text-gray-500">Set and track your personal goals</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile Settings */}
       <Card>

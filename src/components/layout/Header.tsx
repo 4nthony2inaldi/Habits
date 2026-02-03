@@ -10,23 +10,16 @@ import {
   LayoutDashboard,
   PlusCircle,
   Trophy,
-  Target,
   Settings,
   LogOut,
   Menu,
   X,
-  Flame,
-  Shield,
   BarChart3,
-  PanelTopClose,
-  PanelTop,
 } from 'lucide-react'
-import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
 import type { Profile } from '@/types/database'
 
 interface HeaderProps {
   profile: Profile | null
-  streak?: number
 }
 
 const navigation = [
@@ -34,16 +27,14 @@ const navigation = [
   { name: 'New Entry', href: '/entry', icon: PlusCircle },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Leaderboards', href: '/leaderboards', icon: Trophy },
-  { name: 'Goals', href: '/goals', icon: Target },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
-export function Header({ profile, streak = 0 }: HeaderProps) {
+export function Header({ profile }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const { controlsCollapsed, toggleControls } = useDashboardControls()
   const isDashboard = pathname === '/dashboard'
 
   async function handleLogout() {
@@ -66,28 +57,8 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
             </span>
           </Link>
 
-          {/* Mobile dashboard controls slot - in main header bar */}
-          {isDashboard && (
-            <div id="mobile-dashboard-controls" className="md:hidden flex-1 flex justify-center" />
-          )}
-
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-            {/* Admin link - always visible first for admins */}
-            {profile?.is_admin && (
-              <Link
-                href="/admin"
-                className={cn(
-                  'flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  pathname === '/admin' || pathname.startsWith('/admin/')
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                <span>Admin</span>
-              </Link>
-            )}
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -108,40 +79,24 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
             })}
           </nav>
 
-          {/* Right side */}
-          <div className="flex items-center space-x-4">
-            {/* Dashboard controls toggle - only on dashboard page */}
-            {isDashboard && (
-              <button
-                onClick={toggleControls}
-                className="hidden sm:flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                title={controlsCollapsed ? 'Show dashboard controls' : 'Hide dashboard controls'}
-              >
-                {controlsCollapsed ? (
-                  <PanelTop className="h-5 w-5" />
-                ) : (
-                  <PanelTopClose className="h-5 w-5" />
-                )}
-              </button>
-            )}
+          {/* Dashboard controls slot - visible on dashboard for all screen sizes */}
+          {isDashboard && (
+            <div id="dashboard-header-controls" className="flex items-center gap-2" />
+          )}
 
-            {/* Streak indicator */}
-            {streak > 0 && (
-              <div className="hidden sm:flex items-center space-x-1 text-orange-600 font-medium">
-                <Flame className="h-5 w-5" />
-                <span>{streak}</span>
+          {/* Right side - User info and logout (hidden on dashboard as it's in the portal) */}
+          <div className="flex items-center space-x-4">
+            {/* User info - only show on non-dashboard pages */}
+            {!isDashboard && (
+              <div className="hidden md:flex items-center space-x-3">
+                <span className="text-sm text-gray-600">
+                  {profile?.display_name || 'User'}
+                </span>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             )}
-
-            {/* User info */}
-            <div className="hidden md:flex items-center space-x-3">
-              <span className="text-sm text-gray-600">
-                {profile?.display_name || 'User'}
-              </span>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
 
             {/* Mobile menu button */}
             <button
@@ -163,22 +118,6 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="container mx-auto px-4 py-3 space-y-1">
-            {/* Admin link - first in mobile menu for admins */}
-            {profile?.is_admin && (
-              <Link
-                href="/admin"
-                className={cn(
-                  'flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium',
-                  pathname === '/admin' || pathname.startsWith('/admin/')
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-100 text-purple-700'
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Shield className="h-5 w-5" />
-                <span>Admin</span>
-              </Link>
-            )}
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               return (
@@ -203,12 +142,6 @@ export function Header({ profile, streak = 0 }: HeaderProps) {
                 <span className="text-sm text-gray-600">
                   {profile?.display_name || 'User'}
                 </span>
-                {streak > 0 && (
-                  <div className="flex items-center space-x-1 text-orange-600 font-medium">
-                    <Flame className="h-4 w-4" />
-                    <span>{streak}</span>
-                  </div>
-                )}
               </div>
               <Button
                 variant="ghost"

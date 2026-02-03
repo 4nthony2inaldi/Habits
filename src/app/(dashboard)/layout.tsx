@@ -23,39 +23,10 @@ export default async function DashboardLayout({
     .eq('id', user.id)
     .single()
 
-  // Fetch user's current streak (count of consecutive days logged)
-  const { data: entries } = await supabase
-    .from('daily_entries')
-    .select('entry_date')
-    .eq('user_id', user.id)
-    .order('entry_date', { ascending: false })
-    .limit(365)
-
-  let streak = 0
-  if (entries && entries.length > 0) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    let currentDate = yesterday
-    for (const entry of entries) {
-      const entryDate = new Date(entry.entry_date)
-      entryDate.setHours(0, 0, 0, 0)
-
-      if (entryDate.getTime() === currentDate.getTime()) {
-        streak++
-        currentDate.setDate(currentDate.getDate() - 1)
-      } else if (entryDate.getTime() < currentDate.getTime()) {
-        break
-      }
-    }
-  }
-
   return (
     <ClientProviders>
       <div className="min-h-screen bg-gray-50">
-        <Header profile={profile} streak={streak} />
+        <Header profile={profile} />
         <main className="container mx-auto px-4 py-6">
           {children}
         </main>

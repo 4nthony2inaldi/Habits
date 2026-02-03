@@ -14,11 +14,11 @@ import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
 import { DashboardCustomizer, getWidgetConfig } from '@/components/dashboard/DashboardCustomizer'
 import type { DashboardWidgetConfig, GridLayouts } from '@/components/dashboard/DashboardCustomizer'
 import type { Profile } from '@/types/database'
-import { Loader2, Sparkles, Plus } from 'lucide-react'
-import Link from 'next/link'
-import { useDashboardControls } from '@/lib/context/DashboardControlsContext'
+import { Loader2, Sparkles, LogOut } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { YearWrapped, WrappedPeriod } from '@/components/dashboard/YearWrapped'
-import { getYear, getMonth, getQuarter, subMonths, subQuarters, parseISO } from 'date-fns'
+import { getYear, getMonth, getQuarter, parseISO } from 'date-fns'
+import { Button } from '@/components/ui/button'
 
 interface WrappedConfig {
   show: boolean
@@ -34,6 +34,7 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ currentUser, users }: DashboardClientProps) {
+  const router = useRouter()
   const [selectedUserId, setSelectedUserId] = useState(currentUser.id)
   const [dateRange, setDateRange] = useState({
     start: startOfYear(new Date()),
@@ -45,13 +46,12 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
   const [showWrappedPicker, setShowWrappedPicker] = useState(false)
   const [wrappedConfig, setWrappedConfig] = useState<WrappedConfig>({ show: false, period: 'year' })
   const [pickerPeriodType, setPickerPeriodType] = useState<WrappedPeriod>('year')
-  const [mobilePortalContainer, setMobilePortalContainer] = useState<HTMLElement | null>(null)
-  const { controlsCollapsed } = useDashboardControls()
+  const [headerPortalContainer, setHeaderPortalContainer] = useState<HTMLElement | null>(null)
 
-  // Find the mobile portal container in the header
+  // Find the header portal container
   useEffect(() => {
-    const container = document.getElementById('mobile-dashboard-controls')
-    setMobilePortalContainer(container)
+    const container = document.getElementById('dashboard-header-controls')
+    setHeaderPortalContainer(container)
   }, [])
 
   // Helper to launch wrapped with specific config
@@ -110,25 +110,35 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
     [widgetConfig, currentUser.id]
   )
 
-  // Dashboard controls element - rendered in header on mobile, inline on desktop
-  const dashboardControls = !controlsCollapsed && (
-    <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-      {users.length > 1 && currentUser.is_admin && (
+  // Logout handler
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  // Get first name from display name
+  const getFirstName = (displayName: string) => displayName.split(' ')[0] || displayName
+
+  // Dashboard header controls - portaled into the header
+  const headerControls = (
+    <div className="flex items-center gap-2">
+      {/* User selector (admin) or user name */}
+      {users.length > 1 && currentUser.is_admin ? (
         <UserSelector
           users={users}
           selectedUserId={selectedUserId}
           onUserChange={setSelectedUserId}
           className="w-24 sm:w-28 h-9"
         />
+      ) : (
+        <span className="hidden md:inline text-sm text-gray-600">
+          {getFirstName(currentUser.display_name)}
+        </span>
       )}
-      <Link
-        href="/entry"
-        className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 rounded-md transition-colors"
-        title="Log entry"
-      >
-        <Plus className="h-4 w-4" />
-        <span className="hidden sm:inline ml-1.5">Log</span>
-      </Link>
+
+      {/* Date range filter */}
       <DateRangePicker
         startDate={dateRange.start}
         endDate={dateRange.end}
@@ -137,11 +147,15 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         availableMonths={availableMonths}
         earliestDate={earliestDate}
       />
+
+      {/* Customize button */}
       <DashboardCustomizer
         profile={currentUser}
         config={widgetConfig}
         onConfigChange={setWidgetConfig}
       />
+
+      {/* Wrapped button */}
       <button
         onClick={() => setShowWrappedPicker(true)}
         className="inline-flex items-center justify-center h-9 w-9 sm:w-auto sm:px-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-md hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
@@ -150,21 +164,18 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         <Sparkles className="h-4 w-4" />
         <span className="hidden sm:inline ml-1.5">Wrapped</span>
       </button>
+
+      {/* Logout button */}
+      <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden md:flex">
+        <LogOut className="h-4 w-4" />
+      </Button>
     </div>
   )
 
   return (
     <div className="space-y-4">
-      {/* Mobile: render controls in header via portal */}
-      {mobilePortalContainer && dashboardControls && createPortal(
-        dashboardControls,
-        mobilePortalContainer
-      )}
-
-      {/* Desktop: render controls inline (hidden on mobile since they're in header) */}
-      <div className="hidden md:block">
-        {dashboardControls}
-      </div>
+      {/* Portal controls into header */}
+      {headerPortalContainer && createPortal(headerControls, headerPortalContainer)}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -172,19 +183,17 @@ export function DashboardClient({ currentUser, users }: DashboardClientProps) {
         </div>
       ) : (
         <>
-          {/* Summary Cards - collapsible */}
-          {!controlsCollapsed && (
-            <SummaryCards
-              moodAverage={stats.moodStats.average}
-              moodTrend={stats.moodStats.trend}
-              healthScore={stats.healthScore}
-              busyScore={stats.busyScore}
-              totalDays={stats.totalDays}
-              showHappy={widgetConfig.kpiVisibility.happyKpi}
-              showHealthy={widgetConfig.kpiVisibility.healthyKpi}
-              showBusy={widgetConfig.kpiVisibility.busyKpi}
-            />
-          )}
+          {/* Summary Cards */}
+          <SummaryCards
+            moodAverage={stats.moodStats.average}
+            moodTrend={stats.moodStats.trend}
+            healthScore={stats.healthScore}
+            busyScore={stats.busyScore}
+            totalDays={stats.totalDays}
+            showHappy={widgetConfig.kpiVisibility.happyKpi}
+            showHealthy={widgetConfig.kpiVisibility.healthyKpi}
+            showBusy={widgetConfig.kpiVisibility.busyKpi}
+          />
 
           {/* Draggable Widget Grid */}
           <DashboardGrid
