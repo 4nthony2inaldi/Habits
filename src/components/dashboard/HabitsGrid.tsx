@@ -524,8 +524,8 @@ export function HabitsGrid({ entries, showDays = 7, selectedHabits, dateRange, t
   return (
     <div className="h-full flex flex-col p-3">
       <div className="mb-2">
-        <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-green-500" />
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <ListChecks className="h-5 w-5 text-green-500" />
           {title}
         </h3>
         {subtitle && <p className="text-[10px] text-gray-500">{subtitle}</p>}
