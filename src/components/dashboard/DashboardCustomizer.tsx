@@ -136,6 +136,7 @@ export interface DashboardWidgetConfig {
   movementChart: WidgetSettings
   eventsTracker: WidgetSettings
   travelWidget: WidgetSettings
+  sleepWindowChart: WidgetSettings
   selectedHabits: SelectableHabitType[]
   selectedStatusIndicators: StatusIndicatorType[]
   selectedEvents: EventType[]
@@ -175,6 +176,7 @@ export const defaultWidgetTitles: WidgetTitles = {
   movementChart: { title: 'Movement' },
   eventsTracker: { title: 'Life Events' },
   travelWidget: { title: 'Travel' },
+  sleepWindowChart: { title: 'Sleep Window' },
 }
 
 // Default grid layouts for different breakpoints (12 column grid)
@@ -195,6 +197,7 @@ export const defaultGridLayouts: GridLayouts = {
     movementChart: { x: 0, y: 30, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
     travelWidget: { x: 0, y: 36, w: 6, h: 6 },
+    sleepWindowChart: { x: 6, y: 36, w: 6, h: 6 },
   },
   md: {
     moodChart: { x: 0, y: 0, w: 6, h: 4 },
@@ -211,6 +214,7 @@ export const defaultGridLayouts: GridLayouts = {
     movementChart: { x: 0, y: 30, w: 6, h: 4 },
     eventsTracker: { x: 6, y: 30, w: 6, h: 6 },
     travelWidget: { x: 0, y: 36, w: 6, h: 6 },
+    sleepWindowChart: { x: 6, y: 36, w: 6, h: 6 },
   },
   sm: {
     moodChart: { x: 0, y: 0, w: 12, h: 4 },
@@ -227,6 +231,7 @@ export const defaultGridLayouts: GridLayouts = {
     movementChart: { x: 0, y: 53, w: 12, h: 4 },
     eventsTracker: { x: 0, y: 57, w: 12, h: 6 },
     travelWidget: { x: 0, y: 63, w: 12, h: 6 },
+    sleepWindowChart: { x: 0, y: 69, w: 12, h: 6 },
   },
 }
 
@@ -245,6 +250,7 @@ const defaultConfig: DashboardWidgetConfig = {
   movementChart: { visible: true },
   eventsTracker: { visible: true },
   travelWidget: { visible: true },
+  sleepWindowChart: { visible: true },
   selectedHabits: allHabits,
   selectedStatusIndicators: allStatusIndicators,
   selectedEvents: allEvents,
@@ -276,6 +282,7 @@ export const widgetLabels: Record<WidgetKey, string> = {
   movementChart: 'Movement Chart',
   eventsTracker: 'Events Tracker',
   travelWidget: 'Travel Map',
+  sleepWindowChart: 'Sleep Window',
 }
 
 interface DashboardCustomizerProps {

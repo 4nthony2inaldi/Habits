@@ -20,6 +20,7 @@ import { YearOverYearSteps } from './YearOverYearSteps'
 import { MovementChart } from './MovementChart'
 import { EventsTracker } from './EventsTracker'
 import { TravelWidget } from './TravelWidget'
+import { SleepWindowChart } from './SleepWindowChart'
 
 // Type definitions for react-grid-layout
 interface Layout {
@@ -229,6 +230,8 @@ export function DashboardGrid({
         return <EventsTracker entries={allEntries} dateRange={dateRange} selectedEvents={config.selectedEvents} fieldGroupings={profile.field_groupings as import('@/types/forms').FieldGroupings | null} title={titles.title} subtitle={titles.subtitle} />
       case 'travelWidget':
         return <TravelWidget entries={entries} allEntries={allEntries} profile={profile} title={titles.title} subtitle={titles.subtitle} />
+      case 'sleepWindowChart':
+        return <SleepWindowChart entries={entries} allEntries={allEntries} title={titles.title} subtitle={titles.subtitle} />
       default:
         return null
     }
