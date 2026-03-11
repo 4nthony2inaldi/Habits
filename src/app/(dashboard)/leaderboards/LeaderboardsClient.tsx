@@ -6,9 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears, parseISO, getDate, getMonth, getDaysInMonth, differenceInDays } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears, parseISO, getDate, getDaysInMonth, differenceInDays, eachDayOfInterval } from 'date-fns'
 import type { Profile } from '@/types/database'
-import { Beer, Footprints, ChevronLeft, ChevronRight, EyeOff, Plane } from 'lucide-react'
+import { Beer, Footprints, ChevronLeft, ChevronRight, EyeOff } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -29,16 +29,6 @@ type LeaderboardEntry = {
   displayName: string
   value: number
   rank: number
-  isAnonymous: boolean
-  isCurrentUser: boolean
-}
-
-type TravelLeaderboardEntry = {
-  userId: string
-  displayName: string
-  daysSinceTravel: number | null
-  lastTravelDate: string | null
-  lastTravelType: 'flight' | 'train' | 'away' | null
   isAnonymous: boolean
   isCurrentUser: boolean
 }
@@ -77,7 +67,11 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     ? format(selectedDate, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
     : format(selectedDate, 'yyyy') === format(new Date(), 'yyyy')
   const currentDayOfMonth = isCurrentPeriod && viewMode === 'monthly' ? getDate(new Date()) : daysInMonth
-  const currentMonth = isCurrentPeriod && viewMode === 'yearly' ? getMonth(new Date()) : 11
+
+  // For yearly view, calculate the current day of year for the selected year
+  const yearStart = startOfYear(selectedDate)
+  const yearEnd = isCurrentPeriod ? new Date() : endOfYear(selectedDate)
+  const daysInPeriod = differenceInDays(yearEnd, yearStart) + 1
 
   // Fetch all users who opted into leaderboards
   const { data: leaderboardUsers } = useQuery({
@@ -85,8 +79,8 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, share_drinks, share_steps, share_travel, leaderboard_anonymous, home_city')
-        .or('share_drinks.eq.true,share_steps.eq.true,share_travel.eq.true')
+        .select('id, display_name, share_drinks, share_steps, leaderboard_anonymous')
+        .or('share_drinks.eq.true,share_steps.eq.true')
 
       if (error) throw error
       return data
@@ -123,28 +117,6 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
         `)
         .gte('entry_date', dateStart)
         .lte('entry_date', dateEnd)
-
-      if (error) throw error
-      return data
-    },
-    enabled: !!leaderboardUsers,
-  })
-
-  // Fetch all-time travel data for "days since travel" trend
-  const { data: travelEntries } = useQuery({
-    queryKey: ['leaderboard-travel-entries'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('daily_entries')
-        .select(`
-          user_id,
-          entry_date,
-          city_sleep,
-          life_events (
-            event_type
-          )
-        `)
-        .order('entry_date', { ascending: false })
 
       if (error) throw error
       return data
@@ -214,65 +186,6 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       .map((entry, index) => ({ ...entry, rank: index + 1 }))
   }, [leaderboardUsers, entries, currentUser.id])
 
-  // Calculate travel leaderboard (days since last travel - all-time data)
-  const travelLeaderboard: TravelLeaderboardEntry[] = useMemo(() => {
-    if (!leaderboardUsers || !travelEntries) return []
-
-    const usersWhoShareTravel = leaderboardUsers.filter((u) => u.share_travel)
-    const today = new Date()
-
-    return usersWhoShareTravel
-      .map((user) => {
-        const userEntries = travelEntries.filter((e) => e.user_id === user.id)
-        const homeCity = user.home_city?.toLowerCase() || ''
-
-        let lastTravelDate: string | null = null
-        let lastTravelType: 'flight' | 'train' | 'away' | null = null
-
-        for (const entry of userEntries) {
-          // Check for flight or train events
-          const hasFlightOrTrain = entry.life_events?.some(
-            (e: { event_type: string }) => e.event_type === 'flight' || e.event_type === 'train'
-          )
-          const hasFlight = entry.life_events?.some(
-            (e: { event_type: string }) => e.event_type === 'flight'
-          )
-
-          // Check if sleeping away from home
-          const sleepCity = entry.city_sleep?.toLowerCase() || ''
-          const isAway = sleepCity && sleepCity !== 'home' && sleepCity !== 'unknown' && sleepCity !== homeCity
-
-          if (hasFlightOrTrain || isAway) {
-            lastTravelDate = entry.entry_date
-            if (hasFlight) {
-              lastTravelType = 'flight'
-            } else if (entry.life_events?.some((e: { event_type: string }) => e.event_type === 'train')) {
-              lastTravelType = 'train'
-            } else {
-              lastTravelType = 'away'
-            }
-            break // Found most recent travel
-          }
-        }
-
-        const daysSinceTravel = lastTravelDate
-          ? differenceInDays(today, parseISO(lastTravelDate))
-          : null
-
-        return {
-          userId: user.id,
-          displayName: user.leaderboard_anonymous ? 'Anonymous' : user.display_name,
-          daysSinceTravel,
-          lastTravelDate,
-          lastTravelType,
-          isAnonymous: user.leaderboard_anonymous,
-          isCurrentUser: user.id === currentUser.id,
-        }
-      })
-      .filter((entry) => entry.daysSinceTravel !== null)
-      .sort((a, b) => (b.daysSinceTravel || 0) - (a.daysSinceTravel || 0)) // Highest days first (longest since travel)
-  }, [leaderboardUsers, travelEntries, currentUser.id])
-
   // Calculate cumulative drinks chart data
   const drinksChartData = useMemo(() => {
     if (!leaderboardUsers || !entries || drinksLeaderboard.length === 0) return []
@@ -301,9 +214,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
       const data: Record<string, number | string>[] = []
+      const monthStart = startOfMonth(selectedDate)
 
       for (let day = 1; day <= currentDayOfMonth; day++) {
-        const point: Record<string, number | string> = { day }
+        const dayDate = new Date(monthStart)
+        dayDate.setDate(day)
+        const point: Record<string, number | string> = { day, date: format(dayDate, 'MMM d') }
 
         drinksLeaderboard.forEach((user) => {
           const userDays = byUserAndDay.get(user.userId)
@@ -319,47 +235,47 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
       return data
     } else {
-      // Yearly view: group by month
-      const byUserAndMonth = new Map<string, Map<number, number>>()
+      // Yearly view: daily accumulation
+      const byUserAndDate = new Map<string, Map<string, number>>()
 
       entries.forEach((entry) => {
         if (!usersWhoshareDrinks.some((u) => u.id === entry.user_id)) return
-        const monthOfYear = getMonth(parseISO(entry.entry_date))
         const total = (entry.beers || 0) + (entry.seltzers || 0) + (entry.wine || 0) +
           (entry.liquor || 0) + (entry.shots || 0)
 
-        if (!byUserAndMonth.has(entry.user_id)) {
-          byUserAndMonth.set(entry.user_id, new Map())
+        if (!byUserAndDate.has(entry.user_id)) {
+          byUserAndDate.set(entry.user_id, new Map())
         }
-        const existing = byUserAndMonth.get(entry.user_id)!.get(monthOfYear) || 0
-        byUserAndMonth.get(entry.user_id)!.set(monthOfYear, existing + total)
+        const existing = byUserAndDate.get(entry.user_id)!.get(entry.entry_date) || 0
+        byUserAndDate.get(entry.user_id)!.set(entry.entry_date, existing + total)
       })
 
-      // Build chart data
+      // Build chart data - daily from start of year
       const cumulativeSums = new Map<string, number>()
       drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const allDays = eachDayOfInterval({ start: yearStart, end: yearEnd })
       const data: Record<string, number | string>[] = []
 
-      for (let month = 0; month <= currentMonth; month++) {
-        const point: Record<string, number | string> = { month: monthNames[month] }
+      allDays.forEach((date, index) => {
+        const dateStr = format(date, 'yyyy-MM-dd')
+        const point: Record<string, number | string> = { day: index + 1, date: format(date, 'MMM d') }
 
         drinksLeaderboard.forEach((user) => {
-          const userMonths = byUserAndMonth.get(user.userId)
-          const monthlyValue = userMonths?.get(month) || 0
+          const userDates = byUserAndDate.get(user.userId)
+          const dailyValue = userDates?.get(dateStr) || 0
           const prevSum = cumulativeSums.get(user.userId) || 0
-          const newSum = prevSum + monthlyValue
+          const newSum = prevSum + dailyValue
           cumulativeSums.set(user.userId, newSum)
           point[user.displayName] = newSum
         })
 
         data.push(point)
-      }
+      })
 
       return data
     }
-  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth, currentMonth, viewMode])
+  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate])
 
   // Calculate cumulative steps chart data
   const stepsChartData = useMemo(() => {
@@ -388,9 +304,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
       const data: Record<string, number | string>[] = []
+      const monthStart = startOfMonth(selectedDate)
 
       for (let day = 1; day <= currentDayOfMonth; day++) {
-        const point: Record<string, number | string> = { day }
+        const dayDate = new Date(monthStart)
+        dayDate.setDate(day)
+        const point: Record<string, number | string> = { day, date: format(dayDate, 'MMM d') }
 
         stepsLeaderboard.forEach((user) => {
           const userDays = byUserAndDay.get(user.userId)
@@ -406,46 +325,46 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
       return data
     } else {
-      // Yearly view: group by month
-      const byUserAndMonth = new Map<string, Map<number, number>>()
+      // Yearly view: daily accumulation
+      const byUserAndDate = new Map<string, Map<string, number>>()
 
       entries.forEach((entry) => {
         if (!usersWhoshareSteps.some((u) => u.id === entry.user_id)) return
         if (entry.steps === null) return
-        const monthOfYear = getMonth(parseISO(entry.entry_date))
 
-        if (!byUserAndMonth.has(entry.user_id)) {
-          byUserAndMonth.set(entry.user_id, new Map())
+        if (!byUserAndDate.has(entry.user_id)) {
+          byUserAndDate.set(entry.user_id, new Map())
         }
-        const existing = byUserAndMonth.get(entry.user_id)!.get(monthOfYear) || 0
-        byUserAndMonth.get(entry.user_id)!.set(monthOfYear, existing + entry.steps)
+        const existing = byUserAndDate.get(entry.user_id)!.get(entry.entry_date) || 0
+        byUserAndDate.get(entry.user_id)!.set(entry.entry_date, existing + entry.steps)
       })
 
-      // Build chart data
+      // Build chart data - daily from start of year
       const cumulativeSums = new Map<string, number>()
       stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const allDays = eachDayOfInterval({ start: yearStart, end: yearEnd })
       const data: Record<string, number | string>[] = []
 
-      for (let month = 0; month <= currentMonth; month++) {
-        const point: Record<string, number | string> = { month: monthNames[month] }
+      allDays.forEach((date, index) => {
+        const dateStr = format(date, 'yyyy-MM-dd')
+        const point: Record<string, number | string> = { day: index + 1, date: format(date, 'MMM d') }
 
         stepsLeaderboard.forEach((user) => {
-          const userMonths = byUserAndMonth.get(user.userId)
-          const monthlyValue = userMonths?.get(month) || 0
+          const userDates = byUserAndDate.get(user.userId)
+          const dailyValue = userDates?.get(dateStr) || 0
           const prevSum = cumulativeSums.get(user.userId) || 0
-          const newSum = prevSum + monthlyValue
+          const newSum = prevSum + dailyValue
           cumulativeSums.set(user.userId, newSum)
           point[user.displayName] = newSum
         })
 
         data.push(point)
-      }
+      })
 
       return data
     }
-  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth, currentMonth, viewMode])
+  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate])
 
   const navigatePeriod = (direction: 'prev' | 'next') => {
     if (viewMode === 'monthly') {
@@ -510,7 +429,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
         </div>
       </div>
 
-      {!currentUser.share_drinks && !currentUser.share_steps && !currentUser.share_travel && (
+      {!currentUser.share_drinks && !currentUser.share_steps && (
         <Card className="bg-purple-50 border-purple-200">
           <CardContent className="py-4">
             <p className="text-sm text-purple-700">
@@ -596,13 +515,16 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                     <LineChart data={drinksChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
-                        dataKey={viewMode === 'monthly' ? 'day' : 'month'}
+                        dataKey="day"
                         tick={{ fontSize: 10 }}
                         stroke="#9ca3af"
-                        tickFormatter={viewMode === 'monthly'
-                          ? (day) => day === 1 || day % 5 === 0 ? String(day) : ''
-                          : undefined
-                        }
+                        tickFormatter={(day) => {
+                          if (viewMode === 'monthly') {
+                            return day === 1 || day % 5 === 0 ? String(day) : ''
+                          }
+                          // Yearly: show every ~30 days
+                          return day === 1 || day % 30 === 0 ? String(day) : ''
+                        }}
                       />
                       <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" width={35} />
                       <Tooltip
@@ -612,7 +534,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                           borderRadius: '8px',
                           fontSize: '12px',
                         }}
-                        labelFormatter={(label) => viewMode === 'monthly' ? `Day ${label}` : label}
+                        labelFormatter={(_, payload) => {
+                          if (payload && payload.length > 0 && payload[0]?.payload?.date) {
+                            return payload[0].payload.date
+                          }
+                          return `Day ${_}`
+                        }}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
                       {drinksLeaderboard.map((user) => (
@@ -709,13 +636,16 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                     <LineChart data={stepsChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
-                        dataKey={viewMode === 'monthly' ? 'day' : 'month'}
+                        dataKey="day"
                         tick={{ fontSize: 10 }}
                         stroke="#9ca3af"
-                        tickFormatter={viewMode === 'monthly'
-                          ? (day) => day === 1 || day % 5 === 0 ? String(day) : ''
-                          : undefined
-                        }
+                        tickFormatter={(day) => {
+                          if (viewMode === 'monthly') {
+                            return day === 1 || day % 5 === 0 ? String(day) : ''
+                          }
+                          // Yearly: show every ~30 days
+                          return day === 1 || day % 30 === 0 ? String(day) : ''
+                        }}
                       />
                       <YAxis
                         tick={{ fontSize: 10 }}
@@ -730,7 +660,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                           borderRadius: '8px',
                           fontSize: '12px',
                         }}
-                        labelFormatter={(label) => viewMode === 'monthly' ? `Day ${label}` : label}
+                        labelFormatter={(_, payload) => {
+                          if (payload && payload.length > 0 && payload[0]?.payload?.date) {
+                            return payload[0].payload.date
+                          }
+                          return `Day ${_}`
+                        }}
                         formatter={(value) => [typeof value === 'number' ? value.toLocaleString() : '0', '']}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
@@ -752,71 +687,6 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
           )}
         </div>
       </div>
-
-      {/* Days Since Travel Leaderboard */}
-      {travelLeaderboard.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Plane className="h-5 w-5 text-cyan-500" />
-              Days Since Travel
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500 mb-4">
-              Who needs a vacation? Ranked by longest time since last travel.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {travelLeaderboard.map((entry, index) => (
-                <div
-                  key={entry.userId}
-                  className={cn(
-                    'flex items-center justify-between p-3 rounded-lg',
-                    entry.isCurrentUser ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        'w-8 h-8 rounded-full flex items-center justify-center font-bold',
-                        index === 0 ? 'bg-red-100 text-red-700' :
-                        index === 1 ? 'bg-orange-100 text-orange-700' :
-                        index === 2 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {index + 1}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: userColorMap.get(entry.userId) || USER_COLORS[0] }}
-                      />
-                      <span className={cn(
-                        'font-medium',
-                        entry.isCurrentUser ? 'text-purple-700' : 'text-gray-700'
-                      )}>
-                        {entry.displayName}
-                      </span>
-                      {entry.isAnonymous && (
-                        <EyeOff className="h-3 w-3 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-gray-900">{entry.daysSinceTravel}d</span>
-                    {entry.lastTravelDate && (
-                      <p className="text-[10px] text-gray-400">
-                        {format(parseISO(entry.lastTravelDate), 'MMM d')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
