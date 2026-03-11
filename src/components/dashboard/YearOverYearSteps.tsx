@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { parseISO, getYear, getDayOfYear, format } from 'date-fns'
+import { parseISO, getYear, getDayOfYear, getWeek, format } from 'date-fns'
 import {
   LineChart,
   Line,
@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { DailyEntryWithRelations } from '@/types/database'
-import { Footprints, RotateCcw } from 'lucide-react'
+import { Footprints, RotateCcw, Calendar } from 'lucide-react'
 
 interface YearOverYearStepsProps {
   entries: DailyEntryWithRelations[]
@@ -31,25 +31,31 @@ const YEAR_COLORS = [
   '#ef4444', // red - 4 years ago
 ]
 
+type AggregationMode = 'daily' | 'weekly'
+
 export function YearOverYearSteps({
   entries,
   title = 'Steps Year over Year',
   subtitle,
 }: YearOverYearStepsProps) {
   const [cumulative, setCumulative] = useState(true)
+  const [aggregation, setAggregation] = useState<AggregationMode>('weekly')
 
-  const { chartData, years, maxDay, yearlyAverages } = useMemo(() => {
+  const { chartData, years, maxDay, maxWeek, yearlyAverages } = useMemo(() => {
     if (entries.length === 0) {
-      return { chartData: [], years: [], maxDay: 0, yearlyAverages: new Map<number, number>() }
+      return { chartData: [], years: [], maxDay: 0, maxWeek: 0, yearlyAverages: new Map<number, number>() }
     }
 
-    // Get current year and current day of year
+    // Get current year and current day/week of year
     const now = new Date()
     const currentYear = getYear(now)
     const currentDayOfYear = getDayOfYear(now)
+    const currentWeekOfYear = getWeek(now, { weekStartsOn: 0 })
 
     // Group entries by year and day of year
     const byYearAndDay = new Map<number, Map<number, number>>()
+    // Also group by year and week for weekly aggregation
+    const byYearAndWeek = new Map<number, Map<number, number>>()
     const yearsSet = new Set<number>()
     // Track total steps and days with data for each year (for averages)
     const yearTotals = new Map<number, { total: number; days: number }>()
@@ -61,17 +67,26 @@ export function YearOverYearSteps({
       const date = parseISO(entry.entry_date)
       const year = getYear(date)
       const dayOfYear = getDayOfYear(date)
+      const weekOfYear = getWeek(date, { weekStartsOn: 0 })
 
       // Only include data up to the current day of year
       if (dayOfYear > currentDayOfYear) return
 
       yearsSet.add(year)
 
+      // Daily aggregation
       if (!byYearAndDay.has(year)) {
         byYearAndDay.set(year, new Map())
       }
-      const yearMap = byYearAndDay.get(year)!
-      yearMap.set(dayOfYear, (yearMap.get(dayOfYear) || 0) + entry.steps)
+      const yearDayMap = byYearAndDay.get(year)!
+      yearDayMap.set(dayOfYear, (yearDayMap.get(dayOfYear) || 0) + entry.steps)
+
+      // Weekly aggregation
+      if (!byYearAndWeek.has(year)) {
+        byYearAndWeek.set(year, new Map())
+      }
+      const yearWeekMap = byYearAndWeek.get(year)!
+      yearWeekMap.set(weekOfYear, (yearWeekMap.get(weekOfYear) || 0) + entry.steps)
 
       // Track totals for averaging
       const existing = yearTotals.get(year) || { total: 0, days: 0 }
@@ -89,44 +104,72 @@ export function YearOverYearSteps({
       averages.set(year, Math.round(data.total / data.days))
     })
 
-    // Build chart data - one entry per day of year
+    // Build chart data based on aggregation mode
     const data: Record<string, number | string>[] = []
-
-    // Calculate cumulative sums for each year
     const cumulativeSums = new Map<number, number>()
     sortedYears.forEach((year) => cumulativeSums.set(year, 0))
 
-    for (let day = 1; day <= currentDayOfYear; day++) {
-      const point: Record<string, number | string> = { day }
+    if (aggregation === 'weekly') {
+      // Weekly aggregation
+      for (let week = 1; week <= currentWeekOfYear; week++) {
+        const point: Record<string, number | string> = { week }
 
-      // Add month label for tooltip
-      const sampleDate = new Date(currentYear, 0, day)
-      point.label = format(sampleDate, 'MMM d')
+        // Get approximate date for this week for label
+        const approxDay = (week - 1) * 7 + 1
+        const sampleDate = new Date(currentYear, 0, approxDay)
+        point.label = `Week ${week} (${format(sampleDate, 'MMM')})`
 
-      sortedYears.forEach((year) => {
-        const yearMap = byYearAndDay.get(year)
-        const dailyValue = yearMap?.get(day) || 0
+        sortedYears.forEach((year) => {
+          const yearMap = byYearAndWeek.get(year)
+          const weeklyValue = yearMap?.get(week) || 0
 
-        if (cumulative) {
-          const prevSum = cumulativeSums.get(year) || 0
-          const newSum = prevSum + dailyValue
-          cumulativeSums.set(year, newSum)
-          point[String(year)] = newSum
-        } else {
-          point[String(year)] = dailyValue
-        }
-      })
+          if (cumulative) {
+            const prevSum = cumulativeSums.get(year) || 0
+            const newSum = prevSum + weeklyValue
+            cumulativeSums.set(year, newSum)
+            point[String(year)] = newSum
+          } else {
+            point[String(year)] = weeklyValue
+          }
+        })
 
-      data.push(point)
+        data.push(point)
+      }
+    } else {
+      // Daily aggregation (original behavior)
+      for (let day = 1; day <= currentDayOfYear; day++) {
+        const point: Record<string, number | string> = { day }
+
+        // Add month label for tooltip
+        const sampleDate = new Date(currentYear, 0, day)
+        point.label = format(sampleDate, 'MMM d')
+
+        sortedYears.forEach((year) => {
+          const yearMap = byYearAndDay.get(year)
+          const dailyValue = yearMap?.get(day) || 0
+
+          if (cumulative) {
+            const prevSum = cumulativeSums.get(year) || 0
+            const newSum = prevSum + dailyValue
+            cumulativeSums.set(year, newSum)
+            point[String(year)] = newSum
+          } else {
+            point[String(year)] = dailyValue
+          }
+        })
+
+        data.push(point)
+      }
     }
 
     return {
       chartData: data,
       years: sortedYears,
       maxDay: currentDayOfYear,
+      maxWeek: currentWeekOfYear,
       yearlyAverages: averages,
     }
-  }, [entries, cumulative])
+  }, [entries, cumulative, aggregation])
 
   if (entries.length === 0 || years.length === 0) {
     return (
@@ -145,10 +188,10 @@ export function YearOverYearSteps({
     )
   }
 
-  // Generate tick values for X axis (show monthly)
-  const xTicks = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335].filter(
-    (d) => d <= maxDay
-  )
+  // Generate tick values for X axis based on aggregation mode
+  const xTicks = aggregation === 'weekly'
+    ? [1, 5, 9, 13, 18, 22, 26, 31, 35, 39, 44, 48].filter((w) => w <= maxWeek)
+    : [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335].filter((d) => d <= maxDay)
 
   // Format large numbers for Y axis
   const formatYAxis = (value: number) => {
@@ -169,14 +212,24 @@ export function YearOverYearSteps({
           </h3>
           {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
         </div>
-        <button
-          onClick={() => setCumulative(!cumulative)}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-          title={cumulative ? 'Show daily' : 'Show cumulative'}
-        >
-          <RotateCcw className="h-3 w-3" />
-          {cumulative ? 'Daily' : 'Cumulative'}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setAggregation(aggregation === 'weekly' ? 'daily' : 'weekly')}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+            title={aggregation === 'weekly' ? 'Show daily' : 'Show weekly'}
+          >
+            <Calendar className="h-3 w-3" />
+            {aggregation === 'weekly' ? 'Daily' : 'Weekly'}
+          </button>
+          <button
+            onClick={() => setCumulative(!cumulative)}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+            title={cumulative ? 'Show per-period' : 'Show cumulative'}
+          >
+            <RotateCcw className="h-3 w-3" />
+            {cumulative ? 'Per-period' : 'Cumulative'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 relative">
@@ -208,10 +261,16 @@ export function YearOverYearSteps({
           <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
-              dataKey="day"
+              dataKey={aggregation === 'weekly' ? 'week' : 'day'}
               tick={{ fontSize: 10 }}
-              tickFormatter={(day) => {
-                const date = new Date(2024, 0, day)
+              tickFormatter={(value) => {
+                if (aggregation === 'weekly') {
+                  // Convert week number to approximate month
+                  const approxDay = (value - 1) * 7 + 1
+                  const date = new Date(2024, 0, approxDay)
+                  return format(date, 'MMM')
+                }
+                const date = new Date(2024, 0, value)
                 return format(date, 'MMM')
               }}
               ticks={xTicks}
