@@ -243,11 +243,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
         const total = (entry.beers || 0) + (entry.seltzers || 0) + (entry.wine || 0) +
           (entry.liquor || 0) + (entry.shots || 0)
 
+        const entryDate = format(parseISO(entry.entry_date), 'yyyy-MM-dd')
         if (!byUserAndDate.has(entry.user_id)) {
           byUserAndDate.set(entry.user_id, new Map())
         }
-        const existing = byUserAndDate.get(entry.user_id)!.get(entry.entry_date) || 0
-        byUserAndDate.get(entry.user_id)!.set(entry.entry_date, existing + total)
+        const existing = byUserAndDate.get(entry.user_id)!.get(entryDate) || 0
+        byUserAndDate.get(entry.user_id)!.set(entryDate, existing + total)
       })
 
       // Build chart data - daily from start of year
@@ -332,11 +333,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
         if (!usersWhoshareSteps.some((u) => u.id === entry.user_id)) return
         if (entry.steps === null) return
 
+        const entryDate = format(parseISO(entry.entry_date), 'yyyy-MM-dd')
         if (!byUserAndDate.has(entry.user_id)) {
           byUserAndDate.set(entry.user_id, new Map())
         }
-        const existing = byUserAndDate.get(entry.user_id)!.get(entry.entry_date) || 0
-        byUserAndDate.get(entry.user_id)!.set(entry.entry_date, existing + entry.steps)
+        const existing = byUserAndDate.get(entry.user_id)!.get(entryDate) || 0
+        byUserAndDate.get(entry.user_id)!.set(entryDate, existing + entry.steps)
       })
 
       // Build chart data - daily from start of year
