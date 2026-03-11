@@ -63,6 +63,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
   // Privacy settings
   const [shareDrinks, setShareDrinks] = useState(profile.share_drinks)
   const [shareSteps, setShareSteps] = useState(profile.share_steps)
+  const [shareTravel, setShareTravel] = useState(profile.share_travel)
   const [anonymous, setAnonymous] = useState(profile.leaderboard_anonymous)
 
   // Hidden fields
@@ -208,6 +209,7 @@ export function SettingsClient({ profile }: SettingsClientProps) {
           temperature_unit: temperatureUnit,
           share_drinks: shareDrinks,
           share_steps: shareSteps,
+          share_travel: shareTravel,
           leaderboard_anonymous: anonymous,
           hidden_fields: hiddenFields,
           field_groupings: fieldGroupings,
@@ -491,6 +493,18 @@ export function SettingsClient({ profile }: SettingsClientProps) {
                 type="checkbox"
                 checked={shareSteps}
                 onChange={(e) => setShareSteps(e.target.checked)}
+                className="w-5 h-5 accent-purple-600"
+              />
+            </label>
+            <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <div>
+                <span className="font-medium">Share Travel Leaderboard</span>
+                <p className="text-sm text-gray-500">Days since last travel</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={shareTravel}
+                onChange={(e) => setShareTravel(e.target.checked)}
                 className="w-5 h-5 accent-purple-600"
               />
             </label>

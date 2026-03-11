@@ -189,6 +189,7 @@ export interface Database {
           is_admin: boolean
           share_drinks: boolean
           share_steps: boolean
+          share_travel: boolean
           leaderboard_anonymous: boolean
           hidden_fields: string[]
           field_groupings: Json | null
@@ -215,6 +216,7 @@ export interface Database {
           is_admin?: boolean
           share_drinks?: boolean
           share_steps?: boolean
+          share_travel?: boolean
           leaderboard_anonymous?: boolean
           hidden_fields?: string[]
           field_groupings?: Json | null
@@ -241,6 +243,7 @@ export interface Database {
           is_admin?: boolean
           share_drinks?: boolean
           share_steps?: boolean
+          share_travel?: boolean
           leaderboard_anonymous?: boolean
           hidden_fields?: string[]
           field_groupings?: Json | null

@@ -172,6 +172,7 @@ export function UserManagement({ currentUser, users: initialUsers, onUserAdded }
         is_admin: false,
         share_drinks: true,
         share_steps: true,
+        share_travel: false,
         leaderboard_anonymous: false,
         reminder_enabled: false,
         reminder_time: '21:00',
