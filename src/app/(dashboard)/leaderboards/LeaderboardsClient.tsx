@@ -965,7 +965,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               <CardContent>
                 <div className="overflow-x-auto">
                   {(() => {
-                    const days = drinksHeatmapData.slice(-14)
+                    const days = drinksHeatmapData
                     const users = drinksMatchPoints.leaderboard
                     return (
                       <table className="border-collapse">
@@ -1224,7 +1224,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               <CardContent>
                 <div className="overflow-x-auto">
                   {(() => {
-                    const days = stepsHeatmapData.slice(-14)
+                    const days = stepsHeatmapData
                     const users = stepsMatchPoints.leaderboard
                     return (
                       <table className="border-collapse">
