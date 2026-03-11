@@ -377,90 +377,6 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     return { leaderboard, dailyData: dailyRankings }
   }, [leaderboardUsers, entries, currentUser.id])
 
-  // Prepare bump chart data for drinks match points
-  const drinksBumpChartData = useMemo(() => {
-    if (drinksMatchPoints.dailyData.length === 0) return []
-
-    // Build cumulative rankings over time
-    const cumulativePoints = new Map<string, number>()
-    const data: Record<string, number | string | null>[] = []
-
-    drinksMatchPoints.dailyData.forEach((day, dayIndex) => {
-      // Update cumulative points
-      day.rankings.forEach((r) => {
-        cumulativePoints.set(r.userId, (cumulativePoints.get(r.userId) || 0) + r.points)
-      })
-
-      // Calculate current standings
-      const standings = [...cumulativePoints.entries()]
-        .map(([userId, points]) => ({ userId, points }))
-        .sort((a, b) => b.points - a.points)
-
-      // Assign ranks
-      const point: Record<string, number | string | null> = {
-        day: dayIndex + 1,
-        date: format(parseISO(day.date), 'MMM d'),
-      }
-
-      let currentRank = 1
-      standings.forEach((s, i) => {
-        if (i > 0 && s.points !== standings[i - 1].points) {
-          currentRank = i + 1
-        }
-        const user = drinksMatchPoints.leaderboard.find((u) => u.userId === s.userId)
-        if (user) {
-          point[user.displayName] = currentRank
-        }
-      })
-
-      data.push(point)
-    })
-
-    return data
-  }, [drinksMatchPoints])
-
-  // Prepare bump chart data for steps match points
-  const stepsBumpChartData = useMemo(() => {
-    if (stepsMatchPoints.dailyData.length === 0) return []
-
-    // Build cumulative rankings over time
-    const cumulativePoints = new Map<string, number>()
-    const data: Record<string, number | string | null>[] = []
-
-    stepsMatchPoints.dailyData.forEach((day, dayIndex) => {
-      // Update cumulative points
-      day.rankings.forEach((r) => {
-        cumulativePoints.set(r.userId, (cumulativePoints.get(r.userId) || 0) + r.points)
-      })
-
-      // Calculate current standings
-      const standings = [...cumulativePoints.entries()]
-        .map(([userId, points]) => ({ userId, points }))
-        .sort((a, b) => b.points - a.points)
-
-      // Assign ranks
-      const point: Record<string, number | string | null> = {
-        day: dayIndex + 1,
-        date: format(parseISO(day.date), 'MMM d'),
-      }
-
-      let currentRank = 1
-      standings.forEach((s, i) => {
-        if (i > 0 && s.points !== standings[i - 1].points) {
-          currentRank = i + 1
-        }
-        const user = stepsMatchPoints.leaderboard.find((u) => u.userId === s.userId)
-        if (user) {
-          point[user.displayName] = currentRank
-        }
-      })
-
-      data.push(point)
-    })
-
-    return data
-  }, [stepsMatchPoints])
-
   // Prepare daily points heatmap data
   const drinksHeatmapData = useMemo(() => {
     if (drinksMatchPoints.dailyData.length === 0) return []
@@ -887,74 +803,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
             </Card>
           )}
 
-          {/* Match Mode: Bump Chart (Rank over time) */}
-          {scoringMode === 'match' && drinksBumpChartData.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Standing Over Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={drinksBumpChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 10 }}
-                        stroke="#9ca3af"
-                        tickFormatter={(day) => {
-                          if (viewMode === 'monthly') {
-                            return day === 1 || day % 5 === 0 ? String(day) : ''
-                          }
-                          return day === 1 || day % 30 === 0 ? String(day) : ''
-                        }}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        stroke="#9ca3af"
-                        width={25}
-                        reversed
-                        domain={[1, 'dataMax']}
-                        allowDecimals={false}
-                        tickFormatter={(v) => `#${v}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                        }}
-                        labelFormatter={(_, payload) => {
-                          if (payload && payload.length > 0 && payload[0]?.payload?.date) {
-                            return payload[0].payload.date
-                          }
-                          return `Day ${_}`
-                        }}
-                        formatter={(value) => [`#${value}`, '']}
-                      />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
-                      {drinksMatchPoints.leaderboard.map((user) => (
-                        <Line
-                          key={user.userId}
-                          type="stepAfter"
-                          dataKey={user.displayName}
-                          stroke={userColorMap.get(user.userId) || USER_COLORS[0]}
-                          strokeWidth={user.isCurrentUser ? 2.5 : 1.5}
-                          dot={false}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Match Mode: Daily Points Heatmap */}
+          {/* Match Mode: Daily Points Heatmap (Transposed) */}
           {scoringMode === 'match' && drinksHeatmapData.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
@@ -965,33 +814,47 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               <CardContent>
                 <div className="overflow-x-auto">
                   {(() => {
-                    const days = drinksHeatmapData
+                    // Sort days descending (most recent first)
+                    const days = [...drinksHeatmapData].reverse()
+                    // Users already sorted by total points (high to low)
                     const users = drinksMatchPoints.leaderboard
                     return (
-                      <table className="border-collapse">
+                      <table className="border-collapse w-full">
                         <thead>
                           <tr>
-                            <th className="text-[9px] text-gray-400 font-normal pr-2 text-left" />
-                            {days.map((day) => (
-                              <th key={day.date} className="text-[9px] text-gray-400 font-normal px-0.5 pb-1 min-w-[32px]">
-                                {format(parseISO(day.date), 'M/d')}
+                            <th className="text-[10px] text-gray-400 font-normal pr-2 text-left sticky left-0 bg-white" />
+                            {users.map((user) => (
+                              <th key={user.userId} className="text-[10px] text-gray-500 font-medium px-1 pb-1 min-w-[40px]">
+                                {user.displayName.split(' ')[0]}
                               </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {users.map((user) => (
-                            <tr key={user.userId}>
-                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-right">{user.displayName.split(' ')[0]}</td>
-                              {days.map((day) => {
+                          {/* Totals row */}
+                          <tr className="border-b border-gray-200">
+                            <td className="text-[10px] text-gray-600 font-medium pr-2 whitespace-nowrap text-left sticky left-0 bg-white py-1">Total</td>
+                            {users.map((user) => (
+                              <td key={user.userId} className="px-1 py-1 text-center">
+                                <span className="text-[10px] font-bold text-gray-700">
+                                  {user.value % 1 === 0 ? user.value : user.value.toFixed(1)}
+                                </span>
+                              </td>
+                            ))}
+                          </tr>
+                          {/* Daily rows */}
+                          {days.map((day) => (
+                            <tr key={day.date}>
+                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-left sticky left-0 bg-white">{format(parseISO(day.date), 'M/d')}</td>
+                              {users.map((user) => {
                                 const r = day.rankings.find((r) => r.userId === user.userId)
-                                if (!r) return <td key={day.date} className="px-0.5 py-0.5"><div className="w-6 h-6" /></td>
+                                if (!r) return <td key={user.userId} className="px-1 py-0.5"><div className="w-7 h-6" /></td>
                                 const maxPoints = day.rankings.length - 1
                                 const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
                                 return (
-                                  <td key={day.date} className="px-0.5 py-0.5">
+                                  <td key={user.userId} className="px-1 py-0.5">
                                     <div
-                                      className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
+                                      className="w-7 h-6 rounded text-[9px] font-medium flex items-center justify-center mx-auto"
                                       style={{
                                         backgroundColor: `rgba(34, 197, 94, ${0.15 + intensity * 0.7})`,
                                         color: intensity > 0.5 ? 'white' : '#166534',
@@ -1146,74 +1009,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
             </Card>
           )}
 
-          {/* Match Mode: Bump Chart (Rank over time) */}
-          {scoringMode === 'match' && stepsBumpChartData.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Standing Over Time
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={stepsBumpChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 10 }}
-                        stroke="#9ca3af"
-                        tickFormatter={(day) => {
-                          if (viewMode === 'monthly') {
-                            return day === 1 || day % 5 === 0 ? String(day) : ''
-                          }
-                          return day === 1 || day % 30 === 0 ? String(day) : ''
-                        }}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        stroke="#9ca3af"
-                        width={25}
-                        reversed
-                        domain={[1, 'dataMax']}
-                        allowDecimals={false}
-                        tickFormatter={(v) => `#${v}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                        }}
-                        labelFormatter={(_, payload) => {
-                          if (payload && payload.length > 0 && payload[0]?.payload?.date) {
-                            return payload[0].payload.date
-                          }
-                          return `Day ${_}`
-                        }}
-                        formatter={(value) => [`#${value}`, '']}
-                      />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
-                      {stepsMatchPoints.leaderboard.map((user) => (
-                        <Line
-                          key={user.userId}
-                          type="stepAfter"
-                          dataKey={user.displayName}
-                          stroke={userColorMap.get(user.userId) || USER_COLORS[0]}
-                          strokeWidth={user.isCurrentUser ? 2.5 : 1.5}
-                          dot={false}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Match Mode: Daily Points Heatmap */}
+          {/* Match Mode: Daily Points Heatmap (Transposed) */}
           {scoringMode === 'match' && stepsHeatmapData.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
@@ -1224,33 +1020,47 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               <CardContent>
                 <div className="overflow-x-auto">
                   {(() => {
-                    const days = stepsHeatmapData
+                    // Sort days descending (most recent first)
+                    const days = [...stepsHeatmapData].reverse()
+                    // Users already sorted by total points (high to low)
                     const users = stepsMatchPoints.leaderboard
                     return (
-                      <table className="border-collapse">
+                      <table className="border-collapse w-full">
                         <thead>
                           <tr>
-                            <th className="text-[9px] text-gray-400 font-normal pr-2 text-left" />
-                            {days.map((day) => (
-                              <th key={day.date} className="text-[9px] text-gray-400 font-normal px-0.5 pb-1 min-w-[32px]">
-                                {format(parseISO(day.date), 'M/d')}
+                            <th className="text-[10px] text-gray-400 font-normal pr-2 text-left sticky left-0 bg-white" />
+                            {users.map((user) => (
+                              <th key={user.userId} className="text-[10px] text-gray-500 font-medium px-1 pb-1 min-w-[40px]">
+                                {user.displayName.split(' ')[0]}
                               </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {users.map((user) => (
-                            <tr key={user.userId}>
-                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-right">{user.displayName.split(' ')[0]}</td>
-                              {days.map((day) => {
+                          {/* Totals row */}
+                          <tr className="border-b border-gray-200">
+                            <td className="text-[10px] text-gray-600 font-medium pr-2 whitespace-nowrap text-left sticky left-0 bg-white py-1">Total</td>
+                            {users.map((user) => (
+                              <td key={user.userId} className="px-1 py-1 text-center">
+                                <span className="text-[10px] font-bold text-gray-700">
+                                  {user.value % 1 === 0 ? user.value : user.value.toFixed(1)}
+                                </span>
+                              </td>
+                            ))}
+                          </tr>
+                          {/* Daily rows */}
+                          {days.map((day) => (
+                            <tr key={day.date}>
+                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-left sticky left-0 bg-white">{format(parseISO(day.date), 'M/d')}</td>
+                              {users.map((user) => {
                                 const r = day.rankings.find((r) => r.userId === user.userId)
-                                if (!r) return <td key={day.date} className="px-0.5 py-0.5"><div className="w-6 h-6" /></td>
+                                if (!r) return <td key={user.userId} className="px-1 py-0.5"><div className="w-7 h-6" /></td>
                                 const maxPoints = day.rankings.length - 1
                                 const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
                                 return (
-                                  <td key={day.date} className="px-0.5 py-0.5">
+                                  <td key={user.userId} className="px-1 py-0.5">
                                     <div
-                                      className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
+                                      className="w-7 h-6 rounded text-[9px] font-medium flex items-center justify-center mx-auto"
                                       style={{
                                         backgroundColor: `rgba(59, 130, 246, ${0.15 + intensity * 0.7})`,
                                         color: intensity > 0.5 ? 'white' : '#1e40af',
