@@ -35,6 +35,7 @@ type LeaderboardEntry = {
 
 type ViewMode = 'monthly' | 'yearly'
 type ScoringMode = 'volume' | 'match'
+type DrinksMatchDirection = 'fewer' | 'more'
 
 // Colors for different users
 const USER_COLORS = [
@@ -52,6 +53,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [scoringMode, setScoringMode] = useState<ScoringMode>('volume')
+  const [drinksMatchDirection, setDrinksMatchDirection] = useState<DrinksMatchDirection>('fewer')
   const supabase = createClient()
 
   // Date range calculations based on view mode
@@ -220,8 +222,10 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     sortedDates.forEach((date) => {
       const dayEntries = entriesByDate.get(date)!
 
-      // For drinks, LOWER is better (fewer drinks = winning)
-      const sorted = [...dayEntries].sort((a, b) => a.value - b.value)
+      // Sort based on direction: fewer = lower is better, more = higher is better
+      const sorted = drinksMatchDirection === 'fewer'
+        ? [...dayEntries].sort((a, b) => a.value - b.value)
+        : [...dayEntries].sort((a, b) => b.value - a.value)
 
       // Assign ranks with tie handling
       const ranked: { userId: string; value: number; rank: number }[] = []
@@ -283,7 +287,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       .map((entry, index) => ({ ...entry, rank: index + 1 }))
 
     return { leaderboard, dailyData: dailyRankings }
-  }, [leaderboardUsers, entries, currentUser.id])
+  }, [leaderboardUsers, entries, currentUser.id, drinksMatchDirection])
 
   // Calculate match points for steps
   const stepsMatchPoints = useMemo(() => {
@@ -686,7 +690,12 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                 <Beer className="h-5 w-5 text-amber-500" />
                 {scoringMode === 'match' ? 'Drinks Match Points' : `${viewMode === 'monthly' ? 'Monthly' : 'Yearly'} Drinks`}
                 {scoringMode === 'match' && (
-                  <span className="text-xs font-normal text-gray-500 ml-1">(fewer drinks wins)</span>
+                  <button
+                    onClick={() => setDrinksMatchDirection(d => d === 'fewer' ? 'more' : 'fewer')}
+                    className="text-xs font-normal text-gray-500 ml-1 hover:text-gray-700 hover:underline cursor-pointer"
+                  >
+                    ({drinksMatchDirection === 'fewer' ? 'fewer' : 'more'} drinks wins)
+                  </button>
                 )}
               </CardTitle>
             </CardHeader>
