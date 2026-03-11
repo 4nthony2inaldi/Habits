@@ -964,41 +964,51 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <div className="flex gap-1 pb-2" style={{ minWidth: `${drinksHeatmapData.length * 36}px` }}>
-                    {drinksHeatmapData.slice(-14).map((day) => (
-                      <div key={day.date} className="flex flex-col gap-0.5 items-center min-w-[32px]">
-                        <span className="text-[9px] text-gray-400 mb-1">{format(parseISO(day.date), 'M/d')}</span>
-                        {day.rankings.map((r) => {
-                          const maxPoints = day.rankings.length - 1
-                          const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
-                          return (
-                            <div
-                              key={r.userId}
-                              className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
-                              style={{
-                                backgroundColor: `rgba(34, 197, 94, ${0.15 + intensity * 0.7})`,
-                                color: intensity > 0.5 ? 'white' : '#166534',
-                              }}
-                              title={`${r.displayName}: ${r.points % 1 === 0 ? r.points : r.points.toFixed(1)} pts (${r.value} drinks)`}
-                            >
-                              {r.points % 1 === 0 ? r.points : r.points.toFixed(1)}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 mt-1">
-                    {drinksMatchPoints.leaderboard.map((user) => (
-                      <div key={user.userId} className="flex items-center gap-1 text-[9px] text-gray-500">
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: userColorMap.get(user.userId) || USER_COLORS[0] }}
-                        />
-                        {user.displayName}
-                      </div>
-                    ))}
-                  </div>
+                  {(() => {
+                    const days = drinksHeatmapData.slice(-14)
+                    const users = drinksMatchPoints.leaderboard
+                    return (
+                      <table className="border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-[9px] text-gray-400 font-normal pr-2 text-left" />
+                            {days.map((day) => (
+                              <th key={day.date} className="text-[9px] text-gray-400 font-normal px-0.5 pb-1 min-w-[32px]">
+                                {format(parseISO(day.date), 'M/d')}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map((user) => (
+                            <tr key={user.userId}>
+                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-right">{user.displayName.split(' ')[0]}</td>
+                              {days.map((day) => {
+                                const r = day.rankings.find((r) => r.userId === user.userId)
+                                if (!r) return <td key={day.date} className="px-0.5 py-0.5"><div className="w-6 h-6" /></td>
+                                const maxPoints = day.rankings.length - 1
+                                const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
+                                return (
+                                  <td key={day.date} className="px-0.5 py-0.5">
+                                    <div
+                                      className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
+                                      style={{
+                                        backgroundColor: `rgba(34, 197, 94, ${0.15 + intensity * 0.7})`,
+                                        color: intensity > 0.5 ? 'white' : '#166534',
+                                      }}
+                                      title={`${r.displayName}: ${r.points % 1 === 0 ? r.points : r.points.toFixed(1)} pts (${r.value} drinks)`}
+                                    >
+                                      {r.points % 1 === 0 ? r.points : r.points.toFixed(1)}
+                                    </div>
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -1213,41 +1223,51 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <div className="flex gap-1 pb-2" style={{ minWidth: `${stepsHeatmapData.length * 36}px` }}>
-                    {stepsHeatmapData.slice(-14).map((day) => (
-                      <div key={day.date} className="flex flex-col gap-0.5 items-center min-w-[32px]">
-                        <span className="text-[9px] text-gray-400 mb-1">{format(parseISO(day.date), 'M/d')}</span>
-                        {day.rankings.map((r) => {
-                          const maxPoints = day.rankings.length - 1
-                          const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
-                          return (
-                            <div
-                              key={r.userId}
-                              className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
-                              style={{
-                                backgroundColor: `rgba(59, 130, 246, ${0.15 + intensity * 0.7})`,
-                                color: intensity > 0.5 ? 'white' : '#1e40af',
-                              }}
-                              title={`${r.displayName}: ${r.points % 1 === 0 ? r.points : r.points.toFixed(1)} pts (${r.value.toLocaleString()} steps)`}
-                            >
-                              {r.points % 1 === 0 ? r.points : r.points.toFixed(1)}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 mt-1">
-                    {stepsMatchPoints.leaderboard.map((user) => (
-                      <div key={user.userId} className="flex items-center gap-1 text-[9px] text-gray-500">
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: userColorMap.get(user.userId) || USER_COLORS[0] }}
-                        />
-                        {user.displayName}
-                      </div>
-                    ))}
-                  </div>
+                  {(() => {
+                    const days = stepsHeatmapData.slice(-14)
+                    const users = stepsMatchPoints.leaderboard
+                    return (
+                      <table className="border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-[9px] text-gray-400 font-normal pr-2 text-left" />
+                            {days.map((day) => (
+                              <th key={day.date} className="text-[9px] text-gray-400 font-normal px-0.5 pb-1 min-w-[32px]">
+                                {format(parseISO(day.date), 'M/d')}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map((user) => (
+                            <tr key={user.userId}>
+                              <td className="text-[9px] text-gray-500 pr-2 whitespace-nowrap text-right">{user.displayName.split(' ')[0]}</td>
+                              {days.map((day) => {
+                                const r = day.rankings.find((r) => r.userId === user.userId)
+                                if (!r) return <td key={day.date} className="px-0.5 py-0.5"><div className="w-6 h-6" /></td>
+                                const maxPoints = day.rankings.length - 1
+                                const intensity = maxPoints > 0 ? r.points / maxPoints : 0.5
+                                return (
+                                  <td key={day.date} className="px-0.5 py-0.5">
+                                    <div
+                                      className="w-6 h-6 rounded text-[9px] font-medium flex items-center justify-center"
+                                      style={{
+                                        backgroundColor: `rgba(59, 130, 246, ${0.15 + intensity * 0.7})`,
+                                        color: intensity > 0.5 ? 'white' : '#1e40af',
+                                      }}
+                                      title={`${r.displayName}: ${r.points % 1 === 0 ? r.points : r.points.toFixed(1)} pts (${r.value.toLocaleString()} steps)`}
+                                    >
+                                      {r.points % 1 === 0 ? r.points : r.points.toFixed(1)}
+                                    </div>
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                  })()}
                 </div>
               </CardContent>
             </Card>
