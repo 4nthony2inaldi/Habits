@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils/cn'
-import { format, startOfMonth, endOfMonth, subMonths, parseISO, getDate, getDaysInMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subYears, parseISO, getDate, getMonth, getDaysInMonth } from 'date-fns'
 import type { Profile } from '@/types/database'
 import { Beer, Footprints, ChevronLeft, ChevronRight, EyeOff } from 'lucide-react'
 import {
@@ -33,6 +33,8 @@ type LeaderboardEntry = {
   isCurrentUser: boolean
 }
 
+type ViewMode = 'monthly' | 'yearly'
+
 // Colors for different users
 const USER_COLORS = [
   '#22c55e', // green
@@ -46,15 +48,26 @@ const USER_COLORS = [
 ]
 
 export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const supabase = createClient()
 
-  const monthStart = format(startOfMonth(selectedMonth), 'yyyy-MM-dd')
-  const monthEnd = format(endOfMonth(selectedMonth), 'yyyy-MM-dd')
-  const monthLabel = format(selectedMonth, 'MMMM yyyy')
-  const daysInMonth = getDaysInMonth(selectedMonth)
-  const isCurrentMonth = format(selectedMonth, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
-  const currentDayOfMonth = isCurrentMonth ? getDate(new Date()) : daysInMonth
+  // Date range calculations based on view mode
+  const dateStart = viewMode === 'monthly'
+    ? format(startOfMonth(selectedDate), 'yyyy-MM-dd')
+    : format(startOfYear(selectedDate), 'yyyy-MM-dd')
+  const dateEnd = viewMode === 'monthly'
+    ? format(endOfMonth(selectedDate), 'yyyy-MM-dd')
+    : format(endOfYear(selectedDate), 'yyyy-MM-dd')
+  const periodLabel = viewMode === 'monthly'
+    ? format(selectedDate, 'MMMM yyyy')
+    : format(selectedDate, 'yyyy')
+  const daysInMonth = getDaysInMonth(selectedDate)
+  const isCurrentPeriod = viewMode === 'monthly'
+    ? format(selectedDate, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
+    : format(selectedDate, 'yyyy') === format(new Date(), 'yyyy')
+  const currentDayOfMonth = isCurrentPeriod && viewMode === 'monthly' ? getDate(new Date()) : daysInMonth
+  const currentMonth = isCurrentPeriod && viewMode === 'yearly' ? getMonth(new Date()) : 11
 
   // Fetch all users who opted into leaderboards
   const { data: leaderboardUsers } = useQuery({
@@ -82,9 +95,9 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
     return map
   }, [leaderboardUsers])
 
-  // Fetch entries for the month for all leaderboard users
+  // Fetch entries for the period for all leaderboard users
   const { data: entries } = useQuery({
-    queryKey: ['leaderboard-entries', monthStart, monthEnd],
+    queryKey: ['leaderboard-entries', dateStart, dateEnd, viewMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('daily_entries')
@@ -98,8 +111,8 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
           shots,
           steps
         `)
-        .gte('entry_date', monthStart)
-        .lte('entry_date', monthEnd)
+        .gte('entry_date', dateStart)
+        .lte('entry_date', dateEnd)
 
       if (error) throw error
       return data
@@ -175,44 +188,87 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
     const usersWhoshareDrinks = leaderboardUsers.filter((u) => u.share_drinks)
 
-    // Group entries by user and day
-    const byUserAndDay = new Map<string, Map<number, number>>()
+    if (viewMode === 'monthly') {
+      // Group entries by user and day
+      const byUserAndDay = new Map<string, Map<number, number>>()
 
-    entries.forEach((entry) => {
-      if (!usersWhoshareDrinks.some((u) => u.id === entry.user_id)) return
-      const dayOfMonth = getDate(parseISO(entry.entry_date))
-      const total = (entry.beers || 0) + (entry.seltzers || 0) + (entry.wine || 0) +
-        (entry.liquor || 0) + (entry.shots || 0)
+      entries.forEach((entry) => {
+        if (!usersWhoshareDrinks.some((u) => u.id === entry.user_id)) return
+        const dayOfMonth = getDate(parseISO(entry.entry_date))
+        const total = (entry.beers || 0) + (entry.seltzers || 0) + (entry.wine || 0) +
+          (entry.liquor || 0) + (entry.shots || 0)
 
-      if (!byUserAndDay.has(entry.user_id)) {
-        byUserAndDay.set(entry.user_id, new Map())
-      }
-      byUserAndDay.get(entry.user_id)!.set(dayOfMonth, total)
-    })
-
-    // Build chart data
-    const cumulativeSums = new Map<string, number>()
-    drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
-
-    const data: Record<string, number | string>[] = []
-
-    for (let day = 1; day <= currentDayOfMonth; day++) {
-      const point: Record<string, number | string> = { day }
-
-      drinksLeaderboard.forEach((user) => {
-        const userDays = byUserAndDay.get(user.userId)
-        const dailyValue = userDays?.get(day) || 0
-        const prevSum = cumulativeSums.get(user.userId) || 0
-        const newSum = prevSum + dailyValue
-        cumulativeSums.set(user.userId, newSum)
-        point[user.displayName] = newSum
+        if (!byUserAndDay.has(entry.user_id)) {
+          byUserAndDay.set(entry.user_id, new Map())
+        }
+        const existing = byUserAndDay.get(entry.user_id)!.get(dayOfMonth) || 0
+        byUserAndDay.get(entry.user_id)!.set(dayOfMonth, existing + total)
       })
 
-      data.push(point)
-    }
+      // Build chart data
+      const cumulativeSums = new Map<string, number>()
+      drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
-    return data
-  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth])
+      const data: Record<string, number | string>[] = []
+
+      for (let day = 1; day <= currentDayOfMonth; day++) {
+        const point: Record<string, number | string> = { day }
+
+        drinksLeaderboard.forEach((user) => {
+          const userDays = byUserAndDay.get(user.userId)
+          const dailyValue = userDays?.get(day) || 0
+          const prevSum = cumulativeSums.get(user.userId) || 0
+          const newSum = prevSum + dailyValue
+          cumulativeSums.set(user.userId, newSum)
+          point[user.displayName] = newSum
+        })
+
+        data.push(point)
+      }
+
+      return data
+    } else {
+      // Yearly view: group by month
+      const byUserAndMonth = new Map<string, Map<number, number>>()
+
+      entries.forEach((entry) => {
+        if (!usersWhoshareDrinks.some((u) => u.id === entry.user_id)) return
+        const monthOfYear = getMonth(parseISO(entry.entry_date))
+        const total = (entry.beers || 0) + (entry.seltzers || 0) + (entry.wine || 0) +
+          (entry.liquor || 0) + (entry.shots || 0)
+
+        if (!byUserAndMonth.has(entry.user_id)) {
+          byUserAndMonth.set(entry.user_id, new Map())
+        }
+        const existing = byUserAndMonth.get(entry.user_id)!.get(monthOfYear) || 0
+        byUserAndMonth.get(entry.user_id)!.set(monthOfYear, existing + total)
+      })
+
+      // Build chart data
+      const cumulativeSums = new Map<string, number>()
+      drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const data: Record<string, number | string>[] = []
+
+      for (let month = 0; month <= currentMonth; month++) {
+        const point: Record<string, number | string> = { month: monthNames[month] }
+
+        drinksLeaderboard.forEach((user) => {
+          const userMonths = byUserAndMonth.get(user.userId)
+          const monthlyValue = userMonths?.get(month) || 0
+          const prevSum = cumulativeSums.get(user.userId) || 0
+          const newSum = prevSum + monthlyValue
+          cumulativeSums.set(user.userId, newSum)
+          point[user.displayName] = newSum
+        })
+
+        data.push(point)
+      }
+
+      return data
+    }
+  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth, currentMonth, viewMode])
 
   // Calculate cumulative steps chart data
   const stepsChartData = useMemo(() => {
@@ -220,74 +276,146 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
     const usersWhoshareSteps = leaderboardUsers.filter((u) => u.share_steps)
 
-    // Group entries by user and day
-    const byUserAndDay = new Map<string, Map<number, number>>()
+    if (viewMode === 'monthly') {
+      // Group entries by user and day
+      const byUserAndDay = new Map<string, Map<number, number>>()
 
-    entries.forEach((entry) => {
-      if (!usersWhoshareSteps.some((u) => u.id === entry.user_id)) return
-      if (entry.steps === null) return
-      const dayOfMonth = getDate(parseISO(entry.entry_date))
+      entries.forEach((entry) => {
+        if (!usersWhoshareSteps.some((u) => u.id === entry.user_id)) return
+        if (entry.steps === null) return
+        const dayOfMonth = getDate(parseISO(entry.entry_date))
 
-      if (!byUserAndDay.has(entry.user_id)) {
-        byUserAndDay.set(entry.user_id, new Map())
-      }
-      byUserAndDay.get(entry.user_id)!.set(dayOfMonth, entry.steps)
-    })
-
-    // Build chart data
-    const cumulativeSums = new Map<string, number>()
-    stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
-
-    const data: Record<string, number | string>[] = []
-
-    for (let day = 1; day <= currentDayOfMonth; day++) {
-      const point: Record<string, number | string> = { day }
-
-      stepsLeaderboard.forEach((user) => {
-        const userDays = byUserAndDay.get(user.userId)
-        const dailyValue = userDays?.get(day) || 0
-        const prevSum = cumulativeSums.get(user.userId) || 0
-        const newSum = prevSum + dailyValue
-        cumulativeSums.set(user.userId, newSum)
-        point[user.displayName] = newSum
+        if (!byUserAndDay.has(entry.user_id)) {
+          byUserAndDay.set(entry.user_id, new Map())
+        }
+        const existing = byUserAndDay.get(entry.user_id)!.get(dayOfMonth) || 0
+        byUserAndDay.get(entry.user_id)!.set(dayOfMonth, existing + entry.steps)
       })
 
-      data.push(point)
+      // Build chart data
+      const cumulativeSums = new Map<string, number>()
+      stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
+
+      const data: Record<string, number | string>[] = []
+
+      for (let day = 1; day <= currentDayOfMonth; day++) {
+        const point: Record<string, number | string> = { day }
+
+        stepsLeaderboard.forEach((user) => {
+          const userDays = byUserAndDay.get(user.userId)
+          const dailyValue = userDays?.get(day) || 0
+          const prevSum = cumulativeSums.get(user.userId) || 0
+          const newSum = prevSum + dailyValue
+          cumulativeSums.set(user.userId, newSum)
+          point[user.displayName] = newSum
+        })
+
+        data.push(point)
+      }
+
+      return data
+    } else {
+      // Yearly view: group by month
+      const byUserAndMonth = new Map<string, Map<number, number>>()
+
+      entries.forEach((entry) => {
+        if (!usersWhoshareSteps.some((u) => u.id === entry.user_id)) return
+        if (entry.steps === null) return
+        const monthOfYear = getMonth(parseISO(entry.entry_date))
+
+        if (!byUserAndMonth.has(entry.user_id)) {
+          byUserAndMonth.set(entry.user_id, new Map())
+        }
+        const existing = byUserAndMonth.get(entry.user_id)!.get(monthOfYear) || 0
+        byUserAndMonth.get(entry.user_id)!.set(monthOfYear, existing + entry.steps)
+      })
+
+      // Build chart data
+      const cumulativeSums = new Map<string, number>()
+      stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const data: Record<string, number | string>[] = []
+
+      for (let month = 0; month <= currentMonth; month++) {
+        const point: Record<string, number | string> = { month: monthNames[month] }
+
+        stepsLeaderboard.forEach((user) => {
+          const userMonths = byUserAndMonth.get(user.userId)
+          const monthlyValue = userMonths?.get(month) || 0
+          const prevSum = cumulativeSums.get(user.userId) || 0
+          const newSum = prevSum + monthlyValue
+          cumulativeSums.set(user.userId, newSum)
+          point[user.displayName] = newSum
+        })
+
+        data.push(point)
+      }
+
+      return data
     }
+  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth, currentMonth, viewMode])
 
-    return data
-  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth])
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setSelectedMonth((current) =>
-      direction === 'prev' ? subMonths(current, 1) : subMonths(current, -1)
-    )
+  const navigatePeriod = (direction: 'prev' | 'next') => {
+    if (viewMode === 'monthly') {
+      setSelectedDate((current) =>
+        direction === 'prev' ? subMonths(current, 1) : subMonths(current, -1)
+      )
+    } else {
+      setSelectedDate((current) =>
+        direction === 'prev' ? subYears(current, 1) : subYears(current, -1)
+      )
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Leaderboards</h1>
-          <p className="text-gray-600">Monthly rankings for opted-in participants</p>
+          <p className="text-gray-600">
+            {viewMode === 'monthly' ? 'Monthly' : 'Yearly'} rankings for opted-in participants
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigateMonth('prev')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="min-w-[140px] text-center font-medium">{monthLabel}</span>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigateMonth('next')}
-            disabled={isCurrentMonth}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'monthly' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('monthly')}
+              className="h-8 px-3"
+            >
+              Monthly
+            </Button>
+            <Button
+              variant={viewMode === 'yearly' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('yearly')}
+              className="h-8 px-3"
+            >
+              Yearly
+            </Button>
+          </div>
+          {/* Period Navigation */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigatePeriod('prev')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-[140px] text-center font-medium">{periodLabel}</span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigatePeriod('next')}
+              disabled={isCurrentPeriod}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -309,13 +437,13 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Beer className="h-5 w-5 text-amber-500" />
-                Monthly Drinks
+                {viewMode === 'monthly' ? 'Monthly' : 'Yearly'} Drinks
               </CardTitle>
             </CardHeader>
             <CardContent>
               {drinksLeaderboard.length === 0 ? (
                 <p className="text-center py-8 text-gray-500">
-                  No participants yet this month
+                  No participants yet this {viewMode === 'monthly' ? 'month' : 'year'}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -377,10 +505,13 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                     <LineChart data={drinksChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
-                        dataKey="day"
+                        dataKey={viewMode === 'monthly' ? 'day' : 'month'}
                         tick={{ fontSize: 10 }}
                         stroke="#9ca3af"
-                        tickFormatter={(day) => day === 1 || day % 5 === 0 ? String(day) : ''}
+                        tickFormatter={viewMode === 'monthly'
+                          ? (day) => day === 1 || day % 5 === 0 ? String(day) : ''
+                          : undefined
+                        }
                       />
                       <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" width={35} />
                       <Tooltip
@@ -390,7 +521,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                           borderRadius: '8px',
                           fontSize: '12px',
                         }}
-                        labelFormatter={(day) => `Day ${day}`}
+                        labelFormatter={(label) => viewMode === 'monthly' ? `Day ${label}` : label}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
                       {drinksLeaderboard.map((user) => (
@@ -423,7 +554,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
             <CardContent>
               {stepsLeaderboard.length === 0 ? (
                 <p className="text-center py-8 text-gray-500">
-                  No participants yet this month
+                  No participants yet this {viewMode === 'monthly' ? 'month' : 'year'}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -487,10 +618,13 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                     <LineChart data={stepsChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
-                        dataKey="day"
+                        dataKey={viewMode === 'monthly' ? 'day' : 'month'}
                         tick={{ fontSize: 10 }}
                         stroke="#9ca3af"
-                        tickFormatter={(day) => day === 1 || day % 5 === 0 ? String(day) : ''}
+                        tickFormatter={viewMode === 'monthly'
+                          ? (day) => day === 1 || day % 5 === 0 ? String(day) : ''
+                          : undefined
+                        }
                       />
                       <YAxis
                         tick={{ fontSize: 10 }}
@@ -505,7 +639,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
                           borderRadius: '8px',
                           fontSize: '12px',
                         }}
-                        labelFormatter={(day) => `Day ${day}`}
+                        labelFormatter={(label) => viewMode === 'monthly' ? `Day ${label}` : label}
                         formatter={(value) => [typeof value === 'number' ? value.toLocaleString() : '0', '']}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
