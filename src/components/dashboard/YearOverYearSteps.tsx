@@ -46,11 +46,26 @@ export function YearOverYearSteps({
       return { chartData: [], years: [], maxDay: 0, maxWeek: 0, yearlyAverages: new Map<number, number>() }
     }
 
-    // Get current year and current day/week of year
-    const now = new Date()
-    const currentYear = getYear(now)
-    const currentDayOfYear = getDayOfYear(now)
-    const currentWeekOfYear = getWeek(now, { weekStartsOn: 0 })
+    // Find the most recent year and most recent logged date in that year
+    let maxYear = 0
+    let maxLoggedDate: Date | null = null
+    entries.forEach((entry) => {
+      if (entry.steps === null || entry.steps === undefined) return
+      const date = parseISO(entry.entry_date)
+      const year = getYear(date)
+      if (year > maxYear) {
+        maxYear = year
+        maxLoggedDate = date
+      } else if (year === maxYear && maxLoggedDate && date > maxLoggedDate) {
+        maxLoggedDate = date
+      }
+    })
+
+    // Use the most recent logged date (or today as fallback)
+    const referenceDate = maxLoggedDate || new Date()
+    const currentYear = maxYear || getYear(new Date())
+    const currentDayOfYear = getDayOfYear(referenceDate)
+    const currentWeekOfYear = getWeek(referenceDate, { weekStartsOn: 0 })
 
     // Group entries by year and day of year
     const byYearAndDay = new Map<number, Map<number, number>>()

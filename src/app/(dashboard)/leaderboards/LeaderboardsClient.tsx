@@ -408,6 +408,15 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
     const usersWhoshareDrinks = leaderboardUsers.filter((u) => u.share_drinks)
 
+    // Find the most recent logged date from entries
+    let maxLoggedDate: Date | null = null
+    entries.forEach((entry) => {
+      const date = parseISO(entry.entry_date)
+      if (!maxLoggedDate || date > maxLoggedDate) {
+        maxLoggedDate = date
+      }
+    })
+
     if (viewMode === 'monthly') {
       // Group entries by user and day
       const byUserAndDay = new Map<string, Map<number, number>>()
@@ -432,7 +441,10 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       const data: Record<string, number | string>[] = []
       const monthStart = startOfMonth(selectedDate)
 
-      for (let day = 1; day <= currentDayOfMonth; day++) {
+      // Use most recent logged day instead of today for current period
+      const maxDayOfMonth = isCurrentPeriod && maxLoggedDate ? getDate(maxLoggedDate) : currentDayOfMonth
+
+      for (let day = 1; day <= maxDayOfMonth; day++) {
         const dayDate = new Date(monthStart)
         dayDate.setDate(day)
         const point: Record<string, number | string> = { day, date: format(dayDate, 'MMM d') }
@@ -471,7 +483,9 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       const cumulativeSums = new Map<string, number>()
       drinksLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
-      const allDays = eachDayOfInterval({ start: yearStart, end: yearEnd })
+      // Use most recent logged date instead of today for current period
+      const chartEndDate = isCurrentPeriod && maxLoggedDate ? maxLoggedDate : yearEnd
+      const allDays = eachDayOfInterval({ start: yearStart, end: chartEndDate })
       const data: Record<string, number | string>[] = []
 
       allDays.forEach((date, index) => {
@@ -492,13 +506,22 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
       return data
     }
-  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate])
+  }, [leaderboardUsers, entries, drinksLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate, isCurrentPeriod])
 
   // Calculate cumulative steps chart data
   const stepsChartData = useMemo(() => {
     if (!leaderboardUsers || !entries || stepsLeaderboard.length === 0) return []
 
     const usersWhoshareSteps = leaderboardUsers.filter((u) => u.share_steps)
+
+    // Find the most recent logged date from entries
+    let maxLoggedDate: Date | null = null
+    entries.forEach((entry) => {
+      const date = parseISO(entry.entry_date)
+      if (!maxLoggedDate || date > maxLoggedDate) {
+        maxLoggedDate = date
+      }
+    })
 
     if (viewMode === 'monthly') {
       // Group entries by user and day
@@ -523,7 +546,10 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       const data: Record<string, number | string>[] = []
       const monthStart = startOfMonth(selectedDate)
 
-      for (let day = 1; day <= currentDayOfMonth; day++) {
+      // Use most recent logged day instead of today for current period
+      const maxDayOfMonth = isCurrentPeriod && maxLoggedDate ? getDate(maxLoggedDate) : currentDayOfMonth
+
+      for (let day = 1; day <= maxDayOfMonth; day++) {
         const dayDate = new Date(monthStart)
         dayDate.setDate(day)
         const point: Record<string, number | string> = { day, date: format(dayDate, 'MMM d') }
@@ -561,7 +587,9 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
       const cumulativeSums = new Map<string, number>()
       stepsLeaderboard.forEach((user) => cumulativeSums.set(user.userId, 0))
 
-      const allDays = eachDayOfInterval({ start: yearStart, end: yearEnd })
+      // Use most recent logged date instead of today for current period
+      const chartEndDate = isCurrentPeriod && maxLoggedDate ? maxLoggedDate : yearEnd
+      const allDays = eachDayOfInterval({ start: yearStart, end: chartEndDate })
       const data: Record<string, number | string>[] = []
 
       allDays.forEach((date, index) => {
@@ -582,7 +610,7 @@ export function LeaderboardsClient({ currentUser }: LeaderboardsClientProps) {
 
       return data
     }
-  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate])
+  }, [leaderboardUsers, entries, stepsLeaderboard, currentDayOfMonth, viewMode, yearStart, yearEnd, selectedDate, isCurrentPeriod])
 
   const navigatePeriod = (direction: 'prev' | 'next') => {
     if (viewMode === 'monthly') {
