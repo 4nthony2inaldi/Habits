@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/slack/daily-leaderboard",
-      "schedule": "0 14 * * *"
+      "schedule": "0 15 * * *"
     }
   ]
 }
