@@ -181,10 +181,10 @@ export async function GET(request: NextRequest) {
         drinksForDay.push({ userId: user.id, value: entry ? calculateTotalDrinks(entry) : 0 })
       })
 
-      // Sort by drinks descending (most drinks gets most points)
-      drinksForDay.sort((a, b) => b.value - a.value)
+      // Sort by drinks ascending, then award points by position (most drinks = highest index = most points)
+      drinksForDay.sort((a, b) => a.value - b.value)
       drinksForDay.forEach((item, index) => {
-        const points = drinksForDay.length - 1 - index // First place gets most points
+        const points = index // Last place (most drinks) gets most points
         drinksMatchPoints.set(item.userId, (drinksMatchPoints.get(item.userId) || 0) + points)
       })
 
