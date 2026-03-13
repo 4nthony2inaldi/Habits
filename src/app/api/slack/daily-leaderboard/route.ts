@@ -109,11 +109,13 @@ export async function GET(request: NextRequest) {
     const userMap = new Map<string, UserWithEntries>()
     users.forEach(u => userMap.set(u.id, u))
 
-    // Get display name (respecting anonymity)
+    // Get display name (respecting anonymity) - use last name only for shorter display
     const getDisplayName = (userId: string): string => {
       const user = userMap.get(userId)
       if (!user) return 'Unknown'
-      return user.leaderboard_anonymous ? 'Anonymous' : user.display_name
+      if (user.leaderboard_anonymous) return 'Anonymous'
+      const parts = user.display_name.trim().split(/\s+/)
+      return parts.length > 1 ? parts[parts.length - 1] : user.display_name
     }
 
     // Yesterday's data
