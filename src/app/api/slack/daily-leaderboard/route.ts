@@ -373,11 +373,13 @@ export async function GET(request: NextRequest) {
 :beer: ${yesterdayDrinksStr || 'No data'}
 :athletic_shoe: ${yesterdayStepsStr || 'No data'}
 
+
 :beer: *Drinks — ${monthDisplay}*
 ${mtdDrinksRows.join('\n') || 'No participants'}
 
 :beer: *Drinks — ${yearDisplay} YTD*
 ${ytdDrinksRows.join('\n') || 'No participants'}
+
 
 :athletic_shoe: *Steps — ${monthDisplay}*
 ${mtdStepsRows.join('\n') || 'No participants'}
