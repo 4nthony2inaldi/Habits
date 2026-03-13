@@ -1,3 +1,9 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/slack/daily-leaderboard",
+      "schedule": "0 14 * * *"
+    }
+  ]
 }
