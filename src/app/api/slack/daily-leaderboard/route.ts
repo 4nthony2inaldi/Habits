@@ -170,25 +170,65 @@ export async function GET(request: NextRequest) {
     // Get all days in the period up to yesterday
     const daysInPeriod = eachDayOfInterval({ start: monthStart, end: yesterday })
 
+    // Helper to calculate match points with tie handling
+    const calculateMatchPoints = (
+      participants: { userId: string; value: number }[],
+      higherWins: boolean // true = higher value wins, false = lower value wins
+    ): Map<string, number> => {
+      const points = new Map<string, number>()
+      if (participants.length === 0) return points
+
+      // Sort: if higherWins, descending; otherwise ascending
+      const sorted = [...participants].sort((a, b) =>
+        higherWins ? b.value - a.value : a.value - b.value
+      )
+
+      // Assign ranks with tie handling
+      const ranked: { userId: string; value: number; rank: number }[] = []
+      let currentRank = 1
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i].value !== sorted[i - 1].value) {
+          currentRank = i + 1
+        }
+        ranked.push({ ...sorted[i], rank: currentRank })
+      }
+
+      // Calculate points with fractional splits for ties
+      const n = ranked.length
+      ranked.forEach((entry) => {
+        const tiedWith = ranked.filter((other) => other.rank === entry.rank)
+        let totalPointsForTiedGroup = 0
+        const tiedCount = tiedWith.length
+        for (let offset = 0; offset < tiedCount; offset++) {
+          const positionRank = entry.rank + offset
+          totalPointsForTiedGroup += Math.max(0, n - positionRank)
+        }
+        const pts = totalPointsForTiedGroup / tiedCount
+        points.set(entry.userId, pts)
+      })
+
+      return points
+    }
+
     daysInPeriod.forEach(day => {
       const dateStr = format(day, 'yyyy-MM-dd')
       const dayEntries = (entries || []).filter(e => e.entry_date === dateStr)
 
-      // Drinks match points (more drinks = more points = wins)
+      // Drinks: only include users who logged an entry (not defaulting to 0)
       const drinksForDay: { userId: string; value: number }[] = []
       users.filter(u => u.share_drinks).forEach(user => {
         const entry = dayEntries.find(e => e.user_id === user.id)
-        drinksForDay.push({ userId: user.id, value: entry ? calculateTotalDrinks(entry) : 0 })
+        if (entry) {
+          drinksForDay.push({ userId: user.id, value: calculateTotalDrinks(entry) })
+        }
       })
 
-      // Sort by drinks ascending, then award points by position (most drinks = highest index = most points)
-      drinksForDay.sort((a, b) => a.value - b.value)
-      drinksForDay.forEach((item, index) => {
-        const points = index // Last place (most drinks) gets most points
-        drinksMatchPoints.set(item.userId, (drinksMatchPoints.get(item.userId) || 0) + points)
+      const drinksPoints = calculateMatchPoints(drinksForDay, true) // higher drinks wins
+      drinksPoints.forEach((pts, userId) => {
+        drinksMatchPoints.set(userId, (drinksMatchPoints.get(userId) || 0) + pts)
       })
 
-      // Steps match points (more steps = more points)
+      // Steps: only include users who logged steps
       const stepsForDay: { userId: string; value: number }[] = []
       users.filter(u => u.share_steps).forEach(user => {
         const entry = dayEntries.find(e => e.user_id === user.id)
@@ -197,10 +237,9 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      stepsForDay.sort((a, b) => b.value - a.value)
-      stepsForDay.forEach((item, index) => {
-        const points = stepsForDay.length - 1 - index
-        stepsMatchPoints.set(item.userId, (stepsMatchPoints.get(item.userId) || 0) + points)
+      const stepsPoints = calculateMatchPoints(stepsForDay, true) // higher steps wins
+      stepsPoints.forEach((pts, userId) => {
+        stepsMatchPoints.set(userId, (stepsMatchPoints.get(userId) || 0) + pts)
       })
     })
 
