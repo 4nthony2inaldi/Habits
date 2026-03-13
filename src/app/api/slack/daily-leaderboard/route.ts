@@ -227,41 +227,48 @@ export async function GET(request: NextRequest) {
     const dateDisplay = format(yesterday, 'EEE MMM d')
     const monthDisplay = format(today, 'MMMM')
 
-    // Yesterday section
-    const yesterdayDrinksStr = yesterdayDrinks.map(d => `${d.name}: ${d.value}`).join('  ')
-    const yesterdayStepsStr = yesterdaySteps.map(s => `${s.name}: ${formatNumber(s.value)}`).join('  ')
+    // Yesterday section - sorted by value, show drinks/steps inline
+    const yesterdayDrinksStr = yesterdayDrinks
+      .map(d => `${d.name} ${d.value}`)
+      .join(' · ')
 
-    // MTD rankings
-    const formatRankingRow = (rank: number, name: string, volume: string, matchPts: number, isMatchLeader: boolean) => {
-      const fire = isMatchLeader ? ' :fire:' : ''
-      return `${rank}. ${name.padEnd(12)} ${volume.padStart(8)}   ${matchPts}${fire}`
+    const yesterdayStepsStr = yesterdaySteps
+      .map(s => `${s.name} ${formatNumber(s.value)}`)
+      .join(' · ')
+
+    // MTD ranking medals
+    const getMedal = (rank: number): string => {
+      if (rank === 1) return ':first_place_medal:'
+      if (rank === 2) return ':second_place_medal:'
+      if (rank === 3) return ':third_place_medal:'
+      return `${rank}.`
     }
 
-    const drinksRows = drinksRanking.slice(0, 10).map((r, i) =>
-      formatRankingRow(i + 1, r.name, r.volume.toString(), r.matchPts, r.name === drinksMatchLeader?.name)
-    )
+    const drinksRows = drinksRanking.slice(0, 5).map((r, i) => {
+      const medal = getMedal(i + 1)
+      const fire = r.name === drinksMatchLeader?.name ? ' :fire:' : ''
+      return `${medal} *${r.name}* — ${r.volume} drinks, ${r.matchPts} pts${fire}`
+    })
 
-    const stepsRows = stepsRanking.slice(0, 10).map((r, i) =>
-      formatRankingRow(i + 1, r.name, formatNumber(r.total), r.matchPts, r.name === stepsMatchLeader?.name)
-    )
+    const stepsRows = stepsRanking.slice(0, 5).map((r, i) => {
+      const medal = getMedal(i + 1)
+      const fire = r.name === stepsMatchLeader?.name ? ' :fire:' : ''
+      return `${medal} *${r.name}* — ${formatNumber(r.total)} steps, ${r.matchPts} pts${fire}`
+    })
 
-    const message = `
-:bar_chart: Daily Leaderboard — ${dateDisplay}
+    const message = `:bar_chart: *Daily Leaderboard — ${dateDisplay}*
 
-┌─ YESTERDAY ─────────────────────────┐
-│ :beer: ${yesterdayDrinksStr || 'No data'}
-│ :athletic_shoe: ${yesterdayStepsStr || 'No data'}
-└─────────────────────────────────────┘
+*Yesterday*
+:beer: ${yesterdayDrinksStr || 'No data'}
+:athletic_shoe: ${yesterdayStepsStr || 'No data'}
 
-┌─ ${monthDisplay.toUpperCase()} RANKINGS ────────────────────┐
-│                                     │
-│ :beer: DRINKS        Volume   Match Pts │
-${drinksRows.map(r => `│ ${r}`).join('\n') || '│ No participants'}
-│                                     │
-│ :athletic_shoe: STEPS         Total    Match Pts │
-${stepsRows.map(r => `│ ${r}`).join('\n') || '│ No participants'}
-└─────────────────────────────────────┘
-`.trim()
+*${monthDisplay} Rankings*
+
+:beer: *Drinks*
+${drinksRows.join('\n') || 'No participants'}
+
+:athletic_shoe: *Steps*
+${stepsRows.join('\n') || 'No participants'}`
 
     // Send to Slack
     const slackResponse = await fetch(webhookUrl, {
