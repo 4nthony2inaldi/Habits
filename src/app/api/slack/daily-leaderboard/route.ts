@@ -126,7 +126,9 @@ export async function GET(request: NextRequest) {
 
       if (user.share_drinks) {
         const drinks = entry ? calculateTotalDrinks(entry) : 0
-        yesterdayDrinks.push({ name, value: drinks })
+        if (drinks > 0) {
+          yesterdayDrinks.push({ name, value: drinks })
+        }
       }
 
       if (user.share_steps && entry?.steps != null) {
