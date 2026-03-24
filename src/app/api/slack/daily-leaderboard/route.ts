@@ -342,11 +342,8 @@ export async function GET(request: NextRequest) {
       .map(s => `${s.name} ${formatNumber(s.value)}`)
       .join(' · ')
 
-    // Ranking medals
-    const getMedal = (rank: number): string => {
-      if (rank === 1) return ':first_place_medal:'
-      if (rank === 2) return ':second_place_medal:'
-      if (rank === 3) return ':third_place_medal:'
+    // Ranking position
+    const getPosition = (rank: number): string => {
       return `${rank}.`
     }
 
@@ -356,11 +353,11 @@ export async function GET(request: NextRequest) {
       matchLeader: { name: string } | undefined,
       type: 'drinks' | 'steps'
     ) => {
-      return ranking.slice(0, 5).map((r, i) => {
-        const medal = getMedal(i + 1)
+      return ranking.map((r, i) => {
+        const position = getPosition(i + 1)
         const fire = r.name === matchLeader?.name ? ' :fire:' : ''
         const value = type === 'drinks' ? `${r.volume} drinks` : `${formatNumber(r.total || 0)} steps`
-        return `${medal} *${r.name}* — ${value}, ${r.matchPts} pts${fire}`
+        return `${position} *${r.name}* — ${value}, ${r.matchPts} pts${fire}`
       })
     }
 
