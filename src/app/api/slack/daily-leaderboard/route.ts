@@ -45,6 +45,9 @@ function calculateTotalDrinks(entry: DailyEntry): number {
 }
 
 function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(2)}m`.replace('.00m', 'm')
+  }
   if (num >= 1000) {
     return `${(num / 1000).toFixed(1)}k`.replace('.0k', 'k')
   }
@@ -372,13 +375,11 @@ export async function GET(request: NextRequest) {
 :beer: ${yesterdayDrinksStr || 'No data'}
 :athletic_shoe: ${yesterdayStepsStr || 'No data'}
 
-
 :beer: *Drinks — ${monthDisplay}*
 ${mtdDrinksRows.join('\n') || 'No participants'}
 
 :beer: *Drinks — ${yearDisplay} YTD*
 ${ytdDrinksRows.join('\n') || 'No participants'}
-
 
 :athletic_shoe: *Steps — ${monthDisplay}*
 ${mtdStepsRows.join('\n') || 'No participants'}
