@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { startOfMonth, startOfYear, subDays, format, eachDayOfInterval } from 'date-fns'
+import { startOfMonth, startOfYear, subDays, format, eachDayOfInterval, parseISO } from 'date-fns'
 
 // Verify request is from Vercel Cron or has valid secret
 function isAuthorized(request: NextRequest): boolean {
@@ -331,6 +331,75 @@ export async function GET(request: NextRequest) {
     const ytdDrinksMatchLeader = [...ytdDrinksRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
     const ytdStepsMatchLeader = [...ytdStepsRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
 
+    // Calculate biggest single-day totals
+    type BiggestDay = { name: string; value: number; date: string }
+
+    // Biggest drinks days - MTD
+    const mtdBiggestDrinksDays: BiggestDay[] = mtdEntries
+      .filter(entry => {
+        const user = userMap.get(entry.user_id)
+        return user?.share_drinks
+      })
+      .map(entry => ({
+        name: getDisplayName(entry.user_id),
+        value: calculateTotalDrinks(entry),
+        date: format(parseISO(entry.entry_date), 'M/d'),
+      }))
+      .filter(d => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3)
+
+    // Biggest drinks days - YTD
+    const ytdBiggestDrinksDays: BiggestDay[] = ytdEntries
+      .filter(entry => {
+        const user = userMap.get(entry.user_id)
+        return user?.share_drinks
+      })
+      .map(entry => ({
+        name: getDisplayName(entry.user_id),
+        value: calculateTotalDrinks(entry),
+        date: format(parseISO(entry.entry_date), 'M/d'),
+      }))
+      .filter(d => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+
+    // Biggest steps days - MTD
+    const mtdBiggestStepsDays: BiggestDay[] = mtdEntries
+      .filter(entry => {
+        const user = userMap.get(entry.user_id)
+        return user?.share_steps && entry.steps != null
+      })
+      .map(entry => ({
+        name: getDisplayName(entry.user_id),
+        value: entry.steps!,
+        date: format(parseISO(entry.entry_date), 'M/d'),
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3)
+
+    // Biggest steps days - YTD
+    const ytdBiggestStepsDays: BiggestDay[] = ytdEntries
+      .filter(entry => {
+        const user = userMap.get(entry.user_id)
+        return user?.share_steps && entry.steps != null
+      })
+      .map(entry => ({
+        name: getDisplayName(entry.user_id),
+        value: entry.steps!,
+        date: format(parseISO(entry.entry_date), 'M/d'),
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+
+    // Format biggest days helper
+    const formatBiggestDays = (days: BiggestDay[], type: 'drinks' | 'steps'): string[] => {
+      return days.map((d, i) => {
+        const value = type === 'steps' ? formatNumber(d.value) : d.value.toString()
+        return `${i + 1}.  ${value} - *${d.name}* | ${d.date}`
+      })
+    }
+
     // Format Slack message
     const dateDisplay = format(yesterday, 'EEE MMM d')
     const monthDisplay = format(today, 'MMMM')
@@ -369,6 +438,11 @@ export async function GET(request: NextRequest) {
     const mtdStepsRows = formatRankingRows(mtdStepsRanking, mtdStepsMatchLeader, 'steps')
     const ytdStepsRows = formatRankingRows(ytdStepsRanking, ytdStepsMatchLeader, 'steps')
 
+    const mtdBiggestDrinksRows = formatBiggestDays(mtdBiggestDrinksDays, 'drinks')
+    const ytdBiggestDrinksRows = formatBiggestDays(ytdBiggestDrinksDays, 'drinks')
+    const mtdBiggestStepsRows = formatBiggestDays(mtdBiggestStepsDays, 'steps')
+    const ytdBiggestStepsRows = formatBiggestDays(ytdBiggestStepsDays, 'steps')
+
     const message = `:bar_chart: *Daily Leaderboard — ${dateDisplay}*
 
 *Yesterday*
@@ -378,14 +452,26 @@ export async function GET(request: NextRequest) {
 :beer: *Drinks — ${monthDisplay}*
 ${mtdDrinksRows.join('\n') || 'No participants'}
 
+:spiral_calendar_pad: *Biggest days ${monthDisplay}*
+${mtdBiggestDrinksRows.join('\n') || 'No data'}
+
 :beer: *Drinks — ${yearDisplay} YTD*
 ${ytdDrinksRows.join('\n') || 'No participants'}
+
+:spiral_calendar_pad: *Biggest days YTD*
+${ytdBiggestDrinksRows.join('\n') || 'No data'}
 
 :athletic_shoe: *Steps — ${monthDisplay}*
 ${mtdStepsRows.join('\n') || 'No participants'}
 
+:spiral_calendar_pad: *Biggest days ${monthDisplay}*
+${mtdBiggestStepsRows.join('\n') || 'No data'}
+
 :athletic_shoe: *Steps — ${yearDisplay} YTD*
-${ytdStepsRows.join('\n') || 'No participants'}`
+${ytdStepsRows.join('\n') || 'No participants'}
+
+:spiral_calendar_pad: *Biggest days YTD*
+${ytdBiggestStepsRows.join('\n') || 'No data'}`
 
     // Send to Slack
     const slackResponse = await fetch(webhookUrl, {
