@@ -325,12 +325,6 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.total - a.total)
 
-    // Find leaders for match points
-    const mtdDrinksMatchLeader = [...mtdDrinksRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
-    const mtdStepsMatchLeader = [...mtdStepsRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
-    const ytdDrinksMatchLeader = [...ytdDrinksRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
-    const ytdStepsMatchLeader = [...ytdStepsRanking].sort((a, b) => b.matchPts - a.matchPts)[0]
-
     // Calculate biggest single-day totals
     type BiggestDay = { name: string; value: number; date: string }
 
@@ -422,21 +416,19 @@ export async function GET(request: NextRequest) {
     // Format ranking rows helper
     const formatRankingRows = (
       ranking: { name: string; volume?: number; total?: number; matchPts: number }[],
-      matchLeader: { name: string } | undefined,
       type: 'drinks' | 'steps'
     ) => {
       return ranking.map((r, i) => {
         const position = getPosition(i + 1)
-        const fire = r.name === matchLeader?.name ? ' :fire:' : ''
         const value = type === 'drinks' ? `${r.volume} drinks` : `${formatNumber(r.total || 0)} steps`
-        return `${position} *${r.name}* — ${value}, ${r.matchPts} pts${fire}`
+        return `${position} *${r.name}* — ${value}, ${r.matchPts} pts`
       })
     }
 
-    const mtdDrinksRows = formatRankingRows(mtdDrinksRanking, mtdDrinksMatchLeader, 'drinks')
-    const ytdDrinksRows = formatRankingRows(ytdDrinksRanking, ytdDrinksMatchLeader, 'drinks')
-    const mtdStepsRows = formatRankingRows(mtdStepsRanking, mtdStepsMatchLeader, 'steps')
-    const ytdStepsRows = formatRankingRows(ytdStepsRanking, ytdStepsMatchLeader, 'steps')
+    const mtdDrinksRows = formatRankingRows(mtdDrinksRanking, 'drinks')
+    const ytdDrinksRows = formatRankingRows(ytdDrinksRanking, 'drinks')
+    const mtdStepsRows = formatRankingRows(mtdStepsRanking, 'steps')
+    const ytdStepsRows = formatRankingRows(ytdStepsRanking, 'steps')
 
     const mtdBiggestDrinksRows = formatBiggestDays(mtdBiggestDrinksDays, 'drinks')
     const ytdBiggestDrinksRows = formatBiggestDays(ytdBiggestDrinksDays, 'drinks')
