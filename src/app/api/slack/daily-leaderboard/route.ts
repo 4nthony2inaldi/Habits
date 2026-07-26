@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Yesterday's data
-    const yesterdayEntries = (entries || []).filter(e => e.entry_date === yesterdayStr)
+    const yesterdayEntries = (entries || []).filter(e => e.entry_date.startsWith(yesterdayStr))
 
     const yesterdayDrinks: { name: string; value: number }[] = []
     const yesterdaySteps: { name: string; value: number }[] = []
