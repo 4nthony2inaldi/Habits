@@ -96,12 +96,14 @@ export async function GET(request: NextRequest) {
     const userIds = users.map(u => u.id)
 
     // Fetch entries for the year (includes MTD)
+    // Supabase defaults to 1000 rows — with 6+ users over a full year we exceed that
     const { data: entries, error: entriesError } = await supabase
       .from('daily_entries')
       .select('user_id, entry_date, beers, seltzers, wine, liquor, shots, steps')
       .in('user_id', userIds)
       .gte('entry_date', yearStartStr)
       .lt('entry_date', todayStr)
+      .limit(5000)
 
     if (entriesError) {
       console.error('Error fetching entries:', entriesError)
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Yesterday's data
-    const yesterdayEntries = (entries || []).filter(e => e.entry_date.startsWith(yesterdayStr))
+    const yesterdayEntries = (entries || []).filter(e => e.entry_date === yesterdayStr)
 
     const yesterdayDrinks: { name: string; value: number }[] = []
     const yesterdaySteps: { name: string; value: number }[] = []
