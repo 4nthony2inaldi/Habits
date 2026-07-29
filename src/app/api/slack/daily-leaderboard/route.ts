@@ -96,19 +96,33 @@ export async function GET(request: NextRequest) {
     const userIds = users.map(u => u.id)
 
     // Fetch entries for the year (includes MTD)
-    // Supabase defaults to 1000 rows — with 6+ users over a full year we exceed that
-    const { data: entries, error: entriesError } = await supabase
-      .from('daily_entries')
-      .select('user_id, entry_date, beers, seltzers, wine, liquor, shots, steps')
-      .in('user_id', userIds)
-      .gte('entry_date', yearStartStr)
-      .lt('entry_date', todayStr)
-      .limit(5000)
+    // Supabase caps each request at 1000 rows (server-side max-rows setting).
+    // With 6+ users over a full year we exceed that, so we paginate.
+    const allEntries: DailyEntry[] = []
+    const pageSize = 1000
+    let from = 0
 
-    if (entriesError) {
-      console.error('Error fetching entries:', entriesError)
-      return NextResponse.json({ error: 'Failed to fetch entries' }, { status: 500 })
+    while (true) {
+      const { data, error } = await supabase
+        .from('daily_entries')
+        .select('user_id, entry_date, beers, seltzers, wine, liquor, shots, steps')
+        .in('user_id', userIds)
+        .gte('entry_date', yearStartStr)
+        .lt('entry_date', todayStr)
+        .order('entry_date', { ascending: true })
+        .range(from, from + pageSize - 1)
+
+      if (error) {
+        console.error('Error fetching entries:', error)
+        return NextResponse.json({ error: 'Failed to fetch entries' }, { status: 500 })
+      }
+      if (!data || data.length === 0) break
+      allEntries.push(...(data as DailyEntry[]))
+      if (data.length < pageSize) break
+      from += pageSize
     }
+
+    const entries = allEntries
 
     // Build user lookup
     const userMap = new Map<string, UserWithEntries>()
